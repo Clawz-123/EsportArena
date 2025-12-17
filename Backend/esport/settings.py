@@ -41,16 +41,19 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    # Third party apps
     'rest_framework',
     'drf_yasg',
     'corsheaders',
-    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     
     #My apps
     'accounts', 
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware', 
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -146,7 +149,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
-    "EXCEPTION_HANDLER": "myproject.exceptions.custom_exception_handler",
+    "EXCEPTION_HANDLER": "esport.exceptions.custom_exception_handler",
 }
 
 # JWT settings
@@ -157,3 +160,19 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": True,
     "UPDATE_LAST_LOGIN": True,
 }
+
+# Swagger settings
+SWAGGER_SETTINGS = {
+    "SECURITY_DEFINITIONS": {
+        "Bearer": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header",
+            "description": "Enter **Bearer <your-token>**",
+        }
+    },
+    "USE_SESSION_AUTH": False,
+    "JSON_EDITOR": True,
+    "SHOW_REQUEST_HEADERS": True,
+}
+

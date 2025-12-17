@@ -6,7 +6,7 @@ class UserResponseSerializers(serializers.ModelSerializer):
     class Meta:
         # Specify the model and fields to be serialized
         model = User
-        fields = ['id', 'email', 'name', 'is_organizer','role','date_joined']
+        fields = ['id', 'email', 'name', 'is_organizer','phone_number','role','date_joined']
         read_only_fields = ['id','date_joined']
 
         def get_role(self, obj):
@@ -17,7 +17,7 @@ class UserCreateSerializers(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['email', 'name', 'is_organizer', 'password']  
+        fields = ['email', 'name', 'is_organizer','phone_number', 'password']  
 
         def validate_email(self, value):
             if User.objects.filter(email=value).exists():
@@ -32,6 +32,11 @@ class UserCreateSerializers(serializers.ModelSerializer):
         def validate_name(self, value):
             if not value.strip():
                 raise serializers.ValidationError("Name cannot be empty.")
+            return value
+        
+        def validate_phone_number(self, value):
+            if value and not value.isdigit():
+                raise serializers.ValidationError("Phone number must contain only digits.")
             return value
         
         def create(self, validated_data):
@@ -62,6 +67,9 @@ class UserLoginSerializers(serializers.Serializer):
         
         attrs['user'] = user
         return attrs
+    
+class UserLogoutSerializers(serializers.Serializer):
+    refresh = serializers.CharField()
 
         
 

@@ -7,9 +7,12 @@ from .managers import CustomUserManager
 
 class User(AbstractUser):
     username = None
+    first_name = None
+    last_name = None
     email = models.EmailField(_('email address'), unique=True)
     # Common field
     name = models.CharField(max_length=255, blank=True, null=True)
+    phone_number = models.CharField(max_length=15, blank=True, null=True)
     # Role flag
     is_organizer = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
