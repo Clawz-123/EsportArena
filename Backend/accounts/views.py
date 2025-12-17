@@ -1,3 +1,4 @@
+from .models import User
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, generics
@@ -54,7 +55,7 @@ class RegisterUserView(generics.CreateAPIView):
             if serializer.is_valid():
                 self.perform_create(serializer)
                 return api_response(
-                    is_sucess=True,
+                    is_success=True,
                     status_code=status.HTTP_201_CREATED,
                     result={
                         "message": "User registered successfully."
@@ -63,14 +64,14 @@ class RegisterUserView(generics.CreateAPIView):
                 )
             # Return validation errors
             return api_response(
-                is_sucess=False,
+                is_success=False,
                 error_message=serializer.errors,
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
         # Handle unexpected exceptions
         except Exception as e:
             return api_response(
-                is_sucess=False,
+                is_success=False,
                 error_message=(e, "An error occurred during registration."),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
@@ -79,6 +80,7 @@ class RegisterUserView(generics.CreateAPIView):
 class LoginUserView(TokenObtainPairView):
     permission_classes = [AllowAny]
     authentication_classes = [JWTAuthentication]
+
     serializer_class = UserLoginSerializers
 
     @swagger_auto_schema(
@@ -109,7 +111,7 @@ class LoginUserView(TokenObtainPairView):
                     access_token = str(refresh.access_token)
 
                     return api_response(
-                        is_sucess=True,
+                        is_success=True,
                         status_code=status.HTTP_200_OK,
                         result={
                             "user": user_data,
@@ -119,18 +121,18 @@ class LoginUserView(TokenObtainPairView):
                     )
                 else:
                     return api_response(
-                        is_sucess=False,
+                        is_success=False,
                         error_message="Invalid email or password.",
                         status_code=status.HTTP_401_UNAUTHORIZED,
                     )
             return api_response(
-                is_sucess=False,
+                is_success=False,
                 error_message=serializer.errors,
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
         except Exception as e:
             return api_response(
-                is_sucess=False,
+                is_success=False,
                 error_message=(e, "An error occurred during login."),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
@@ -159,7 +161,7 @@ class LogoutUserView(APIView):
             refresh_token = request.data.get("refresh")
             if not refresh_token:
                 return api_response(
-                    is_sucess=False,
+                    is_success=False,
                     error_message="Refresh token is required.",
                     status_code=status.HTTP_400_BAD_REQUEST,
                 )
@@ -168,18 +170,99 @@ class LogoutUserView(APIView):
             token.blacklist()
 
             return api_response(
-                is_sucess=True,
+                is_success=True,
                 status_code=status.HTTP_200_OK,
                 result={"message": "User logged out successfully."}
             )
         except Exception as e:
             return api_response(
-                is_sucess=False,
+                is_success=False,
                 error_message=(e, "An error occurred during logout."),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
     
+# Get All Users View
+class GetUserView(generics.ListAPIView):
+    """
+    Get all registered users
+    """
+    queryset = User.objects.all()
+    serializer_class = UserResponseSerializers
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_description="Get list of all registered users",
+        responses={
+            200: openapi.Response(
+                description="User list retrieved successfully",
+                schema=UserResponseSerializers(many=True)
+            ),
+            500: openapi.Response(description="Internal Server Error"),
+        },
+        tags=["User"],
+    )
+    def get(self, request, *args, **kwargs):
+        try:
+            users = self.get_queryset()
+            serializer = self.serializer_class(users, many=True)
+            return api_response(
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+                result={
+                    "count": users.count(),
+                    "users": serializer.data
+                }
+            )
+        except Exception as e:
+            return api_response(
+                is_success=False,
+                error_message=str(e),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        
+class UserDetailView(generics.RetrieveAPIView):
+    """
+    Get details of a specific user by ID
+    """
+    queryset = User.objects.all()
+    serializer_class = UserResponseSerializers
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description="Get details of a specific user by ID",
+        responses={
+            200: openapi.Response(
+                description="User details retrieved successfully",
+                schema=UserResponseSerializers()
+            ),
+            404: openapi.Response(description="User not found"),
+            500: openapi.Response(description="Internal Server Error"),
+        },
+        tags=["User"],
+    )
+    def get(self, request, *args, **kwargs):
+        try:
+            user = self.get_object()
+            serializer = self.serializer_class(user)
+            return api_response(
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+                result=serializer.data
+            )
+        except User.DoesNotExist:
+            return api_response(
+                is_success=False,
+                error_message="User not found.",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        except Exception as e:
+            return api_response(
+                is_success=False,
+                error_message=str(e),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 

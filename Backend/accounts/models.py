@@ -6,6 +6,11 @@ from .managers import CustomUserManager
 
 
 class User(AbstractUser):
+    class UserRoles(models.TextChoices):
+        ORGANIZER = "Organizer", _("Organizer")
+        PLAYER = "Player", _("Player")
+        SUPERADMIN = "SuperAdmin", _("SuperAdmin")
+
     username = None
     first_name = None
     last_name = None
@@ -19,10 +24,11 @@ class User(AbstractUser):
     objects = CustomUserManager()
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
+    role = models.CharField(choices = UserRoles.choices, max_length=20, default=UserRoles.PLAYER)
 
     def __str__(self):
-        role = "Organizer" if self.is_organizer else "Player"
-        return f"{self.email} ({role})"
+        return f"{self.email} ({self.role})"
+    
 
     class Meta:
         verbose_name = "User"

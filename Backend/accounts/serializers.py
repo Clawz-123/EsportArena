@@ -70,10 +70,4 @@ class UserLoginSerializers(serializers.Serializer):
         return attrs
     
 class UserLogoutSerializers(serializers.Serializer):
-    refresh = serializers.CharField()
-
-
-
-
-        
-
+    refresh = serializers.CharField(required=True)

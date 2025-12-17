@@ -6,7 +6,7 @@ from rest_framework import status
 # Standardized API response format
 def api_response(
     result=None,  
-    is_sucess=False,
+    is_success=False,
     error_message=None,
     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
 ):
@@ -14,7 +14,7 @@ def api_response(
     return Response(
         {
             "Status_code": status_code,
-            "Is_Sucess": is_sucess,
+            "Is_Success": is_success,
             "Error_Message": error_message if error_message else "",
             "Result": result,
         },
