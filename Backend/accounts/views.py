@@ -13,7 +13,7 @@ from django.db import transaction
 
 from esport.response import api_response
 
-from .serializers import(UserResponseSerializers, UserCreateSerializers, UserLoginSerializers)
+from .serializers import(UserResponseSerializers, UserCreateSerializers, UserLoginSerializers, UserLogoutSerializers)
 
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -24,7 +24,7 @@ from drf_yasg import openapi
 # User Registration View
 class RegisterUserView(generics.CreateAPIView):
     serializer_class = UserCreateSerializers
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     
     @transaction.atomic
@@ -74,12 +74,11 @@ class RegisterUserView(generics.CreateAPIView):
                 error_message=(e, "An error occurred during registration."),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-        
 
 # User Login View
 class LoginUserView(TokenObtainPairView):
-    permission_classes = [IsAuthenticated]
-    authentiaction_classes = [JWTAuthentication]
+    permission_classes = [AllowAny]
+    authentication_classes = [JWTAuthentication]
     serializer_class = UserLoginSerializers
 
     @swagger_auto_schema(
@@ -136,9 +135,24 @@ class LoginUserView(TokenObtainPairView):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+# User Logout View
 class LogoutUserView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        # API documentation for user logout
+        operation_description="Logout a user by blacklisting the refresh token",
+        request_body=UserLogoutSerializers,
+        responses={
+            200: openapi.Response(description="Logout successful"),
+            400: openapi.Response(description="Bad Request"),
+            500: openapi.Response(description="Internal Server Error"),
+        },
+        tags=["User"],
+    )   
+
+
 
     def post(self, request):
         try:
