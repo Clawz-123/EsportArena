@@ -12,7 +12,10 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.contrib.auth import authenticate
 from django.db import transaction
 
+from .permission import IsSuperUser
 from esport.response import api_response
+# from .otp import generate_otp, set_otp, verify_otp
+# from redis.exceptions import ConnectionError as RedisConnectionError
 
 from .serializers import(UserResponseSerializers, UserCreateSerializers, UserLoginSerializers, UserLogoutSerializers)
 
@@ -72,15 +75,15 @@ class RegisterUserView(generics.CreateAPIView):
         except Exception as e:
             return api_response(
                 is_success=False,
-                error_message=(e, "An error occurred during registration."),
+                error_message=(e),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
 
 # User Login View
 class LoginUserView(TokenObtainPairView):
     permission_classes = [AllowAny]
     authentication_classes = [JWTAuthentication]
-
     serializer_class = UserLoginSerializers
 
     @swagger_auto_schema(
@@ -114,6 +117,7 @@ class LoginUserView(TokenObtainPairView):
                         is_success=True,
                         status_code=status.HTTP_200_OK,
                         result={
+                            "message": "Login Sucessful",
                             "user": user_data,
                             "refresh": refresh_token,
                             "access": access_token,
@@ -133,7 +137,7 @@ class LoginUserView(TokenObtainPairView):
         except Exception as e:
             return api_response(
                 is_success=False,
-                error_message=(e, "An error occurred during login."),
+                error_message=(e),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -189,7 +193,7 @@ class GetUserView(generics.ListAPIView):
     queryset = User.objects.all()
     serializer_class = UserResponseSerializers
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsSuperUser]
 
     @swagger_auto_schema(
         operation_description="Get list of all registered users",
@@ -221,6 +225,7 @@ class GetUserView(generics.ListAPIView):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
         
+# Get User Detail View
 class UserDetailView(generics.RetrieveAPIView):
     """
     Get details of a specific user by ID
@@ -228,7 +233,7 @@ class UserDetailView(generics.RetrieveAPIView):
     queryset = User.objects.all()
     serializer_class = UserResponseSerializers
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     @swagger_auto_schema(
         operation_description="Get details of a specific user by ID",
@@ -263,6 +268,26 @@ class UserDetailView(generics.RetrieveAPIView):
                 error_message=str(e),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+# # Send OTP View
+# class VerifyOTPView(APIView):
+#     permission_classes = [AllowAny]
 
-
-
+#     @swagger_auto_schema(
+#         operation_description="Verify OTP sent to user email",
+#         request_body=VerifyOTPSerializer,
+#         responses={200: openapi.Response(description="OTP verified successfully")},
+#         tags=["User"]
+#     )
+#     def post(self, request):
+#         serializer = VerifyOTPSerializer(data=request.data)
+#         if serializer.is_valid():
+#             return api_response(
+#                 is_success=True,
+#                 status_code=status.HTTP_200_OK,
+#                 result={"message": "OTP verified successfully. You can now log in."}
+#             )
+#         return api_response(
+#             is_success=False,
+#             error_message=serializer.errors,
+#             status_code=status.HTTP_400_BAD_REQUEST
+#         )

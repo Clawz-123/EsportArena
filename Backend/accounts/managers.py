@@ -19,9 +19,11 @@ class CustomUserManager(BaseUserManager):
             raise ValueError(_("An email address is required."))
         if not password:
             raise ValueError(_("A password is required."))
+        
 
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
+        # extra_fields.setdefault('is_verified', False)
         user.set_password(password)
         user.save(using=self._db)
         return user
@@ -35,6 +37,7 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('role', "SuperAdmin")
+      
 
         if extra_fields.get('is_staff') is not True:
             raise ValueError(_("Superuser must have is_staff=True."))

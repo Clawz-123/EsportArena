@@ -15,20 +15,34 @@ class User(AbstractUser):
     first_name = None
     last_name = None
     email = models.EmailField(_('email address'), unique=True)
-    # Common field
+    
     name = models.CharField(max_length=255, blank=True, null=True)
     phone_number = models.CharField(max_length=15, blank=True, null=True)
-    # Role flag
+    # is_verified = models.BooleanField(default=False)
+
     is_organizer = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
+    role = models.CharField(
+        choices=UserRoles.choices,
+        max_length=20,
+        default=UserRoles.PLAYER
+    )
+
     objects = CustomUserManager()
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
-    role = models.CharField(choices = UserRoles.choices, max_length=20, default=UserRoles.PLAYER)
+
+    def save(self, *args, **kwargs):
+        if self.is_superuser:
+            self.role = self.UserRoles.SUPERADMIN
+        elif self.is_organizer:
+            self.role = self.UserRoles.ORGANIZER
+        else:
+            self.role = self.UserRoles.PLAYER
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.email} ({self.role})"
-    
 
     class Meta:
         verbose_name = "User"

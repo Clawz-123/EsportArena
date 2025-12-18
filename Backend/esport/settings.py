@@ -181,3 +181,29 @@ SWAGGER_SETTINGS = {
     "USE_SESSION_AUTH": False,
 }
 
+# # Redis configuration
+# REDIS_HOST = 'localhost'  
+# REDIS_PORT = 6379
+# REDIS_DB = 0
+# REDIS_PASSWORD = None
+
+# CACHES = {
+#     "default": {
+#         "BACKEND": "django_redis.cache.RedisCache",
+#         "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}",
+#         "OPTIONS": {
+#             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+#         }
+#     }
+# }
+
+# # Email backend configuration
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com' 
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'your_email@gmail.com'
+# EMAIL_HOST_PASSWORD = 'your_email_password' 
+# DEFAULT_FROM_EMAIL = 'Your App <your_email@gmail.com>'
+
+
