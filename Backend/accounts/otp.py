@@ -1,48 +1,79 @@
-# import random
-# import redis
-# from django.conf import settings
-# from django.core.mail import send_mail
-# from .models import User
+import random
+from datetime import timedelta
 
-# # Connect to Redis
-# redis_client = redis.StrictRedis(
-#     host=settings.REDIS_HOST,
-#     port=settings.REDIS_PORT,
-#     db=settings.REDIS_DB,
-#     password=settings.REDIS_PASSWORD,
-#     decode_responses=True
-# )
+from django.conf import settings
+from django.core.mail import send_mail
+from django.utils import timezone
 
-# def generate_otp(length=6):
-#     return ''.join([str(random.randint(0, 9)) for _ in range(length)])
+from .models import User, OTP
 
-# def set_otp(email, otp, expiry=300):
-#     redis_client.setex(f"otp:{email}", expiry, otp)
 
-# def get_otp(email):
-#     return redis_client.get(f"otp:{email}")
+# Generate OTP
+def generate_otp(length=6):
+    return ''.join(str(random.randint(0, 9)) for _ in range(length))
 
-# def send_otp_email(email, otp):
-#     subject = 'Your OTP Code'
-#     message = f'Your OTP code is: {otp}. It is valid for 5 minutes.'
-#     send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [email])
 
-# def create_and_send_otp(email, expiry=300):
-#     """Generate OTP, store in Redis, and send via email"""
-#     otp = generate_otp()
-#     set_otp(email, otp, expiry)
-#     send_otp_email(email, otp)
-#     return otp
+# Create and send OTP
+def create_and_send_otp(email, expiry_minutes=3):
+    otp_code = generate_otp()
+    
+    # Remove old unused OTPs
+    OTP.objects.filter(email=email, is_used=False).delete()
 
-# def verify_otp(email, otp_input):
-#     stored_otp = get_otp(email)
-#     if stored_otp and stored_otp == otp_input:
-#         try:
-#             user = User.objects.get(email=email)
-#             user.is_verified = True
-#             user.save()
-#         except User.DoesNotExist:
-#             return False
-#         redis_client.delete(f"otp:{email}")
-#         return True
-#     return False
+    otp = OTP.objects.create(
+        email=email,
+        otp=otp_code,
+    )
+
+    try:
+        send_mail(
+            subject="Your Email Verification OTP",
+            message=f"Your OTP code is {otp_code}. It is valid for {expiry_minutes} minutes.",
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[email],
+            fail_silently=False,
+        )
+        return True
+    except Exception as e:
+        otp.delete()
+        raise Exception(f"Failed to send OTP email: {e}")
+
+
+# Verify OTP
+def verify_otp(email, otp_input, expiry_minutes=3):
+    otp = OTP.objects.filter(email=email, is_used=False).order_by('-created_at').first()
+
+    if not otp:
+        return False, "No valid OTP found. Please request a new one."
+
+    if timezone.now() > otp.created_at + timedelta(minutes=expiry_minutes):
+        otp.delete()
+        return False, "OTP has expired. Please request a new one."
+
+    if otp.otp != otp_input:
+        return False, "Invalid OTP."
+
+    otp.is_used = True
+    otp.save()
+
+    try:
+        user = User.objects.get(email=email)
+        user.is_verified = True
+        user.save()
+        return True, "Email verified successfully."
+    except User.DoesNotExist:
+        return False, "User not found."
+
+
+# Resend OTP
+def resend_otp(email):
+    try:
+        user = User.objects.get(email=email)
+        if user.is_verified:
+            return False, "Email already verified."
+
+        create_and_send_otp(email)
+        return True, "OTP resent successfully."
+
+    except User.DoesNotExist:
+        return False, "User not found."

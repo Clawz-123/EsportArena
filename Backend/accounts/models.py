@@ -5,6 +5,7 @@ from django.utils.translation import gettext_lazy as _
 from .managers import CustomUserManager
 
 
+# Custom User Model
 class User(AbstractUser):
     class UserRoles(models.TextChoices):
         ORGANIZER = "Organizer", _("Organizer")
@@ -18,7 +19,7 @@ class User(AbstractUser):
     
     name = models.CharField(max_length=255, blank=True, null=True)
     phone_number = models.CharField(max_length=15, blank=True, null=True)
-    # is_verified = models.BooleanField(default=False)
+    is_verified = models.BooleanField(default=False)
 
     is_organizer = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
@@ -32,6 +33,7 @@ class User(AbstractUser):
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
 
+    # Override save method to set role based on flags
     def save(self, *args, **kwargs):
         if self.is_superuser:
             self.role = self.UserRoles.SUPERADMIN
@@ -48,3 +50,21 @@ class User(AbstractUser):
         verbose_name = "User"
         verbose_name_plural = "Users"
         ordering = ['-date_joined']
+
+
+# OTP Model
+class OTP(models.Model):
+    email = models.EmailField()
+    otp = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_used = models.BooleanField(default=False)
+
+    # Meta class for OTP model
+    class Meta:
+        verbose_name = "OTP"
+        verbose_name_plural = "OTPs"
+        ordering = ['-created_at']
+
+    # String representation of OTP model
+    def __str__(self):
+        return f"{self.email} - {self.otp}"

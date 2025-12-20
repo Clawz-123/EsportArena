@@ -14,10 +14,9 @@ from django.db import transaction
 
 from .permission import IsSuperUser
 from esport.response import api_response
-# from .otp import generate_otp, set_otp, verify_otp
-# from redis.exceptions import ConnectionError as RedisConnectionError
+from .otp import verify_otp, resend_otp
 
-from .serializers import(UserResponseSerializers, UserCreateSerializers, UserLoginSerializers, UserLogoutSerializers)
+from .serializers import(UserResponseSerializers, UserCreateSerializers, UserLoginSerializers, VerifyOTPSerializer, ResendOTPSerializer, UserLogoutSerializers)
 
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -37,9 +36,8 @@ class RegisterUserView(generics.CreateAPIView):
         user = serializer.save()
         return user
 
-
+    # Swagger documentation for user registration
     @swagger_auto_schema(
-        # API documentation for user registration
         operation_description="Register a new user",
         request_body=UserCreateSerializers,
         responses={
@@ -56,12 +54,15 @@ class RegisterUserView(generics.CreateAPIView):
             serializer = self.serializer_class(data=request.data)
             # Validate and create the user
             if serializer.is_valid():
-                self.perform_create(serializer)
+                user = self.perform_create(serializer) 
+                # Store email in session for OTP verification
+                request.session['otp_email'] = user.email
+                request.session.set_expiry(1800)  
                 return api_response(
                     is_success=True,
                     status_code=status.HTTP_201_CREATED,
                     result={
-                        "message": "User registered successfully."
+                        "message": "User registered successfully. Please Verify OTP"
                     }
 
                 )
@@ -80,14 +81,122 @@ class RegisterUserView(generics.CreateAPIView):
             )
 
 
+# Verify OTP View
+class VerifyOTPView(APIView):
+    permission_classes = [AllowAny]
+
+    # Swagger documentation for OTP verification
+    @swagger_auto_schema(
+        operation_description="Verify OTP sent to user email",
+        request_body=VerifyOTPSerializer,
+        responses={200: openapi.Response(description="OTP verified successfully")},
+        tags=["OTP"]
+    )
+    def post(self, request):
+        try:
+            email = request.session.get('otp_email')
+
+            if not email:
+                return api_response(
+                    is_success=False,  # Fixed typo: is_sucess -> is_success
+                    error_message={"error": "Session expired. Please register again."},
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Validate OTP input format
+            serializer = VerifyOTPSerializer(data=request.data)
+            if not serializer.is_valid():
+                return api_response(
+                    is_success=False,
+                    error_message=serializer.errors,
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+            
+            otp = serializer.validated_data['otp']
+            is_valid, message = verify_otp(email, otp)
+            
+            if is_valid:
+                # Clear session after successful verification
+                if 'otp_email' in request.session:
+                    del request.session['otp_email']
+                
+                return api_response(
+                    is_success=True,
+                    status_code=status.HTTP_200_OK,
+                    result={"message": "OTP verified successfully. You can now log in."}
+                )
+            else:
+                return api_response(
+                    is_success=False,
+                    error_message={"error": message},
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+        except Exception as e:
+            return api_response(
+                is_success=False,
+                error_message=str(e),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+# Resend OTP View
+class ResendOTPView(APIView):
+    permission_classes = [AllowAny]
+
+    @swagger_auto_schema(
+        operation_description="Resend OTP to user email",
+        request_body=ResendOTPSerializer,
+        responses={
+            200: openapi.Response(description="OTP resent successfully"),
+            400: openapi.Response(description="Bad Request"),
+            500: openapi.Response(description="Internal Server Error"),
+            },
+        tags=["OTP"]
+    )
+    def post(self, request):
+        try:
+            email = request.session.get('otp_email')
+            
+            if not email:
+                return api_response(
+                    is_success=False,
+                    error_message={"error": "Session expired. Please register again."},
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+            
+            # Resend OTP
+            result, message = resend_otp(email)
+
+            if result:
+                # Refresh session expiry
+                request.session['otp_email'] = email
+                request.session.set_expiry(1800)
+                return api_response(
+                    is_success=True,
+                    status_code=status.HTTP_200_OK,
+                    result={"message": "OTP has been resent to your email."}
+                )
+            else:
+                return api_response(
+                    is_success=False,
+                    error_message={"error": message},
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+        except Exception as e:
+            return api_response(
+                is_success=False,
+                error_message=str(e),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
 # User Login View
 class LoginUserView(TokenObtainPairView):
     permission_classes = [AllowAny]
     authentication_classes = [JWTAuthentication]
     serializer_class = UserLoginSerializers
 
+    # Swagger documentation for user login
     @swagger_auto_schema(
-        # API documentation for user login
         operation_description="Login a user and obtain JWT tokens",
         responses={
             200: openapi.Response(description="Login successful"),
@@ -100,12 +209,12 @@ class LoginUserView(TokenObtainPairView):
 
     def post(self, request):
         try:
+            # Validate login data
             serializer = self.serializer_class(data=request.data)
             if serializer.is_valid():
                 email = serializer.validated_data['email']
                 password = serializer.validated_data['password']
-
-                user = authenticate(request, email=email, password=password)
+                user = authenticate(request, username=email, password=password)
 
                 if user is not None:
                     user_data = UserResponseSerializers(user).data
@@ -146,8 +255,8 @@ class LogoutUserView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
+    # Swagger documentation for user logout
     @swagger_auto_schema(
-        # API documentation for user logout
         operation_description="Logout a user by blacklisting the refresh token",
         request_body=UserLogoutSerializers,
         responses={
@@ -157,9 +266,7 @@ class LogoutUserView(APIView):
         },
         tags=["User"],
     )   
-
-
-
+    # POST method to handle user logout
     def post(self, request):
         try:
             refresh_token = request.data.get("refresh")
@@ -268,26 +375,3 @@ class UserDetailView(generics.RetrieveAPIView):
                 error_message=str(e),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-# # Send OTP View
-# class VerifyOTPView(APIView):
-#     permission_classes = [AllowAny]
-
-#     @swagger_auto_schema(
-#         operation_description="Verify OTP sent to user email",
-#         request_body=VerifyOTPSerializer,
-#         responses={200: openapi.Response(description="OTP verified successfully")},
-#         tags=["User"]
-#     )
-#     def post(self, request):
-#         serializer = VerifyOTPSerializer(data=request.data)
-#         if serializer.is_valid():
-#             return api_response(
-#                 is_success=True,
-#                 status_code=status.HTTP_200_OK,
-#                 result={"message": "OTP verified successfully. You can now log in."}
-#             )
-#         return api_response(
-#             is_success=False,
-#             error_message=serializer.errors,
-#             status_code=status.HTTP_400_BAD_REQUEST
-#         )

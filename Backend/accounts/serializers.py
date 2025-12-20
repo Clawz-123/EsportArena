@@ -1,30 +1,32 @@
 from rest_framework import serializers
 from .models import User
-# from .otp import create_and_send_otp, verify_otp
+from .otp import create_and_send_otp
 
 
+# User Response Serializer
 class UserResponseSerializers(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['id', 'email', 'name', 'is_organizer', 'phone_number', 'role', 'date_joined']
-        read_only_fields = ['id', 'date_joined', 'role']
+        fields = ['id', 'email', 'name', 'is_organizer', 'phone_number', 'role', 'is_verified', 'date_joined']
+        read_only_fields = ['id', 'date_joined', 'role', 'is_verified']
 
         def get_role(self, obj):
             return obj.role
 
 
+# User Create Serializer
 class UserCreateSerializers(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     class Meta:
         model = User
         fields = ['email', 'name', 'is_organizer', 'phone_number', 'password']
 
-
+    # Validation methods
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
             raise serializers.ValidationError("Email is already in use.")
-        return value
+        return value    
 
     def validate_password(self, value):
         if len(value) < 8:
@@ -41,35 +43,35 @@ class UserCreateSerializers(serializers.ModelSerializer):
             raise serializers.ValidationError("Phone number must contain only digits.")
         return value
     
+    # Create user and send OTP
     def create(self, validated_data):
-        # Create user with is_verified=False
         user = User.objects.create_user(
             email=validated_data['email'],
             password=validated_data['password'],
             name=validated_data.get('name', ''),
             phone_number=validated_data.get('phone_number', ''),
-            is_organizer=validated_data.get('is_organizer', False)
+            is_organizer=validated_data.get('is_organizer', False),
+            is_verified=False
         )
+        # Send OTP to user
+        try:
+            create_and_send_otp(user.email)
+        except Exception as e:
+            print(f"Error sending OTP: {e}")
 
-        # # Generate and send OTP via Redis
-        # create_and_send_otp(user.email)
         return user
 
+# Verify OTP Serializer
+class VerifyOTPSerializer(serializers.Serializer):
+    otp = serializers.CharField(max_length=6, min_length=6, required=True)
 
 
-# class VerifyOTPSerializer(serializers.Serializer):
-#     email = serializers.EmailField()
-#     otp = serializers.CharField(max_length=6, write_only=True)
-
-#     def validate(self, attrs):
-#         email = attrs.get('email')
-#         otp_input = attrs.get('otp')
-#         if not verify_otp(email, otp_input):
-#             raise serializers.ValidationError("Invalid or expired OTP.")
-#         return attrs
+# Resend OTP Serializer
+class ResendOTPSerializer(serializers.Serializer):
+    pass
 
 
-
+# User Login Serializer
 class UserLoginSerializers(serializers.Serializer):
     email = serializers.EmailField(required=True)
     password = serializers.CharField(write_only=True, required=True)
@@ -86,13 +88,13 @@ class UserLoginSerializers(serializers.Serializer):
         if not user.check_password(password):
             raise serializers.ValidationError("Invalid email or password.")
 
-        # # Check if user is verified
-        # if not user.is_verified:
-        #     raise serializers.ValidationError("Email not verified. Please verify OTP first.")
+        # Check if user is verified
+        if not user.is_verified:
+            raise serializers.ValidationError("Email not verified. Please verify OTP first.")
 
         attrs['user'] = user
         return attrs
 
-
+# User Logout Serializer
 class UserLogoutSerializers(serializers.Serializer):
     refresh = serializers.CharField(required=True)
