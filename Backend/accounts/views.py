@@ -81,29 +81,25 @@ class RegisterUserView(generics.CreateAPIView):
             )
 
 
-# Verify OTP View
+# Verify OTP view
 class VerifyOTPView(APIView):
     permission_classes = [AllowAny]
 
-    # Swagger documentation for OTP verification
+   
     @swagger_auto_schema(
         operation_description="Verify OTP sent to user email",
         request_body=VerifyOTPSerializer,
-        responses={200: openapi.Response(description="OTP verified successfully")},
-        tags=["OTP"]
+        responses={
+            200: openapi.Response(description="OTP verified successfully"),
+            400: openapi.Response(description="Invalid or expired OTP"),
+            500: openapi.Response(description="Internal Server Error"),
+        },
+        tags=["OTP"],
     )
+    
     def post(self, request):
         try:
-            email = request.session.get('otp_email')
-
-            if not email:
-                return api_response(
-                    is_success=False,  # Fixed typo: is_sucess -> is_success
-                    error_message={"error": "Session expired. Please register again."},
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                )
-
-            # Validate OTP input format
+            # Validate request body
             serializer = VerifyOTPSerializer(data=request.data)
             if not serializer.is_valid():
                 return api_response(
@@ -111,15 +107,13 @@ class VerifyOTPView(APIView):
                     error_message=serializer.errors,
                     status_code=status.HTTP_400_BAD_REQUEST,
                 )
-            
+
+            email = serializer.validated_data['email']
             otp = serializer.validated_data['otp']
+
             is_valid, message = verify_otp(email, otp)
-            
+
             if is_valid:
-                # Clear session after successful verification
-                if 'otp_email' in request.session:
-                    del request.session['otp_email']
-                
                 return api_response(
                     is_success=True,
                     status_code=status.HTTP_200_OK,
@@ -131,13 +125,13 @@ class VerifyOTPView(APIView):
                     error_message={"error": message},
                     status_code=status.HTTP_400_BAD_REQUEST,
                 )
+
         except Exception as e:
             return api_response(
                 is_success=False,
                 error_message=str(e),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-
 # Resend OTP View
 class ResendOTPView(APIView):
     permission_classes = [AllowAny]

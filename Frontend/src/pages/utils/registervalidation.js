@@ -1,5 +1,11 @@
 import * as Yup from "yup";
 
+const termsSchema = {
+  terms: Yup.boolean()
+    .oneOf([true], "You must accept the terms and conditions")
+    .required("You must accept the terms and conditions"),
+};
+
 // Validation for Player
 export const playerValidationSchema = Yup.object().shape({
   fullName: Yup.string().required("Full Name is required"),
@@ -12,6 +18,8 @@ export const playerValidationSchema = Yup.object().shape({
   confirmPassword: Yup.string()
     .oneOf([Yup.ref("password"), null], "Passwords must match")
     .required("Confirm Password is required"),
+
+  
 });
 
 // Validation for Organizer
