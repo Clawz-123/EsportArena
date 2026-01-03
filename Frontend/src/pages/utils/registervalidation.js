@@ -1,6 +1,6 @@
 import * as Yup from "yup";
 
-const termsSchema = {
+export const termsSchema = {
   terms: Yup.boolean()
     .oneOf([true], "You must accept the terms and conditions")
     .required("You must accept the terms and conditions"),

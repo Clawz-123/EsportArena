@@ -56,6 +56,37 @@ export const loginUser = createAsyncThunk(
   }
 );
 
+export const verifyOtp = createAsyncThunk(
+  "auth/verifyOtp",
+  async (otpData, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.post(
+        "/accounts/verify-otp/",
+        otpData
+      );
+      localStorage.removeItem("registeredData");
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+export const resendOtp = createAsyncThunk(
+  "auth/resendOtp",
+  async (emailData, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.post(
+        "/accounts/resend-otp/",
+        emailData
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
 export const logoutUser = createAsyncThunk(
   "auth/logout",
   async (_, { rejectWithValue }) => {
@@ -83,6 +114,12 @@ const getInitialState = () => {
     success: false,
     registerLoading: false,
     registerError: null,
+    otpLoading: false,
+    otpError: null,
+    otpSuccess: false,
+    resendLoading: false,
+    resendError: null,
+    resendSuccess: false,
   };
 };
 
@@ -93,6 +130,14 @@ const authSlice = createSlice({
     clearError: (state) => {
       state.error = null;
       state.registerError = null;
+    },
+    clearOtpState: (state) => {
+      state.otpLoading = false;
+      state.otpError = null;
+      state.otpSuccess = false;
+      state.resendLoading = false;
+      state.resendError = null;
+      state.resendSuccess = false;
     },
     clearSuccess: (state) => {
       state.success = false;
@@ -136,6 +181,38 @@ const authSlice = createSlice({
       state.error = action.payload;
     });
 
+    builder.addCase(verifyOtp.pending, (state) => {
+      state.otpLoading = true;
+      state.otpError = null;
+      state.otpSuccess = false;
+    });
+
+    builder.addCase(verifyOtp.fulfilled, (state) => {
+      state.otpLoading = false;
+      state.otpSuccess = true;
+    });
+
+    builder.addCase(verifyOtp.rejected, (state, action) => {
+      state.otpLoading = false;
+      state.otpError = action.payload;
+    });
+
+    builder.addCase(resendOtp.pending, (state) => {
+      state.resendLoading = true;
+      state.resendError = null;
+      state.resendSuccess = false;
+    });
+
+    builder.addCase(resendOtp.fulfilled, (state) => {
+      state.resendLoading = false;
+      state.resendSuccess = true;
+    });
+
+    builder.addCase(resendOtp.rejected, (state, action) => {
+      state.resendLoading = false;
+      state.resendError = action.payload;
+    });
+
     builder.addCase(logoutUser.fulfilled, (state) => {
       state.user = null;
       state.token = null;
@@ -144,5 +221,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError, clearSuccess, setUser } = authSlice.actions;
+export const { clearError, clearSuccess, setUser, clearOtpState } = authSlice.actions;
 export default authSlice.reducer;

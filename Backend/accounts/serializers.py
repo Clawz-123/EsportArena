@@ -22,7 +22,6 @@ class UserCreateSerializers(serializers.ModelSerializer):
         model = User
         fields = ['email', 'name', 'is_organizer', 'phone_number', 'password']
 
-    # Validation methods
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
             raise serializers.ValidationError("Email is already in use.")
@@ -43,7 +42,6 @@ class UserCreateSerializers(serializers.ModelSerializer):
             raise serializers.ValidationError("Phone number must contain only digits.")
         return value
     
-    # Create user and send OTP
     def create(self, validated_data):
         user = User.objects.create_user(
             email=validated_data['email'],
@@ -53,7 +51,6 @@ class UserCreateSerializers(serializers.ModelSerializer):
             is_organizer=validated_data.get('is_organizer', False),
             is_verified=False
         )
-        # Send OTP to user
         try:
             create_and_send_otp(user.email)
         except Exception as e:
@@ -61,19 +58,15 @@ class UserCreateSerializers(serializers.ModelSerializer):
 
         return user
 
-# Verify OTP Serializer
-# Verify OTP Serializer
 class VerifyOTPSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
     otp = serializers.CharField(max_length=6, min_length=6, required=True)
 
 
-# Resend OTP Serializer
 class ResendOTPSerializer(serializers.Serializer):
-    pass
+    email = serializers.EmailField(required=True)
 
 
-# User Login Serializer
 class UserLoginSerializers(serializers.Serializer):
     email = serializers.EmailField(required=True)
     password = serializers.CharField(write_only=True, required=True)
@@ -90,13 +83,12 @@ class UserLoginSerializers(serializers.Serializer):
         if not user.check_password(password):
             raise serializers.ValidationError("Invalid email or password.")
 
-        # Check if user is verified
         if not user.is_verified:
             raise serializers.ValidationError("Email not verified. Please verify OTP first.")
 
         attrs['user'] = user
         return attrs
 
-# User Logout Serializer
+
 class UserLogoutSerializers(serializers.Serializer):
     refresh = serializers.CharField(required=True)

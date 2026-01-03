@@ -8,16 +8,15 @@ from django.utils import timezone
 from .models import User, OTP
 
 
-# Generate OTP
+
 def generate_otp(length=6):
     return ''.join(str(random.randint(0, 9)) for _ in range(length))
 
 
-# Create and send OTP
 def create_and_send_otp(email, expiry_minutes=3):
     otp_code = generate_otp()
     
-    # Remove old unused OTPs
+
     OTP.objects.filter(email=email, is_used=False).delete()
 
     otp = OTP.objects.create(
@@ -39,7 +38,6 @@ def create_and_send_otp(email, expiry_minutes=3):
         raise Exception(f"Failed to send OTP email: {e}")
 
 
-# Verify OTP
 def verify_otp(email, otp_input, expiry_minutes=3):
     otp = OTP.objects.filter(email=email, is_used=False).order_by('-created_at').first()
 
@@ -65,7 +63,6 @@ def verify_otp(email, otp_input, expiry_minutes=3):
         return False, "User not found."
 
 
-# Resend OTP
 def resend_otp(email):
     try:
         user = User.objects.get(email=email)

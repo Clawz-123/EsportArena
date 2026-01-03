@@ -31,12 +31,10 @@ class RegisterUserView(generics.CreateAPIView):
 
     
     @transaction.atomic
-    # Helper method to create a new user
     def perform_create(self, serializer):
         user = serializer.save()
         return user
 
-    # Swagger documentation for user registration
     @swagger_auto_schema(
         operation_description="Register a new user",
         request_body=UserCreateSerializers,
@@ -48,14 +46,11 @@ class RegisterUserView(generics.CreateAPIView):
         tags=["User"],
     )
 
-    # POST method to handle user registration
     def post(self, request):
         try:
             serializer = self.serializer_class(data=request.data)
-            # Validate and create the user
             if serializer.is_valid():
                 user = self.perform_create(serializer) 
-                # Store email in session for OTP verification
                 request.session['otp_email'] = user.email
                 request.session.set_expiry(1800)  
                 return api_response(
@@ -66,13 +61,11 @@ class RegisterUserView(generics.CreateAPIView):
                     }
 
                 )
-            # Return validation errors
             return api_response(
                 is_success=False,
                 error_message=serializer.errors,
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
-        # Handle unexpected exceptions
         except Exception as e:
             return api_response(
                 is_success=False,
@@ -81,7 +74,6 @@ class RegisterUserView(generics.CreateAPIView):
             )
 
 
-# Verify OTP view
 class VerifyOTPView(APIView):
     permission_classes = [AllowAny]
 
@@ -99,7 +91,6 @@ class VerifyOTPView(APIView):
     
     def post(self, request):
         try:
-            # Validate request body
             serializer = VerifyOTPSerializer(data=request.data)
             if not serializer.is_valid():
                 return api_response(
@@ -132,6 +123,7 @@ class VerifyOTPView(APIView):
                 error_message=str(e),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+        
 # Resend OTP View
 class ResendOTPView(APIView):
     permission_classes = [AllowAny]
@@ -148,20 +140,19 @@ class ResendOTPView(APIView):
     )
     def post(self, request):
         try:
-            email = request.session.get('otp_email')
-            
-            if not email:
+            serializer = ResendOTPSerializer(data=request.data)
+            if not serializer.is_valid():
                 return api_response(
                     is_success=False,
-                    error_message={"error": "Session expired. Please register again."},
+                    error_message=serializer.errors,
                     status_code=status.HTTP_400_BAD_REQUEST,
                 )
             
-            # Resend OTP
+            email = serializer.validated_data['email']
+            
             result, message = resend_otp(email)
 
             if result:
-                # Refresh session expiry
                 request.session['otp_email'] = email
                 request.session.set_expiry(1800)
                 return api_response(
@@ -189,7 +180,6 @@ class LoginUserView(TokenObtainPairView):
     authentication_classes = [JWTAuthentication]
     serializer_class = UserLoginSerializers
 
-    # Swagger documentation for user login
     @swagger_auto_schema(
         operation_description="Login a user and obtain JWT tokens",
         responses={
@@ -203,7 +193,6 @@ class LoginUserView(TokenObtainPairView):
 
     def post(self, request):
         try:
-            # Validate login data
             serializer = self.serializer_class(data=request.data)
             if serializer.is_valid():
                 email = serializer.validated_data['email']
@@ -249,7 +238,6 @@ class LogoutUserView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
-    # Swagger documentation for user logout
     @swagger_auto_schema(
         operation_description="Logout a user by blacklisting the refresh token",
         request_body=UserLogoutSerializers,
@@ -260,7 +248,6 @@ class LogoutUserView(APIView):
         },
         tags=["User"],
     )   
-    # POST method to handle user logout
     def post(self, request):
         try:
             refresh_token = request.data.get("refresh")

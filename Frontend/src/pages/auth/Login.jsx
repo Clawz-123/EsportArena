@@ -26,7 +26,6 @@ const Login = () => {
     <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0e1a] px-4 py-8">
       <div className="w-full max-w-md">
         <div className="bg-[#0f1420] rounded-2xl border border-[#1e293b] p-8 shadow-lg relative">
-          {/* Background glow circles */}
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <div
               aria-hidden
@@ -62,7 +61,7 @@ const Login = () => {
               <Gamepad2 className="w-8 h-8 text-blue-500" />
               <h1 className="text-2xl font-bold">
                 <span className="text-blue-500">Esports</span>{' '}
-                <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Arena</span>
+                <span className="bg-linear-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Arena</span>
               </h1>
             </div>
             <h2 className="text-3xl font-bold text-white mb-2">Welcome Back</h2>

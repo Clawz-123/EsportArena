@@ -109,8 +109,8 @@ const Register = () => {
           </div>
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-2 mb-4">
-              <Gamepad2 className="w-8 h-8 text-blue-500" />
-              <h1 className="text-2xl font-bold text-white">
+              <Gamepad2 className="w-8 h-8 text-[#3A86FF]" />
+              <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-linear-to-r from-[#3A86FF] to-pink-500">
                 Esports Arena
               </h1>
             </div>

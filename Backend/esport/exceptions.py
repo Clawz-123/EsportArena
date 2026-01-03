@@ -13,7 +13,6 @@ def custom_exception_handler(exc, context):
             "Result": None,
         }
 
-        # Flatten error messages if they are in dictionary format
         if isinstance(response.data, dict):
             error_dict = {}
             for key, value in response.data.items():
@@ -22,12 +21,10 @@ def custom_exception_handler(exc, context):
                 else:
                     error_dict[key] = str(value)
 
-            # Correct assignment here
             custom_response["Error_Message"] = error_dict
 
         return Response(custom_response, status=response.status_code)
 
-    # For unhandled exceptions
     return Response(
         {
             "Status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
