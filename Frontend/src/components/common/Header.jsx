@@ -20,7 +20,6 @@ function Navbar() {
             <div className="container mx-auto px-4">
                 <div className="flex h-16 items-center justify-between">
 
-                    {/* Logo */}
                     <Link to="/" className="flex items-center gap-2 text-xl font-bold">
                         <Gamepad2 className="h-7 w-7 text-[#3A86FF]" />
                         <span className="text-transparent bg-clip-text bg-linear-to-r from-[#3A86FF] to-pink-500">
