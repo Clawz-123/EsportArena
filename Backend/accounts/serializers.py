@@ -1,59 +1,76 @@
 from rest_framework import serializers
-from .models import User, Player, Organizer
+from .models import User
+from .otp import create_and_send_otp
 
 
-class UserResponseSerializer(serializers.ModelSerializer):
+# Serializer for User Response
+class UserResponseSerializers(serializers.ModelSerializer):
+    
     class Meta:
         model = User
-        fields = ['id', 'email', 'first_name', 'last_name', 'date_joined']
-        read_only_fields = ['id', 'date_joined']
+        fields = ['id', 'email', 'name', 'is_organizer', 'phone_number', 'role', 'is_verified', 'date_joined']
+        read_only_fields = ['id', 'date_joined', 'role', 'is_verified']
+
+        def get_role(self, obj):
+            return obj.role
 
 
-class UserCreateSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, required=True)
-    # accept full_name from frontend and split if provided
-    full_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
-
+# Serializer for User Creation
+class UserCreateSerializers(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
     class Meta:
         model = User
-        fields = ['email', 'first_name', 'last_name', 'full_name', 'password']
+        fields = ['email', 'name', 'is_organizer', 'phone_number', 'password']
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("A user with this email already exists.")
-        return value
+            raise serializers.ValidationError("Email is already in use.")
+        return value    
 
     def validate_password(self, value):
         if len(value) < 8:
             raise serializers.ValidationError("Password must be at least 8 characters long.")
         return value
-
-    def validate_first_name(self, value):
-        if value is not None and value != "" and len(value) < 2:
-            raise serializers.ValidationError("First_name must be at least 2 characters long.")
+    
+    def validate_name(self, value):
+        if not value.strip():
+            raise serializers.ValidationError("Name cannot be empty.")
         return value
-
-    def validate_last_name(self, value):
-        if value is not None and value != "" and len(value) < 2:
-            raise serializers.ValidationError("Last_name must be at least 2 characters long.")
+    
+    def validate_phone_number(self, value):
+        if value and not value.isdigit():
+            raise serializers.ValidationError("Phone number must contain only digits.")
         return value
-
+    
     def create(self, validated_data):
-        # handle optional full_name
-        full_name = validated_data.pop('full_name', None)
-        if full_name and (not validated_data.get('first_name') and not validated_data.get('last_name')):
-            parts = full_name.strip().split(None, 1)
-            validated_data['first_name'] = parts[0]
-            validated_data['last_name'] = parts[1] if len(parts) > 1 else ''
+        user = User.objects.create_user(
+            email=validated_data['email'],
+            password=validated_data['password'],
+            name=validated_data.get('name', ''),
+            phone_number=validated_data.get('phone_number', ''),
+            is_organizer=validated_data.get('is_organizer', False),
+            is_verified=False
+        )
+        try:
+            create_and_send_otp(user.email)
+        except Exception as e:
+            print(f"Error sending OTP: {e}")
 
-        password = validated_data.pop('password')
-        user = User(**validated_data)
-        user.set_password(password)
-        user.save()
         return user
 
+# Serializer for Verifying OTP
+class VerifyOTPSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+    otp = serializers.CharField(max_length=6, min_length=6, required=True)
 
-class UserLoginSerializer(serializers.Serializer):
+
+# Serializer for Resending OTP 
+class ResendOTPSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+
+
+# Serializer for User Login
+class UserLoginSerializers(serializers.Serializer):
     email = serializers.EmailField(required=True)
     password = serializers.CharField(write_only=True, required=True)
 
@@ -64,121 +81,33 @@ class UserLoginSerializer(serializers.Serializer):
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            raise serializers.ValidationError({"email": "User with this email does not exist."})
-
+            raise serializers.ValidationError("Invalid email or password.")
+        
         if not user.check_password(password):
-            raise serializers.ValidationError({"password": "Incorrect password."})
+            raise serializers.ValidationError("Invalid email or password.")
+
+        if not user.is_verified:
+            raise serializers.ValidationError("Email not verified. Please verify OTP first.")
 
         attrs['user'] = user
         return attrs
 
 
-class PlayerSerializer(serializers.ModelSerializer):
-    user = UserResponseSerializer(read_only=True)
-
-    class Meta:
-        model = Player
-        fields = ['id', 'user', 'display_name', 'phone', 'is_verified', 'created_at']
-        read_only_fields = ['id', 'is_verified', 'created_at']
+# Serializer for User Logout
+class UserLogoutSerializers(serializers.Serializer):
+    refresh = serializers.CharField(required=True)
 
 
-class OrganizerSerializer(serializers.ModelSerializer):
-    user = UserResponseSerializer(read_only=True)
+# Serializer for Resetting Password
+class ResetPasswordSerializer(serializers.Serializer):
+    new_password = serializers.CharField(write_only=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True, min_length=8)
 
-    class Meta:
-        model = Organizer
-        fields = ['id', 'user', 'organization_name', 'phone', 'website', 'created_at']
-        read_only_fields = ['id', 'created_at']
+    def validate(self, attrs):
+        new_password = attrs.get("new_password")
+        confirm_password = attrs.get("confirm_password")
 
+        if new_password != confirm_password:
+            raise serializers.ValidationError("Passwords do not match.")
 
-class PlayerCreateSerializer(serializers.Serializer):
-    # user fields
-    email = serializers.EmailField(required=True)
-    password = serializers.CharField(write_only=True, required=True)
-    first_name = serializers.CharField(required=False, allow_blank=True)
-    last_name = serializers.CharField(required=False, allow_blank=True)
-    full_name = serializers.CharField(required=False, allow_blank=True)
-
-    # player fields
-    display_name = serializers.CharField(required=False, allow_blank=True)
-    phone = serializers.CharField(required=False, allow_blank=True)
-
-    def validate_email(self, value):
-        if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("A user with this email already exists.")
-        return value
-
-    def validate_password(self, value):
-        if len(value) < 8:
-            raise serializers.ValidationError("Password must be at least 8 characters long.")
-        return value
-
-    def create(self, validated_data):
-        # extract user data
-        full_name = validated_data.pop('full_name', None)
-        first_name = validated_data.pop('first_name', '') or ''
-        last_name = validated_data.pop('last_name', '') or ''
-
-        if full_name and not (first_name or last_name):
-            parts = full_name.strip().split(None, 1)
-            first_name = parts[0]
-            last_name = parts[1] if len(parts) > 1 else ''
-
-        password = validated_data.pop('password')
-        email = validated_data.pop('email')
-
-        user = User(email=email, first_name=first_name, last_name=last_name)
-        user.set_password(password)
-        user.save()
-
-        player = Player.objects.create(user=user, display_name=validated_data.get('display_name', ''), phone=validated_data.get('phone', ''))
-        return player
-
-
-class OrganizerCreateSerializer(serializers.Serializer):
-    # user fields
-    email = serializers.EmailField(required=True)
-    password = serializers.CharField(write_only=True, required=True)
-    first_name = serializers.CharField(required=False, allow_blank=True)
-    last_name = serializers.CharField(required=False, allow_blank=True)
-    full_name = serializers.CharField(required=False, allow_blank=True)
-
-    # organizer fields
-    organization_name = serializers.CharField(required=True)
-    phone = serializers.CharField(required=False, allow_blank=True)
-    website = serializers.URLField(required=False, allow_blank=True)
-
-    def validate_email(self, value):
-        if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("A user with this email already exists.")
-        return value
-
-    def validate_password(self, value):
-        if len(value) < 8:
-            raise serializers.ValidationError("Password must be at least 8 characters long.")
-        return value
-
-    def create(self, validated_data):
-        full_name = validated_data.pop('full_name', None)
-        first_name = validated_data.pop('first_name', '') or ''
-        last_name = validated_data.pop('last_name', '') or ''
-
-        if full_name and not (first_name or last_name):
-            parts = full_name.strip().split(None, 1)
-            first_name = parts[0]
-            last_name = parts[1] if len(parts) > 1 else ''
-
-        password = validated_data.pop('password')
-        email = validated_data.pop('email')
-
-        user = User(email=email, first_name=first_name, last_name=last_name)
-        user.set_password(password)
-        user.save()
-
-        organizer = Organizer.objects.create(
-            user=user,
-            organization_name=validated_data.get('organization_name'),
-            phone=validated_data.get('phone', ''),
-            website=validated_data.get('website', '')
-        )
-        return organizer
+        return attrs

@@ -23,5 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 
+# Dependency directories
+node_modules/
+jspm_packages/
+# Environement variables file
 .env
-.env.*.local
