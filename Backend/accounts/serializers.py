@@ -3,7 +3,7 @@ from .models import User
 from .otp import create_and_send_otp
 
 
-# User Response Serializer
+# Serializer for User Response
 class UserResponseSerializers(serializers.ModelSerializer):
     
     class Meta:
@@ -15,7 +15,7 @@ class UserResponseSerializers(serializers.ModelSerializer):
             return obj.role
 
 
-# User Create Serializer
+# Serializer for User Creation
 class UserCreateSerializers(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     class Meta:
@@ -58,15 +58,18 @@ class UserCreateSerializers(serializers.ModelSerializer):
 
         return user
 
+# Serializer for Verifying OTP
 class VerifyOTPSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
     otp = serializers.CharField(max_length=6, min_length=6, required=True)
 
 
+# Serializer for Resending OTP 
 class ResendOTPSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
 
 
+# Serializer for User Login
 class UserLoginSerializers(serializers.Serializer):
     email = serializers.EmailField(required=True)
     password = serializers.CharField(write_only=True, required=True)
@@ -90,5 +93,21 @@ class UserLoginSerializers(serializers.Serializer):
         return attrs
 
 
+# Serializer for User Logout
 class UserLogoutSerializers(serializers.Serializer):
     refresh = serializers.CharField(required=True)
+
+
+# Serializer for Resetting Password
+class ResetPasswordSerializer(serializers.Serializer):
+    new_password = serializers.CharField(write_only=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True, min_length=8)
+
+    def validate(self, attrs):
+        new_password = attrs.get("new_password")
+        confirm_password = attrs.get("confirm_password")
+
+        if new_password != confirm_password:
+            raise serializers.ValidationError("Passwords do not match.")
+
+        return attrs

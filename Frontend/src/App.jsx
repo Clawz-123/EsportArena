@@ -5,6 +5,8 @@ import Home from './pages/public/Home.jsx';
 import Login from './pages/auth/Login.jsx';
 import Register from './pages/auth/Register.jsx';
 import VerifyOtp from './pages/Otp/VerifyOtp.jsx';
+import ResetPassword from './pages/auth/ResetPassword.jsx';
+import ForgotPassword from './pages/auth/ForgotPassword.jsx';
 
 function App() {
   return (
@@ -15,6 +17,8 @@ function App() {
           <Route path='/login' element={<Login />} />
           <Route path='/register' element={<Register />} />
           <Route path='/verify-otp' element={<VerifyOtp />} />
+          <Route path='/reset-password' element={<ResetPassword />} />
+          <Route path='/forgot-password' element={<ForgotPassword />} />
         </Routes>
       </Router>
     </Provider>

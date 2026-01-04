@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 
-
+#  Created custom response function for clean api responses
 def api_response(
     result=None,  
     is_success=True,

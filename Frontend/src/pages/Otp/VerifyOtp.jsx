@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Gamepad2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import { toast } from "react-toastify";
 import { verifyOtp, resendOtp, clearOtpState } from "../../slices/auth";
 
 const VerifyOtp = () => {
@@ -19,117 +20,107 @@ const VerifyOtp = () => {
   } = useSelector((state) => state.auth);
 
   const [registeredData] = useState(() => {
-    const data = JSON.parse(localStorage.getItem("registeredData"));
-    return data || null;
+    const regData = JSON.parse(localStorage.getItem("registeredData"));
+    const forgotData = JSON.parse(localStorage.getItem("forgotPasswordEmail"));
+    return regData || forgotData || null;
   });
-  const [displayError, setDisplayError] = useState("");
-  const [displaySuccess, setDisplaySuccess] = useState("");
+
+  const [isForgotPasswordFlow] = useState(() => {
+    return !!localStorage.getItem("forgotPasswordEmail");
+  });
 
   useEffect(() => {
-    const data = JSON.parse(localStorage.getItem("registeredData"));
+    const regData = JSON.parse(localStorage.getItem("registeredData"));
+    const forgotData = JSON.parse(localStorage.getItem("forgotPasswordEmail"));
+    const data = regData || forgotData;
+
     if (!data || !data.email) {
       navigate("/register");
     }
 
     dispatch(clearOtpState());
-
-    return () => {
-      dispatch(clearOtpState());
-    };
+    return () => dispatch(clearOtpState());
   }, [navigate, dispatch]);
 
   useEffect(() => {
     if (otpSuccess) {
-      setTimeout(() => {
-        setDisplaySuccess("OTP verified successfully! Redirecting to login...");
-        setTimeout(() => {
-          navigate("/login");
-        }, 2000);
-      }, 0);
+      toast.success("OTP verified successfully!");
+      const timer = setTimeout(() => {
+        navigate(isForgotPasswordFlow ? "/reset-password" : "/login");
+      }, 1200);
+      return () => clearTimeout(timer);
     }
+  }, [otpSuccess, navigate, isForgotPasswordFlow]);
 
-    if (otpError) {
-      setTimeout(() => {
-        let errorMessage = "Failed to verify OTP";
-        if (otpError?.error) {
-          errorMessage = otpError.error;
-        } else if (otpError?.detail) {
-          errorMessage = otpError.detail;
-        } else if (otpError?.Error_Message?.error) {
-          errorMessage = otpError.Error_Message.error;
-        } else if (typeof otpError === 'string') {
-          errorMessage = otpError;
-        }
-        setDisplayError(errorMessage);
-      }, 0);
-    }
-  }, [otpSuccess, otpError, navigate]);
+  useEffect(() => {
+    if (!otpError) return;
+
+    let message = "Failed to verify OTP";
+
+    if (otpError?.error) message = otpError.error;
+    else if (otpError?.detail) message = otpError.detail;
+    else if (otpError?.Error_Message?.error)
+      message = otpError.Error_Message.error;
+    else if (typeof otpError === "string") message = otpError;
+
+    toast.error(message);
+  }, [otpError]);
 
   useEffect(() => {
     if (resendSuccess) {
-      setTimeout(() => {
-        setDisplaySuccess("OTP resent successfully!");
-        setTimeout(() => {
-          setDisplaySuccess("");
-          dispatch(clearOtpState());
-        }, 3000);
-      }, 0);
+      toast.success("OTP resent successfully!");
+      dispatch(clearOtpState());
     }
 
-    if (resendError) {
-      setTimeout(() => {
-        let errorMessage = "Failed to resend OTP";
-        if (resendError?.error) {
-          errorMessage = resendError.error;
-        } else if (resendError?.detail) {
-          errorMessage = resendError.detail;
-        } else if (typeof resendError === 'string') {
-          errorMessage = resendError;
-        }
-        setDisplayError(errorMessage);
-      }, 0);
-    }
+    if (!resendError) return;
+
+    let message = "Failed to resend OTP";
+
+    if (resendError?.error) message = resendError.error;
+    else if (resendError?.detail) message = resendError.detail;
+    else if (typeof resendError === "string") message = resendError;
+
+    toast.error(message);
   }, [resendSuccess, resendError, dispatch]);
 
   const handleVerify = (e) => {
     e.preventDefault();
-    setDisplayError("");
-    setDisplaySuccess("");
 
     if (!registeredData?.email) {
-      setDisplayError("No registration email found. Please register again.");
+      toast.error("No registration email found. Please register again.");
       return;
     }
 
     if (otp.length !== 6) {
-      setDisplayError("Please enter a valid 6-digit OTP");
+      toast.error("Please enter a valid 6-digit OTP");
       return;
     }
 
-    dispatch(verifyOtp({
-      email: registeredData.email,
-      otp: otp,
-    }));
+    dispatch(
+      verifyOtp({
+        email: registeredData.email,
+        otp: otp,
+      })
+    );
   };
 
   const handleResend = () => {
-    setDisplayError("");
-    setDisplaySuccess("");
-
     if (!registeredData?.email) {
-      setDisplayError("No registration email found.");
+      toast.error("No registration email found.");
       return;
     }
 
-    dispatch(resendOtp({
-      email: registeredData.email,
-    }));
+    dispatch(
+      resendOtp({
+        email: registeredData.email,
+      })
+    );
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0e1a] px-4 py-8">
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0e1a] px-4 py-8">
       <div className="w-full max-w-md">
-        <div className="bg-[#0f1420] rounded-2xl border border-[#1e293b] p-8 shadow-lg relative overflow-hidden">
+        <div className="bg-[#0f1420] rounded-2xl border border-[#1e293b] p-8 shadow-lg relative">
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <div
               aria-hidden
@@ -158,82 +149,78 @@ const VerifyOtp = () => {
               }}
             />
           </div>
-          <div className="relative text-center mb-8">
-            <div className="flex items-center justify-center gap-2 mb-4">
+
+          <div className="text-center mb-8 relative">
+            <div className="flex items-center justify-center gap-2 mb-3">
               <Gamepad2 className="w-8 h-8 text-blue-500" />
-              <h1 className="text-2xl font-bold text-white">
+              <h1 className="text-2xl font-bold">
                 <span className="text-blue-500">Esports</span>{" "}
-                <span className="bg-clip-text text-transparent bg-linear-to-r from-purple-500 to-pink-500">Arena</span>
+                <span className="bg-linear-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
+                  Arena
+                </span>
               </h1>
             </div>
 
-            <h2 className="text-3xl font-bold text-white mb-2">Verify OTP</h2>
-            <p className="text-gray-400">Enter the 6-digit code sent to your email</p>
+            <h2 className="text-3xl font-bold text-white mb-2">
+              Verify OTP
+            </h2>
+
+            <p className="text-gray-400">
+              Enter the 6-digit code sent to your email
+            </p>
           </div>
-
-          {displaySuccess && (
-            <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-              <p className="text-green-400 text-sm">{displaySuccess}</p>
-            </div>
-          )}
-
-          {displayError && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-              <p className="text-red-400 text-sm">{displayError}</p>
-            </div>
-          )}
-
+          {/* Form */}
           <form onSubmit={handleVerify}>
-            <div className="mb-6">
-              <label className="block text-white mb-2 font-medium">One Time Password (6 digits)</label>
+            <div className="mb-5">
+              <label className="block text-white mb-2 font-medium">
+                One-Time Password
+              </label>
+
               <input
                 type="text"
                 maxLength="6"
-                placeholder="Enter OTP"
                 value={otp}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, '');
-                  setOtp(value);
-                }}
-                className="w-full text-center tracking-[0.4em] text-xl px-4 py-3 rounded-xl bg-[#1a1f2e] border border-[#1e293b] text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onChange={(e) =>
+                  setOtp(e.target.value.replace(/\D/g, ""))
+                }
+                placeholder="Enter 6-digit OTP"
+                className="w-full text-center text-lg tracking-[0.35em] px-4 py-3 rounded-xl bg-[#1a1f2e] border border-[#1e293b] text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <p className="text-gray-400 text-sm mt-2">
-                Enter the 6-digit code sent to your email
+
+              <p className="text-gray-400 text-xs mt-1">
+                Only numbers are allowed
               </p>
             </div>
 
             <button
               type="submit"
               disabled={otpLoading || otp.length !== 6}
-              className="w-full py-3.5 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-semibold transition-colors mb-4 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full bg-blue-500 text-white font-bold py-3 rounded-xl hover:bg-blue-600 transition shadow-[0_0_12px_#3b82f6] disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {otpLoading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Verifying...
-                </span>
-              ) : "Verify OTP"}
+              {otpLoading ? "Verifying..." : "Verify OTP"}
             </button>
 
-            <div className="text-center text-sm text-gray-400 mb-6">
-              <span> Did't get the code, </span>
+            <div className="text-center mt-4 text-sm text-slate-300">
+              Didn't receive code?{" "}
               <button
                 type="button"
                 onClick={handleResend}
                 disabled={resendLoading}
-                className="text-blue-500 hover:underline font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                className="text-blue-400 hover:text-blue-300 font-medium disabled:opacity-50"
               >
                 {resendLoading ? "Resending..." : "Resend OTP"}
               </button>
             </div>
 
-            <div className="mt-6 pt-6 border-t border-[#1e293b]">
-              <p className="text-center text-gray-400 text-sm">
-                <span> Go Back to, </span>
-                <Link to="/register" className="text-blue-500 hover:underline font-medium">
-                  Register
+            <div className="text-center mt-6">
+              <p className="text-slate-400">
+                Go back to{" "}
+                <Link
+                  to="/register"
+                  className="text-blue-500 hover:text-blue-400 font-bold"
+                >
+                  Register Page
                 </Link>
-                <span> Page </span>
               </p>
             </div>
           </form>

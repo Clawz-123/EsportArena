@@ -31,6 +31,7 @@ schema_view = get_schema_view(
     permission_classes=[permissions.AllowAny],
 )
 
+# Joining the urls of accounts app and admin panel
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/accounts/", include("accounts.urls")),

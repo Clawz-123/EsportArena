@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Gamepad2, User, Users } from "lucide-react";
+import { Gamepad2, User, Users, Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Formik, Form, Field, ErrorMessage } from "formik";
+import { toast } from "react-toastify";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { registerUser, clearError } from "../../slices/auth";
 import {
@@ -11,6 +12,7 @@ import {
 
 const Register = () => {
   const [userType, setUserType] = useState("player");
+  const [showPasswords, setShowPasswords] = useState({});
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
@@ -41,6 +43,19 @@ const Register = () => {
       ? playerValidationSchema
       : organizerValidationSchema;
 
+  const formatErrorMessage = (error, fallback = "Registration failed") => {
+    if (!error) return fallback;
+    if (error.error) return error.error;
+    if (error.detail) return error.detail;
+    if (error.Error_Message) {
+      if (typeof error.Error_Message === "string") return error.Error_Message;
+      const values = Object.values(error.Error_Message);
+      if (Array.isArray(values)) return values.flat().join(" ");
+    }
+    if (error.message) return error.message;
+    return typeof error === "string" ? error : fallback;
+  };
+
   const initialValues = {
     ...fieldsToShow.reduce((acc, field) => {
       acc[field.name] = "";
@@ -63,6 +78,7 @@ const Register = () => {
 
       if (registerUser.fulfilled.match(result)) {
         actions.resetForm();
+        toast.success("Account created! Check your email for the OTP");
         navigate("/verify-otp");
       }
     } catch (error) {
@@ -74,11 +90,15 @@ const Register = () => {
     dispatch(clearError());
   }, [dispatch, userType]);
 
+  useEffect(() => {
+    if (!registerError) return;
+    toast.error(formatErrorMessage(registerError));
+  }, [registerError]);
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0a0e1a] px-4 py-8">
       <div className="w-full max-w-md">
         <div className="bg-[#0f1420] rounded-2xl border border-[#1e293b] p-8 shadow-lg">
-            {/* Background glow circles */}
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <div
               aria-hidden
@@ -122,24 +142,15 @@ const Register = () => {
             </p>
           </div>
 
-          {registerError && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-              <p className="text-red-400 text-sm">
-                {typeof registerError === "object"
-                  ? registerError.message || "Registration failed"
-                  : registerError}
-              </p>
-            </div>
-          )}
-
           <div className="mb-6">
             <label className="block text-white mb-3 font-medium">
               I want to be a
             </label>
             <div className="grid grid-cols-2 gap-4">
-              {[{ type: "player", label: "Player", Icon: User }, { type: "organizer", label: "Organizer", Icon: Users }].map(
-                ({ type, label, Icon }) => {
+              {[{ type: "player", label: "Player" }, { type: "organizer", label: "Organizer" }].map(
+                ({ type, label }) => {
                   const selected = userType === type;
+                  const IconComponent = type === "player" ? User : Users;
                   return (
                     <button
                       key={type}
@@ -151,7 +162,7 @@ const Register = () => {
                           : "border-[#1e293b] bg-[#1a1f2e]"
                       }`}
                     >
-                      <Icon className={`w-6 h-6 mb-2 ${selected ? "text-blue-500" : "text-gray-400"}`} />
+                      <IconComponent className={`w-6 h-6 mb-2 ${selected ? "text-blue-500" : "text-gray-400"}`} />
                       <span className={selected ? "text-blue-500" : "text-gray-400"}>
                         {label}
                       </span>
@@ -170,24 +181,59 @@ const Register = () => {
           >
             {({ isSubmitting }) => (
               <Form>
-                {fieldsToShow.map((field) => (
-                  <div className="mb-4" key={field.name}>
-                    <label className="block text-white mb-2 font-medium">
-                      {field.label}
-                    </label>
-                    <Field
-                      name={field.name}
-                      type={field.type}
-                      placeholder={field.placeholder}
-                      className="w-full px-4 py-3 rounded-xl bg-[#1a1f2e] border border-[#1e293b] text-white"
-                    />
-                    <ErrorMessage
-                      name={field.name}
-                      component="p"
-                      className="text-red-500 text-sm mt-1"
-                    />
-                  </div>
-                ))}
+                {fieldsToShow.map((field) => {
+                  const isPassword = field.type === "password";
+                  const inputType = isPassword && showPasswords[field.name] ? "text" : field.type;
+                  if (!isPassword) {
+                    return (
+                      <div className="mb-4" key={field.name}>
+                        <label className="block text-white mb-2 font-medium">
+                          {field.label}
+                        </label>
+                        <Field
+                          name={field.name}
+                          type={field.type}
+                          placeholder={field.placeholder}
+                          className="w-full px-4 py-3 rounded-xl bg-[#1a1f2e] border border-[#1e293b] text-white"
+                        />
+                        <ErrorMessage
+                          name={field.name}
+                          component="p"
+                          className="text-red-500 text-sm mt-1"
+                        />
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="mb-4" key={field.name}>
+                      <label className="block text-white mb-2 font-medium">
+                        {field.label}
+                      </label>
+                      <div className="relative">
+                        <Field
+                          name={field.name}
+                          type={inputType}
+                          placeholder={field.placeholder}
+                          className="w-full px-4 py-3 pr-11 rounded-xl bg-[#1a1f2e] border border-[#1e293b] text-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPasswords((prev) => ({ ...prev, [field.name]: !prev[field.name] }))}
+                          className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-white"
+                          aria-label={showPasswords[field.name] ? "Hide password" : "Show password"}
+                        >
+                          {showPasswords[field.name] ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        </button>
+                      </div>
+                      <ErrorMessage
+                        name={field.name}
+                        component="p"
+                        className="text-red-500 text-sm mt-1"
+                      />
+                    </div>
+                  );
+                })}
 
                 <div className="mb-6">
                   <label className="flex items-start gap-3 cursor-pointer">

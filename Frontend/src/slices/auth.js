@@ -101,6 +101,21 @@ export const logoutUser = createAsyncThunk(
   }
 );
 
+export const resetPassword = createAsyncThunk(
+  "auth/resetPassword",
+  async (passwordData, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.post(
+        "/accounts/reset-password/",
+        passwordData
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
 const getInitialState = () => {
   const storedUser = localStorage.getItem("user");
   const token = localStorage.getItem("access_token");
@@ -120,6 +135,9 @@ const getInitialState = () => {
     resendLoading: false,
     resendError: null,
     resendSuccess: false,
+    resetLoading: false,
+    resetError: null,
+    resetSuccess: false,
   };
 };
 
@@ -138,6 +156,9 @@ const authSlice = createSlice({
       state.resendLoading = false;
       state.resendError = null;
       state.resendSuccess = false;
+      state.resetLoading = false;
+      state.resetError = null;
+      state.resetSuccess = false;
     },
     clearSuccess: (state) => {
       state.success = false;
@@ -217,6 +238,22 @@ const authSlice = createSlice({
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;
+    });
+
+    builder.addCase(resetPassword.pending, (state) => {
+      state.resetLoading = true;
+      state.resetError = null;
+      state.resetSuccess = false;
+    });
+
+    builder.addCase(resetPassword.fulfilled, (state) => {
+      state.resetLoading = false;
+      state.resetSuccess = true;
+    });
+
+    builder.addCase(resetPassword.rejected, (state, action) => {
+      state.resetLoading = false;
+      state.resetError = action.payload;
     });
   },
 });

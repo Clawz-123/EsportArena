@@ -16,7 +16,15 @@ from .permission import IsSuperUser
 from esport.response import api_response
 from .otp import verify_otp, resend_otp
 
-from .serializers import(UserResponseSerializers, UserCreateSerializers, UserLoginSerializers, VerifyOTPSerializer, ResendOTPSerializer, UserLogoutSerializers)
+from .serializers import(
+    UserResponseSerializers,
+    UserCreateSerializers,
+    UserLoginSerializers,
+    VerifyOTPSerializer,
+    ResendOTPSerializer,
+    UserLogoutSerializers,
+    ResetPasswordSerializer,
+)
 
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -24,7 +32,7 @@ from drf_yasg import openapi
 # Create your views here.
 
 
-# User Registration View
+# View for User Registration
 class RegisterUserView(generics.CreateAPIView):
     serializer_class = UserCreateSerializers
     permission_classes = [AllowAny]
@@ -46,6 +54,7 @@ class RegisterUserView(generics.CreateAPIView):
         tags=["User"],
     )
 
+# Created post method for user registration
     def post(self, request):
         try:
             serializer = self.serializer_class(data=request.data)
@@ -74,6 +83,7 @@ class RegisterUserView(generics.CreateAPIView):
             )
 
 
+# View for Verifying OTP
 class VerifyOTPView(APIView):
     permission_classes = [AllowAny]
 
@@ -88,7 +98,8 @@ class VerifyOTPView(APIView):
         },
         tags=["OTP"],
     )
-    
+
+# Created post method for verifying OTP
     def post(self, request):
         try:
             serializer = VerifyOTPSerializer(data=request.data)
@@ -105,10 +116,12 @@ class VerifyOTPView(APIView):
             is_valid, message = verify_otp(email, otp)
 
             if is_valid:
+                request.session["reset_email"] = email
+                request.session.set_expiry(600)
                 return api_response(
                     is_success=True,
                     status_code=status.HTTP_200_OK,
-                    result={"message": "OTP verified successfully. You can now log in."}
+                    result={"message": "OTP verified successfully. You can now reset your password."}
                 )
             else:
                 return api_response(
@@ -123,8 +136,71 @@ class VerifyOTPView(APIView):
                 error_message=str(e),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+# View for Resetting Password
+class ResetPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    @swagger_auto_schema(
+        operation_description="Reset user password after OTP verification",
+        request_body=ResetPasswordSerializer,
+        responses={
+            200: openapi.Response(description="Password reset successful"),
+            400: openapi.Response(description="Bad Request"),
+            404: openapi.Response(description="User not found"),
+            500: openapi.Response(description="Internal Server Error"),
+        },
+        tags=["User"],
+    )
+
+#  Created post method for resetting password
+    def post(self, request):
+        try:
+            serializer = ResetPasswordSerializer(data=request.data)
+            if not serializer.is_valid():
+                return api_response(
+                    is_success=False,
+                    error_message=serializer.errors,
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+
+            email = request.session.get("reset_email") or request.data.get("email")
+            if not email:
+                return api_response(
+                    is_success=False,
+                    error_message="OTP verification required before resetting password.",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                return api_response(
+                    is_success=False,
+                    error_message="User not found.",
+                    status_code=status.HTTP_404_NOT_FOUND,
+                )
+
+            user.set_password(serializer.validated_data["new_password"])
+            user.save()
+
+            if "reset_email" in request.session:
+                del request.session["reset_email"]
+
+            return api_response(
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+                result={"message": "Password reset successfully."},
+            )
+        except Exception as e:
+            return api_response(
+                is_success=False,
+                error_message=str(e),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
         
-# Resend OTP View
+# View for Resending OTP
 class ResendOTPView(APIView):
     permission_classes = [AllowAny]
 
@@ -138,6 +214,7 @@ class ResendOTPView(APIView):
             },
         tags=["OTP"]
     )
+# Created post method for resending OTP
     def post(self, request):
         try:
             serializer = ResendOTPSerializer(data=request.data)
@@ -173,8 +250,7 @@ class ResendOTPView(APIView):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-
-# User Login View
+# View for User Login
 class LoginUserView(TokenObtainPairView):
     permission_classes = [AllowAny]
     authentication_classes = [JWTAuthentication]
@@ -191,6 +267,7 @@ class LoginUserView(TokenObtainPairView):
         tags=["User"],
     )
 
+# Created post method for user login
     def post(self, request):
         try:
             serializer = self.serializer_class(data=request.data)
@@ -233,7 +310,7 @@ class LoginUserView(TokenObtainPairView):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-# User Logout View
+# View for User Logout
 class LogoutUserView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -248,6 +325,8 @@ class LogoutUserView(APIView):
         },
         tags=["User"],
     )   
+
+# Created post method for user logout
     def post(self, request):
         try:
             refresh_token = request.data.get("refresh")
@@ -273,7 +352,7 @@ class LogoutUserView(APIView):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
     
-# Get All Users View
+# View for Getting all Users
 class GetUserView(generics.ListAPIView):
     """
     Get all registered users
@@ -294,6 +373,7 @@ class GetUserView(generics.ListAPIView):
         },
         tags=["User"],
     )
+# Created get method for getting all users by authenticated superuser
     def get(self, request, *args, **kwargs):
         try:
             users = self.get_queryset()
@@ -313,7 +393,7 @@ class GetUserView(generics.ListAPIView):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
         
-# Get User Detail View
+# View for Getting User Details
 class UserDetailView(generics.RetrieveAPIView):
     """
     Get details of a specific user by ID
@@ -321,7 +401,7 @@ class UserDetailView(generics.RetrieveAPIView):
     queryset = User.objects.all()
     serializer_class = UserResponseSerializers
     authentication_classes = [JWTAuthentication]
-    permission_classes = [AllowAny]
+    permission_classes = [IsSuperUser]
 
     @swagger_auto_schema(
         operation_description="Get details of a specific user by ID",
@@ -335,6 +415,8 @@ class UserDetailView(generics.RetrieveAPIView):
         },
         tags=["User"],
     )
+
+# Created get method for getting user details by ID by authenticated superuser
     def get(self, request, *args, **kwargs):
         try:
             user = self.get_object()

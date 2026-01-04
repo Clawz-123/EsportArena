@@ -66,9 +66,6 @@ def verify_otp(email, otp_input, expiry_minutes=3):
 def resend_otp(email):
     try:
         user = User.objects.get(email=email)
-        if user.is_verified:
-            return False, "Email already verified."
-
         create_and_send_otp(email)
         return True, "OTP resent successfully."
 
