@@ -1,200 +1,230 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
-import Navbar from '../../components/common/Header'
-import Footer from '../../components/common/Footer'
-import { Trophy, Users, Zap, Shield, Brain, Users2, Bell } from 'lucide-react'
+import React from "react";
+import { Link } from "react-router-dom";
+import Navbar from "../../components/common/Header";
+import Footer from "../../components/common/Footer";
+import { Trophy, Users, Zap, Shield, Users2, Bell } from "lucide-react";
+import background from "../../assets/Homeimage.jpg";
 
 const Home = () => {
   const stats = [
-    { icon: Trophy, label: 'Tournaments', value: '500+', color: 'text-[#3A86FF]' },
-    { icon: Users, label: 'Players', value: '10K+', color: 'text-pink-500' },
-    { icon: Zap, label: 'Prize Distributed', value: '₹5M+', color: 'text-yellow-400' }
-  ]
+    { icon: Trophy, label: "Tournaments", value: "500+" },
+    { icon: Users, label: "Players", value: "10K+" },
+    { icon: Zap, label: "Prize Distributed", value: "₹5M+" }
+  ];
 
   const features = [
-    { icon: Zap, title: 'Automated Brackets', description: 'Generate tournament brackets automatically with intelligent seeding', color: 'text-[#3A86FF]' },
-    { icon: Shield, title: 'Secure Payments', description: 'Process entry fees and payouts with bank-grade security', color: 'text-green-400' },
-    { icon: Trophy, title: 'Result Verification', description: 'Screenshot-based verification system with instant moderation workflow', color: 'text-yellow-400' },
-    { icon: Users2, title: 'Role-Based Access', description: 'Give teams, players, and admins with granular permission controls', color: 'text-purple-400' },
-    { icon: Brain, title: 'AI Toxicity Filter', description: 'Keep your community safe with automated content moderation', color: 'text-cyan-400' },
-    { icon: Users, title: 'Community Forums', description: 'Connect with players, share strategies, and build your network', color: 'text-pink-500' },
-    { icon: Bell, title: 'Real-Time Alerts', description: 'Get instant notifications for matches, results, and updates', color: 'text-orange-400', span: true }
-  ]
+    {
+      icon: Zap,
+      title: "Automated Brackets",
+      description:
+        "Generate tournament brackets automatically with support for standard formats."
+    },
+    {
+      icon: Shield,
+      title: "Secure Payments",
+      description:
+        "Integrated and transparent payment processing for fees and prize distribution."
+    },
+    {
+      icon: Trophy,
+      title: "Result Verification",
+      description:
+        "Match results require confirmation to ensure fairness and accuracy."
+    },
+    {
+      icon: Users2,
+      title: "Role-Based Access",
+      description:
+        "Separate dashboards for admins, organizers, and players."
+    },
+    {
+      icon: Bell,
+      title: "Real-Time Notifications",
+      description:
+        "Receive updates for schedules, matches, and announcements."
+    },
+    {
+      icon: Users,
+      title: "Player Community",
+      description:
+        "Connect with participants and collaborate across tournaments."
+    }
+  ];
 
   const steps = [
-    { number: '1', title: 'Create Account', description: 'Sign up in seconds with email or social login' },
-    { number: '2', title: 'Browse & Join', description: 'Find tournaments that match your skill level' },
-    { number: '3', title: 'Compete & Submit', description: 'Play your matches and upload results' },
-    { number: '4', title: 'Win & Withdraw', description: 'Claim your prizes instantly to your account' }
-  ]
-
-  const glowEffects = [
-    { top: '0%', left: '50%', width: '1000px', height: '1000px', color: 'rgba(58, 134, 255, 0.15)' },
-    { top: '20%', left: '20%', width: '600px', height: '600px', color: 'rgba(58, 134, 255, 0.08)' },
-    { top: '10%', right: '20%', width: '600px', height: '600px', color: 'rgba(217, 70, 239, 0.08)' }
-  ]
+    {
+      number: "01",
+      title: "Create Account",
+      description: "Register and complete your player profile."
+    },
+    {
+      number: "02",
+      title: "Browse & Join",
+      description: "View available tournaments and register."
+    },
+    {
+      number: "03",
+      title: "Compete",
+      description: "Participate in scheduled matches."
+    },
+    {
+      number: "04",
+      title: "Track & Withdraw",
+      description: "View results and withdraw prize earnings."
+    }
+  ];
 
   return (
-    <div className="bg-[#0a0e1a] text-white min-h-screen relative overflow-hidden">
-      {glowEffects.map((glow, idx) => (
-        <div
-          key={idx}
-          aria-hidden
-          className="absolute pointer-events-none"
-          style={{
-            top: glow.top,
-            left: glow.left,
-            right: glow.right,
-            transform: glow.left === '50%' ? 'translate(-50%, -50%)' : undefined,
-            width: glow.width,
-            height: glow.height,
-            borderRadius: '50%',
-            background: `radial-gradient(circle, ${glow.color} 0%, rgba(10, 14, 26, 0) 70%)`,
-            filter: 'blur(80px)',
-            zIndex: 0
-          }}
-        />
-      ))}
-
+    <div className="bg-[#0a0e1a] text-white min-h-screen">
 
       <Navbar />
-      <section className="pt-32 pb-20 px-4 relative z-10">
-        <div className="container mx-auto text-center">
-          <div className="inline-block mb-6">
-            <span className="bg-[#1e293b] text-blue-400 text-xs font-semibold px-4 py-1.5 rounded-full border border-slate-700">
-              Nepal's #1 Esports Platform
-            </span>
-          </div>
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-            Organize & Play <br />
-            <span className="text-[#3A86FF] drop-shadow-[0_0_15px_rgba(58,134,255,0.3)]">Tournaments</span> Easily
+
+      {/* HERO SECTION */}
+      <section
+        className="pt-28 pb-20 px-4 bg-[#020617]"
+        style={{
+          backgroundImage: `linear-gradient(rgba(2,6,23,.92), rgba(2,6,23,.92)), url(${background})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center"
+        }}
+      >
+        <div className="container mx-auto text-center max-w-3xl">
+
+          <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-4">
+            Esports Tournament Management Platform
           </h1>
-          <p className="text-slate-400 text-lg mb-10 max-w-2xl mx-auto">
-            Create, manage, and compete in esports tournaments with automated brackets, secure payments, and real-time updates. Join Nepal's fastest-growing gaming community today.
+
+          <p className="text-slate-400 text-base md:text-lg mb-8">
+            A structured and reliable platform for organizing and participating
+            in esports tournaments with automated brackets, verified results,
+            and role-based system workflows.
           </p>
-          <div className="flex flex-col md:flex-row gap-4 justify-center">
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               to="/register"
-              className="bg-linear-to-r from-[#3A86FF] to-pink-500 hover:opacity-90 text-white px-8 py-3 rounded-xl font-bold transition shadow-[0_0_15px_rgba(58,134,255,0.5)]"
+              className="bg-blue-600 hover:bg-blue-700 px-6 py-2.5 rounded-md font-semibold"
             >
-              Get Started Free →
+              Get Started
             </Link>
+
             <Link
               to="/tournaments"
-              className="border border-slate-700 hover:border-[#3A86FF] bg-[#0f1420] text-slate-300 hover:text-white px-8 py-3 rounded-xl font-bold transition"
+              className="border border-slate-600 hover:border-blue-500 px-6 py-2.5 rounded-md font-semibold"
             >
-              Browse Tournaments
+              View Tournaments
             </Link>
           </div>
         </div>
       </section>
 
-      <section className="py-16 px-4 relative z-10">
-        <div className="container mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {stats.map((stat, idx) => {
-              const Icon = stat.icon
-              return (
-                <div key={idx} className="border border-slate-700 bg-[#0f1420] rounded-xl p-8 text-center hover:border-[#3A86FF] hover:bg-[#151c2e] transition">
-                  <Icon className={`h-12 w-12 ${stat.color} mx-auto mb-4`} />
-                  <p className="text-4xl font-bold mb-2">{stat.value}</p>
-                  <p className="text-slate-400">{stat.label}</p>
-                </div>
-              )
-            })}
-          </div>
+      {/* STATS */}
+      <section className="py-16 px-4 bg-[#0f172a]">
+        <div className="container mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl">
+          {stats.map((s, i) => {
+            const Icon = s.icon;
+            return (
+              <div
+                key={i}
+                className="bg-[#020617] border border-slate-700 rounded-lg p-6 text-center"
+              >
+                <Icon className="h-8 w-8 mx-auto mb-2 text-slate-200" />
+                <p className="text-3xl font-bold">{s.value}</p>
+                <p className="text-slate-400 text-sm">{s.label}</p>
+              </div>
+            );
+          })}
         </div>
       </section>
 
-      <section className="py-20 px-4 relative z-10">
-        <div className="container mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold text-center mb-4">
-            Everything You Need to <span className="text-[#3A86FF]">Dominate</span>
+      {/* FEATURES */}
+      <section className="py-16 px-4 bg-[#020617]">
+        <div className="container mx-auto max-w-6xl">
+
+          <h2 className="text-2xl md:text-3xl font-bold text-center mb-2">
+            Platform Features
           </h2>
-          <p className="text-slate-400 text-center mb-16 max-w-2xl mx-auto">
-            Powerful features designed for competitive gaming excellence
+
+          <p className="text-slate-400 text-center mb-10">
+            Designed to support fair and organized tournament management
           </p>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature, idx) => {
-              const Icon = feature.icon
+            {features.map((f, i) => {
+              const Icon = f.icon;
               return (
                 <div
-                  key={idx}
-                  className={`border border-slate-700 bg-[#0f1420] rounded-xl p-6 hover:border-[#3A86FF] hover:bg-[#151c2e] transition ${feature.span ? 'lg:col-span-2 md:col-span-1' : ''}`}
+                  key={i}
+                  className="bg-[#0f172a] border border-slate-700 p-6 rounded-lg"
                 >
-                  <Icon className={`h-8 w-8 ${feature.color} mb-4`} />
-                  <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
-                  <p className="text-slate-400">{feature.description}</p>
+                  <Icon className="h-7 w-7 mb-3 text-slate-200" />
+                  <h3 className="font-semibold mb-1">{f.title}</h3>
+                  <p className="text-slate-400 text-sm">{f.description}</p>
                 </div>
-              )
+              );
             })}
           </div>
         </div>
       </section>
 
-      <section className="py-20 px-4 relative z-10">
-        <div className="container mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold text-center mb-16">
+      {/* HOW IT WORKS */}
+      <section className="py-16 px-4 bg-[#0f172a]">
+        <div className="container mx-auto max-w-6xl">
+
+          <h2 className="text-2xl md:text-3xl font-bold text-center mb-10">
             How It Works
           </h2>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {steps.map((step, idx) => (
-              <div key={idx} className="border border-slate-700 bg-[#0f1420] rounded-xl p-8 text-center hover:border-[#3A86FF] hover:bg-[#151c2e] transition">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-linear-to-r from-[#3A86FF] to-pink-500 font-bold text-lg mb-4 shadow-[0_0_15px_rgba(58,134,255,0.4)]">
-                  {step.number}
-                </div>
-                <h3 className="text-lg font-bold mb-3">{step.title}</h3>
-                <p className="text-slate-400 text-sm">{step.description}</p>
+            {steps.map((s, i) => (
+              <div
+                key={i}
+                className="bg-[#020617] border border-slate-700 p-6 rounded-lg"
+              >
+                <p className="text-blue-400 text-xs font-semibold mb-2">
+                  {s.number}
+                </p>
+                <h3 className="font-semibold mb-2">{s.title}</h3>
+                <p className="text-slate-400 text-sm">{s.description}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="py-20 px-4 relative z-10">
-        <div className="container mx-auto">
-          <div className="bg-linear-to-b from-[#1a1f3a] to-[#0f1420] border border-slate-700 rounded-2xl p-12 md:p-16 text-center relative overflow-hidden">
-            <div
-              aria-hidden
-              className="absolute pointer-events-none"
-              style={{
-                bottom: '-20%',
-                right: '-10%',
-                width: '400px',
-                height: '400px',
-                borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(58, 134, 255, 0.15) 0%, rgba(10, 14, 26, 0) 70%)',
-                filter: 'blur(60px)',
-                zIndex: 0
-              }}
-            />
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 relative z-10 text-white">
-              Ready to <span className="text-[#3A86FF]">Level Up</span>Your Game?
-            </h2>
-            <p className="text-base md:text-lg mb-10 text-slate-300 max-w-2xl mx-auto relative z-10">
-              Join thousands of gamers who trust Esports Arena for competitive gaming. Start your journey today and become part of Nepal's premier esports community.
-            </p>
-            <div className="flex flex-col md:flex-row gap-4 justify-center relative z-10">
-              <Link
-                to="/register"
-                className="bg-linear-to-r from-[#3A86FF] to-pink-500 hover:opacity-90 text-white px-8 py-3 rounded-lg font-bold transition shadow-[0_0_15px_rgba(58,134,255,0.5)]"
-              >
-                Create Free Account
-              </Link>
-              <Link
-                to="/login"
-                className="border border-slate-600 hover:border-[#3A86FF] text-slate-300 hover:text-white px-8 py-3 rounded-lg font-bold transition"
-              >
-                I Already Have an Account
-              </Link>
-            </div>
+      {/* CTA */}
+      <section className="py-16 px-4 bg-[#020617]">
+        <div className="container mx-auto text-center max-w-2xl">
+
+          <h2 className="text-2xl md:text-3xl font-bold mb-3">
+            Ready to Get Started?
+          </h2>
+
+          <p className="text-slate-400 mb-8">
+            Create your account and begin organizing or participating in tournaments.
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link
+              to="/register"
+              className="bg-blue-600 hover:bg-blue-700 px-6 py-2.5 rounded-md font-semibold"
+            >
+              Create Account
+            </Link>
+
+            <Link
+              to="/login"
+              className="border border-slate-600 hover:border-blue-500 px-6 py-2.5 rounded-md font-semibold"
+            >
+              Sign In
+            </Link>
           </div>
         </div>
       </section>
 
       <Footer />
     </div>
-  )
-}
+  );
+};
 
-export default Home
+export default Home;

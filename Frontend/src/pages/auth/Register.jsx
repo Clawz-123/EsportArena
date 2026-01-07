@@ -22,18 +22,18 @@ const Register = () => {
 
   const playerFields = [
     { name: "fullName", label: "Full Name", type: "text", placeholder: "Enter your full name" },
-    { name: "email", label: "Email", type: "email", placeholder: "Enter your email" },
-    { name: "phone", label: "Phone Number", type: "tel", placeholder: "Enter your phone number" },
-    { name: "password", label: "Password", type: "password", placeholder: "Create a password" },
-    { name: "confirmPassword", label: "Confirm Password", type: "password", placeholder: "Confirm your password" },
+    { name: "email", label: "Email", type: "email", placeholder: "your.email@example.com" },
+    { name: "phone", label: "Phone Number", type: "tel", placeholder: "+977 98XXXXXXXX" },
+    { name: "password", label: "Password", type: "password", placeholder: "Create a strong password" },
+    { name: "confirmPassword", label: "Confirm Password", type: "password", placeholder: "Re-enter your password" },
   ];
 
   const organizerFields = [
     { name: "orgName", label: "Organizer Name", type: "text", placeholder: "Enter organizer name" },
-    { name: "email", label: "Email", type: "email", placeholder: "Enter your email" },
-    { name: "phone", label: "Phone Number", type: "tel", placeholder: "Enter your phone number" },
-    { name: "password", label: "Password", type: "password", placeholder: "Create a password" },
-    { name: "confirmPassword", label: "Confirm Password", type: "password", placeholder: "Confirm your password" },
+    { name: "email", label: "Email", type: "email", placeholder: "your.email@example.com" },
+    { name: "phone", label: "Phone Number", type: "tel", placeholder: "+977 98XXXXXXXX" },
+    { name: "password", label: "Password", type: "password", placeholder: "Create a strong password" },
+    { name: "confirmPassword", label: "Confirm Password", type: "password", placeholder: "Re-enter your password" },
   ];
 
   const fieldsToShow = userType === "player" ? playerFields : organizerFields;
@@ -96,81 +96,45 @@ const Register = () => {
   }, [registerError]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0e1a] px-4 py-8">
-      <div className="w-full max-w-md">
-        <div className="bg-[#0f1420] rounded-2xl border border-[#1e293b] p-8 shadow-lg">
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <div
-              aria-hidden
-              className="absolute"
-              style={{
-                width: 420,
-                height: 420,
-                borderRadius: '50%',
-                background: '#3A86FF',
-                opacity: 0.10,
-                filter: 'blur(80px)',
-                transform: 'translateX(-80px)'
-              }}
-            />
-            <div
-              aria-hidden
-              className="absolute"
-              style={{
-                width: 520,
-                height: 520,
-                borderRadius: '50%',
-                background: '#D946EF',
-                opacity: 0.08,
-                filter: 'blur(80px)',
-                transform: 'translateX(80px)'
-              }}
-            />
-          </div>
+    <div className="min-h-screen flex items-center justify-center bg-[#0F172A] relative overflow-hidden font-sans">
+      <div className="w-full max-w-md p-6 relative z-10">
+        <div className="bg-[#151b2b]/80 backdrop-blur-xl rounded-3xl border border-white/10 p-8 shadow-xl">
           <div className="text-center mb-8">
-            <div className="flex items-center justify-center gap-2 mb-4">
+            <div className="flex items-center justify-center gap-3 mb-2">
               <Gamepad2 className="w-8 h-8 text-[#3A86FF]" />
-              <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-linear-to-r from-[#3A86FF] to-pink-500">
+              <h1 className="text-2xl font-bold bg-linear-to-r from-[#3A86FF] to-[#ff0080] bg-clip-text text-transparent">
                 Esports Arena
               </h1>
             </div>
-            <h2 className="text-3xl font-bold text-white mb-2">
+            <h2 className="text-2xl font-bold text-white mb-2">
               Create Your Account
             </h2>
-            <p className="text-gray-400">
+            <p className="text-gray-400 text-sm">
               Join the gaming revolution in Nepal
             </p>
           </div>
 
-          <div className="mb-6">
-            <label className="block text-white mb-3 font-medium">
-              I want to be a
-            </label>
-            <div className="grid grid-cols-2 gap-4">
-              {[{ type: "player", label: "Player" }, { type: "organizer", label: "Organizer" }].map(
-                ({ type, label }) => {
-                  const selected = userType === type;
-                  const IconComponent = type === "player" ? User : Users;
-                  return (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => setUserType(type)}
-                      className={`flex flex-col items-center p-4 rounded-xl border-2 ${
-                        selected
-                          ? "border-blue-500 bg-blue-500/10"
-                          : "border-[#1e293b] bg-[#1a1f2e]"
+          <div className="mb-6 grid grid-cols-2 gap-4">
+            {[{ type: "player", label: "Player" }, { type: "organizer", label: "Organizer" }].map(
+              ({ type, label }) => {
+                const selected = userType === type;
+                const IconComponent = type === "player" ? User : Users;
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setUserType(type)}
+                    className={`flex flex-col items-center justify-center py-3 rounded-xl border transition-all duration-300 ${selected
+                        ? "border-[#3A86FF] bg-[#3A86FF]/10 text-white"
+                        : "border-[#2a303c] bg-[#1a1f2e] text-gray-400 hover:border-gray-500"
                       }`}
-                    >
-                      <IconComponent className={`w-6 h-6 mb-2 ${selected ? "text-blue-500" : "text-gray-400"}`} />
-                      <span className={selected ? "text-blue-500" : "text-gray-400"}>
-                        {label}
-                      </span>
-                    </button>
-                  );
-                }
-              )}
-            </div>
+                  >
+                    <IconComponent className={`w-5 h-5 mb-1 ${selected ? "text-[#3A86FF]" : "text-gray-400"}`} />
+                    <span className="text-sm font-medium">{label}</span>
+                  </button>
+                );
+              }
+            )}
           </div>
 
           <Formik
@@ -180,34 +144,14 @@ const Register = () => {
             enableReinitialize
           >
             {({ isSubmitting }) => (
-              <Form>
+              <Form className="space-y-4">
                 {fieldsToShow.map((field) => {
                   const isPassword = field.type === "password";
                   const inputType = isPassword && showPasswords[field.name] ? "text" : field.type;
-                  if (!isPassword) {
-                    return (
-                      <div className="mb-4" key={field.name}>
-                        <label className="block text-white mb-2 font-medium">
-                          {field.label}
-                        </label>
-                        <Field
-                          name={field.name}
-                          type={field.type}
-                          placeholder={field.placeholder}
-                          className="w-full px-4 py-3 rounded-xl bg-[#1a1f2e] border border-[#1e293b] text-white"
-                        />
-                        <ErrorMessage
-                          name={field.name}
-                          component="p"
-                          className="text-red-500 text-sm mt-1"
-                        />
-                      </div>
-                    );
-                  }
 
                   return (
-                    <div className="mb-4" key={field.name}>
-                      <label className="block text-white mb-2 font-medium">
+                    <div key={field.name}>
+                      <label className="block text-gray-300 text-xs font-medium mb-1.5 ml-1">
                         {field.label}
                       </label>
                       <div className="relative">
@@ -215,61 +159,73 @@ const Register = () => {
                           name={field.name}
                           type={inputType}
                           placeholder={field.placeholder}
-                          className="w-full px-4 py-3 pr-11 rounded-xl bg-[#1a1f2e] border border-[#1e293b] text-white"
+                          className="w-full px-4 py-3 rounded-xl bg-[#1e2532] border border-[#2a303c] text-white placeholder-gray-500 focus:outline-none focus:border-[#3A86FF] focus:ring-1 focus:ring-[#3A86FF] transition-all text-sm"
                         />
-                        <button
-                          type="button"
-                          onClick={() => setShowPasswords((prev) => ({ ...prev, [field.name]: !prev[field.name] }))}
-                          className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-white"
-                          aria-label={showPasswords[field.name] ? "Hide password" : "Show password"}
-                        >
-                          {showPasswords[field.name] ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                        </button>
+                        {isPassword && (
+                          <button
+                            type="button"
+                            onClick={() => setShowPasswords((prev) => ({ ...prev, [field.name]: !prev[field.name] }))}
+                            className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-white transition-colors"
+                          >
+                            {showPasswords[field.name] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        )}
                       </div>
                       <ErrorMessage
                         name={field.name}
                         component="p"
-                        className="text-red-500 text-sm mt-1"
+                        className="text-red-400 text-xs mt-1 ml-1"
                       />
                     </div>
                   );
                 })}
 
-                <div className="mb-6">
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <Field type="checkbox" name="terms" className="mt-1" />
-                    <span className="text-gray-400 text-sm">
-                      I agree to the{" "}
-                      <Link to="/terms" className="text-blue-500">
+                <div className="pt-2">
+                  <label className="flex items-start gap-3 cursor-pointer group">
+                    <div className="relative flex items-center">
+                      <Field
+                        type="checkbox"
+                        name="terms"
+                        className="peer h-4 w-4 cursor-pointer appearance-none rounded border border-gray-600 bg-[#1e2532] transition-all checked:border-[#3A86FF] checked:bg-[#3A86FF]"
+                      />
+                      <svg className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 peer-checked:opacity-100 w-3 h-3 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                    </div>
+                    <span className="text-gray-400 text-xs leading-5">
+                      I agree to{" "}
+                      <Link to="/terms" className="text-[#3A86FF] hover:underline">
                         Terms of Service
                       </Link>{" "}
                       and{" "}
-                      <Link to="/privacy" className="text-blue-500">
-                        Privacy Policy
+                      <Link to="/privacy" className="text-[#3A86FF] hover:underline">
+                        Private Policy
                       </Link>
                     </span>
                   </label>
                   <ErrorMessage
                     name="terms"
                     component="p"
-                    className="text-red-500 text-sm mt-1 ml-6"
+                    className="text-red-400 text-xs mt-1 ml-1"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={registerLoading || isSubmitting}
-                  className="w-full py-3 rounded-xl bg-blue-500 text-white font-semibold disabled:opacity-60"
+                  className="w-full py-3.5 mt-2 rounded-xl bg-[#3A86FF] hover:bg-blue-600 text-white text-sm font-semibold transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {registerLoading ? "Creating Account..." : "Create Account"}
                 </button>
 
-                <p className="text-center text-gray-400 text-sm mt-4">
-                  Already have an account?{" "}
-                  <Link to="/login" className="text-blue-500">
-                    Login
-                  </Link>
-                </p>
+                <div className="text-center mt-6">
+                  <p className="text-gray-400 text-sm">
+                    Already have an account?{" "}
+                    <Link to="/login" className="text-[#3A86FF] hover:text-blue-400 font-medium transition-colors">
+                      Login
+                    </Link>
+                  </p>
+                </div>
               </Form>
             )}
           </Formik>

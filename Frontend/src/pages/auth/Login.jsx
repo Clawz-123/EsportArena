@@ -26,38 +26,9 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false)
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0e1a] px-4 py-8">
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#0F172A] px-4 py-8">
       <div className="w-full max-w-md">
-        <div className="bg-[#0f1420] rounded-2xl border border-[#1e293b] p-8 shadow-lg relative">
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <div
-              aria-hidden
-              className="absolute"
-              style={{
-                width: 420,
-                height: 420,
-                borderRadius: '50%',
-                background: '#3A86FF',
-                opacity: 0.10,
-                filter: 'blur(80px)',
-                transform: 'translateX(-80px)'
-              }}
-            />
-            <div
-              aria-hidden
-              className="absolute"
-              style={{
-                width: 520,
-                height: 520,
-                borderRadius: '50%',
-                background: '#D946EF',
-                opacity: 0.08,
-                filter: 'blur(80px)',
-                transform: 'translateX(80px)'
-              }}
-            />
-          </div>
-          
+        <div className="bg-[#151b2b]/80 rounded-2xl border border-[#1e293b] p-8 shadow-lg relative">
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-2 mb-4">
               <Gamepad2 className="w-8 h-8 text-blue-500" />
@@ -76,7 +47,7 @@ const Login = () => {
               const inputType = isPassword && showPassword ? 'text' : field.type
               return (
                 <div className="mb-4" key={field.id}>
-                  <label htmlFor={field.id} className="block text-white mb-2 font-medium">{field.label}</label>
+                  <label htmlFor={field.id} className="block text-white mb-2 font-light">{field.label}</label>
                   <div className="relative">
                     <input
                       id={field.id}
@@ -112,12 +83,12 @@ const Login = () => {
               <Link to="/forgot-password" className="text-blue-500 hover:text-blue-400">Forgot password?</Link>
             </div>
 
-            <button type="submit" className="w-full bg-blue-500 text-white font-bold py-3 rounded-xl hover:bg-blue-600 transition shadow-[0_0_12px_#3b82f6]">
+            <button type="submit" className="w-full bg-blue-500 text-white font-bold py-3 rounded-xl hover:bg-blue-600 transition ">
               Sign In
             </button>
 
             <div className="text-center mt-6">
-              <p className="text-slate-400">Don't have an account? <Link to="/register" className="text-blue-500 hover:text-blue-400 font-bold">Sign up here</Link></p>
+              <p className="text-slate-400">Don't have an account? <Link to="/register" className="text-blue-500 hover:text-blue-400 font-medium">Sign up here</Link></p>
             </div>
           </form>
         </div>

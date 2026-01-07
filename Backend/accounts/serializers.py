@@ -3,6 +3,7 @@ from .models import User
 from .otp import create_and_send_otp
 
 
+
 # Serializer for User Response
 class UserResponseSerializers(serializers.ModelSerializer):
     
