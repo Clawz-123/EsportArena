@@ -4,9 +4,13 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useFormik } from 'formik'
 import { loginValidationSchema } from '../utils/loginvalidation'
 import { toast } from 'react-toastify'
+import { useDispatch, useSelector } from 'react-redux'
+import { loginUser } from '../../slices/auth'
 
 const Login = () => {
   const navigate = useNavigate()
+  const dispatch = useDispatch()
+  const { loading } = useSelector((state) => state.auth)
 
   const loginFields = [
     { id: 'email', label: 'Email', type: 'email', placeholder: 'Enter your email' },
@@ -16,10 +20,30 @@ const Login = () => {
   const formik = useFormik({
     initialValues: loginFields.reduce((acc, field) => ({ ...acc, [field.id]: '' }), { remember: false }),
     validationSchema: loginValidationSchema,
-    onSubmit: (values) => {
-      console.log('Login submitted:', values)
-      toast.success('Signed in successfully')
-      navigate('/') 
+    onSubmit: async (values) => {
+      try {
+        const resultAction = await dispatch(loginUser(values))
+        if (loginUser.fulfilled.match(resultAction)) {
+          toast.success('Signed in successfully')
+          navigate('/')
+        } else {
+          const errorPayload = resultAction.payload;
+          let errorMessage = 'Login failed';
+          if (typeof errorPayload === 'string') {
+            errorMessage = errorPayload;
+          } else if (errorPayload?.detail) {
+            errorMessage = errorPayload.detail;
+          } else if (errorPayload && typeof errorPayload === 'object') {
+            // Fallback for field errors: grab the first value of the first key
+            const firstError = Object.values(errorPayload)[0];
+            errorMessage = Array.isArray(firstError) ? firstError[0] : JSON.stringify(errorPayload);
+          }
+          toast.error(errorMessage);
+        }
+      } catch (err) {
+        console.error('Login error:', err)
+        toast.error('An unexpected error occurred')
+      }
     },
   })
 

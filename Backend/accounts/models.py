@@ -18,6 +18,7 @@ class User(AbstractUser):
     
     name = models.CharField(max_length=255, blank=True, null=True)
     phone_number = models.CharField(max_length=15, blank=True, null=True)
+    profile_image = models.ImageField(upload_to='profiles/', blank=True, null=True)
     is_verified = models.BooleanField(default=False)
 
     is_organizer = models.BooleanField(default=False)

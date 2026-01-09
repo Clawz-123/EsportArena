@@ -112,3 +112,40 @@ class ResetPasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError("Passwords do not match.")
 
         return attrs
+    
+
+# Serializer for Profile Page
+class UserProfileSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='name', read_only=True)
+    organizer_name = serializers.CharField(source='name', read_only=True)
+    contact = serializers.CharField(source='phone_number', read_only=True)
+    profile_image = serializers.ImageField(allow_null=True, required=False)
+
+    class Meta:
+        model = User
+        fields = [
+            'email',
+            'username',
+            'organizer_name',
+            'contact',
+            'role',
+            'profile_image',
+        ]
+        read_only_fields = ['email', 'username', 'organizer_name', 'contact', 'role']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        role = (instance.role or '').lower()
+        
+        if instance.profile_image:
+            request = self.context.get('request')
+            if request:
+                data['profile_image'] = request.build_absolute_uri(instance.profile_image.url)
+            else:
+                data['profile_image'] = instance.profile_image.url
+        
+        if role == 'organizer':
+            data.pop('username', None)
+        else:
+            data.pop('organizer_name', None)
+        return data

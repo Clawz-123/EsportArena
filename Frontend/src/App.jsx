@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { store } from './store/store.js'; 
-import Home from './pages/public/Home.jsx';
+import Home from './pages/public/home.jsx';
 import Login from './pages/auth/Login.jsx';
 import Register from './pages/auth/Register.jsx';
 import VerifyOtp from './pages/Otp/VerifyOtp.jsx';

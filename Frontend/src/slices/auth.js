@@ -43,13 +43,16 @@ export const loginUser = createAsyncThunk(
         credentials
       );
 
-      if (response.data.access) {
-        localStorage.setItem("access_token", response.data.access);
-        localStorage.setItem("refresh_token", response.data.refresh);
-        localStorage.setItem("user", JSON.stringify(response.data.user));
+      // Backend wraps response in Result object
+      const result = response.data.Result || response.data;
+      
+      if (result.access) {
+        localStorage.setItem("access_token", result.access);
+        localStorage.setItem("refresh_token", result.refresh);
+        localStorage.setItem("user", JSON.stringify(result.user));
       }
 
-      return response.data;
+      return result;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
     }
@@ -91,7 +94,8 @@ export const logoutUser = createAsyncThunk(
   "auth/logout",
   async (_, { rejectWithValue }) => {
     try {
-      await axiosInstance.post("/accounts/logout/");
+      const refresh = localStorage.getItem("refresh_token");
+      await axiosInstance.post("/accounts/logout/", { refresh });
       localStorage.clear();
       return true;
     } catch (error) {

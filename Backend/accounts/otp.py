@@ -21,8 +21,6 @@ def send_otp_email(email, otp):
     This code will expire in 10 minutes.
     Please do not share this code with anyone.
 
-    If you didn't request this code, please ignore this email.
-
     Best regards,
     EsportArena Team
     """

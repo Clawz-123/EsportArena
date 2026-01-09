@@ -24,6 +24,7 @@ from .serializers import(
     ResendOTPSerializer,
     UserLogoutSerializers,
     ResetPasswordSerializer,
+    UserProfileSerializer,
 )
 
 from drf_yasg.utils import swagger_auto_schema
@@ -438,3 +439,144 @@ class UserDetailView(generics.RetrieveAPIView):
                 error_message=str(e),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+        
+
+# View for Profile Management
+class UserProfileView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserProfileSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+    @swagger_auto_schema(
+        operation_description="Retrieve the authenticated user's profile",
+        responses={
+            200: openapi.Response(
+                description="User profile retrieved successfully",
+                schema=UserProfileSerializer()
+            ),
+            500: openapi.Response(description="Internal Server Error"),
+        },
+        tags=["Profile"],
+    )
+    # Getting the data for authenticated user for profile
+    def get(self, request, *args, **kwargs):
+        try:
+            user = self.get_object()
+            serializer = self.serializer_class(user, context={'request': request})
+            return api_response(
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+                result=serializer.data
+            )
+        except Exception as e:
+            return api_response(
+                is_success=False,
+                error_message=str(e),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    @swagger_auto_schema(
+        operation_description="Update the authenticated user's profile (name, phone_number)",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'name': openapi.Schema(type=openapi.TYPE_STRING, description='User or Organizer name'),
+                'phone_number': openapi.Schema(type=openapi.TYPE_STRING, description='Contact phone number'),
+            },
+        ),
+        responses={
+            200: openapi.Response(
+                description="Profile updated successfully",
+                schema=UserProfileSerializer()
+            ),
+            400: openapi.Response(description="Bad Request"),
+            500: openapi.Response(description="Internal Server Error"),
+        },
+        tags=["Profile"],
+    )
+
+    # For updating the profile of authenticated user
+    def patch(self, request, *args, **kwargs):
+        try:
+            user = self.get_object()
+            
+            # Only allow updating specific fields
+            allowed_fields = ['name', 'phone_number', 'profile_image']
+            update_data = {k: v for k, v in request.data.items() if k in allowed_fields}
+            
+            if not update_data:
+                return api_response(
+                    is_success=False,
+                    error_message="No valid fields to update. Allowed fields: name, phone_number, profile_image",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+            
+            # Validate phone_number if provided
+            if 'phone_number' in update_data:
+                phone = update_data['phone_number']
+                if phone and not phone.isdigit():
+                    return api_response(
+                        is_success=False,
+                        error_message="Phone number must contain only digits.",
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                    )
+            
+            # Validate name if provided
+            if 'name' in update_data:
+                name = update_data['name']
+                if not name or not name.strip():
+                    return api_response(
+                        is_success=False,
+                        error_message="Name cannot be empty.",
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                    )
+            
+            # Update user fields
+            for field, value in update_data.items():
+                setattr(user, field, value)
+            user.save()
+            
+            # Return updated profile
+            serializer = self.serializer_class(user, context={'request': request})
+            return api_response(
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+                result={
+                    "message": "Profile updated successfully.",
+                    "profile": serializer.data
+                }
+            )
+        except Exception as e:
+            return api_response(
+                is_success=False,
+                error_message=str(e),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    @swagger_auto_schema(
+        operation_description="Fully update the authenticated user's profile (name, phone_number)",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'name': openapi.Schema(type=openapi.TYPE_STRING, description='User or Organizer name'),
+                'phone_number': openapi.Schema(type=openapi.TYPE_STRING, description='Contact phone number'),
+            },
+        ),
+        responses={
+            200: openapi.Response(
+                description="Profile updated successfully",
+                schema=UserProfileSerializer()
+            ),
+            400: openapi.Response(description="Bad Request"),
+            500: openapi.Response(description="Internal Server Error"),
+        },
+        tags=["Profile"],
+    )
+    def put(self, request, *args, **kwargs):
+        """
+        PUT delegates to PATCH logic to keep validation consistent.
+        """
+        return self.patch(request, *args, **kwargs)
