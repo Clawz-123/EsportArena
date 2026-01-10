@@ -130,8 +130,10 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'contact',
             'role',
             'profile_image',
+            'date_joined',
+            'last_login',
         ]
-        read_only_fields = ['email', 'username', 'organizer_name', 'contact', 'role']
+        read_only_fields = ['email', 'username', 'organizer_name', 'contact', 'role', 'date_joined', 'last_login']
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

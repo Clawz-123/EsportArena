@@ -1,6 +1,8 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "../axios/axiousinstance";
 
+
+// Thunk for user registration
 export const registerUser = createAsyncThunk(
   "auth/register",
   async (userData, { rejectWithValue }) => {
@@ -34,6 +36,7 @@ export const registerUser = createAsyncThunk(
   }
 );
 
+// Thunk for user login
 export const loginUser = createAsyncThunk(
   "auth/login",
   async (credentials, { rejectWithValue }) => {
@@ -43,7 +46,6 @@ export const loginUser = createAsyncThunk(
         credentials
       );
 
-      // Backend wraps response in Result object
       const result = response.data.Result || response.data;
       
       if (result.access) {
@@ -59,6 +61,7 @@ export const loginUser = createAsyncThunk(
   }
 );
 
+// Thunk for OTP verification
 export const verifyOtp = createAsyncThunk(
   "auth/verifyOtp",
   async (otpData, { rejectWithValue }) => {
@@ -75,6 +78,8 @@ export const verifyOtp = createAsyncThunk(
   }
 );
 
+
+// Thunk for resending OTP
 export const resendOtp = createAsyncThunk(
   "auth/resendOtp",
   async (emailData, { rejectWithValue }) => {
@@ -90,6 +95,7 @@ export const resendOtp = createAsyncThunk(
   }
 );
 
+// Thunk for user logout
 export const logoutUser = createAsyncThunk(
   "auth/logout",
   async (_, { rejectWithValue }) => {
@@ -105,6 +111,8 @@ export const logoutUser = createAsyncThunk(
   }
 );
 
+
+// Thunk for password reset
 export const resetPassword = createAsyncThunk(
   "auth/resetPassword",
   async (passwordData, { rejectWithValue }) => {
@@ -120,6 +128,7 @@ export const resetPassword = createAsyncThunk(
   }
 );
 
+// Setting up the initial state for the auth slices
 const getInitialState = () => {
   const storedUser = localStorage.getItem("user");
   const token = localStorage.getItem("access_token");

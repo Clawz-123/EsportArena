@@ -278,6 +278,12 @@ class LoginUserView(TokenObtainPairView):
                 user = authenticate(request, username=email, password=password)
 
                 if user is not None:
+                    # Update last_login
+                    from django.contrib.auth import update_session_auth_hash
+                    from django.utils import timezone
+                    user.last_login = timezone.now()
+                    user.save(update_fields=['last_login'])
+                    
                     user_data = UserResponseSerializers(user).data
                     refresh = RefreshToken.for_user(user)
                     refresh_token = str(refresh)
@@ -506,6 +512,10 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
             # Only allow updating specific fields
             allowed_fields = ['name', 'phone_number', 'profile_image']
             update_data = {k: v for k, v in request.data.items() if k in allowed_fields}
+
+            # Explicitly handle uploaded file from request.FILES
+            if 'profile_image' in request.FILES:
+                update_data['profile_image'] = request.FILES['profile_image']
             
             if not update_data:
                 return api_response(

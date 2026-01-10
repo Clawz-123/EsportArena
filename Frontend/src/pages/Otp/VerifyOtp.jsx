@@ -118,38 +118,9 @@ const VerifyOtp = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0e1a] px-4 py-8">
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#0F172A]  px-4 py-8">
       <div className="w-full max-w-md">
-        <div className="bg-[#0f1420] rounded-2xl border border-[#1e293b] p-8 shadow-lg relative">
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <div
-              aria-hidden
-              className="absolute"
-              style={{
-                width: 420,
-                height: 420,
-                borderRadius: '50%',
-                background: '#3A86FF',
-                opacity: 0.10,
-                filter: 'blur(80px)',
-                transform: 'translateX(-80px)'
-              }}
-            />
-            <div
-              aria-hidden
-              className="absolute"
-              style={{
-                width: 520,
-                height: 520,
-                borderRadius: '50%',
-                background: '#D946EF',
-                opacity: 0.08,
-                filter: 'blur(80px)',
-                transform: 'translateX(80px)'
-              }}
-            />
-          </div>
-
+        <div className="bg-[#151b2b]/80 rounded-2xl border border-[#1e293b] p-8 shadow-lg relative">
           <div className="text-center mb-8 relative">
             <div className="flex items-center justify-center gap-2 mb-3">
               <Gamepad2 className="w-8 h-8 text-blue-500" />

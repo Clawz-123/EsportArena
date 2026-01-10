@@ -7,6 +7,8 @@ import Register from './pages/auth/Register.jsx';
 import VerifyOtp from './pages/Otp/VerifyOtp.jsx';
 import ResetPassword from './pages/auth/ResetPassword.jsx';
 import ForgotPassword from './pages/auth/ForgotPassword.jsx';
+import ViewProfile from './pages/public/ViewProfile.jsx';
+import UpdateProfile from './pages/public/UpdateProfile.jsx';
 
 function App() {
   return (
@@ -19,6 +21,8 @@ function App() {
           <Route path='/verify-otp' element={<VerifyOtp />} />
           <Route path='/reset-password' element={<ResetPassword />} />
           <Route path='/forgot-password' element={<ForgotPassword />} />
+          <Route path='/view-profile' element={<ViewProfile />} />
+          <Route path='/update-profile' element={<UpdateProfile />} />
         </Routes>
       </Router>
     </Provider>

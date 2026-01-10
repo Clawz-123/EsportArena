@@ -123,7 +123,10 @@ const Register = () => {
                   <button
                     key={type}
                     type="button"
-                    onClick={() => setUserType(type)}
+                    onClick={() => {
+                      setUserType(type);
+                      setShowPasswords({});
+                    }}
                     className={`flex flex-col items-center justify-center py-3 rounded-xl border transition-all duration-300 ${selected
                         ? "border-[#3A86FF] bg-[#3A86FF]/10 text-white"
                         : "border-[#2a303c] bg-[#1a1f2e] text-gray-400 hover:border-gray-500"
@@ -147,7 +150,7 @@ const Register = () => {
               <Form className="space-y-4">
                 {fieldsToShow.map((field) => {
                   const isPassword = field.type === "password";
-                  const inputType = isPassword && showPasswords[field.name] ? "text" : field.type;
+                  const inputType = isPassword && showPasswords[field.name] === true ? "text" : field.type;
 
                   return (
                     <div key={field.name}>

@@ -13,39 +13,19 @@ const Home = () => {
   ];
 
   const features = [
-    {
-      icon: Layout, title: "Automated Brackets", description: "Generate tournament brackets automatically with support for single elimination, double elimination, and round robin formats."
-    },
-    {
-      icon: Shield, title: "Secure Payments", description: "Integrated payment processing through eSewa and Khalti for entry fees and prize distribution with full transaction tracking."
-    },
-    {
-      icon: CheckCircle, title: "Result Verification", description: "Match results require verification from both players to ensure fairness and prevent disputes during tournament play."
-    },
-    {
-      icon: Users2, title: "Role-Based Access", description: "Different permission levels for administrators, organizers, and players with tailored dashboards for each role."
-    },
-    {
-      icon: Flag, title: "Content Moderation", description: "Community-driven moderation system allowing users to report inappropriate content and behavior for review."
-    },
-    {
-      icon: Bell, title: "Real-Time Alerts", description: "Instant notifications for match schedules, results, announcements, and important tournament updates."
-    }
+    {icon: Layout, title: "Automated Brackets", description: "Generate tournament brackets automatically with support for single elimination, double elimination, and round robin formats."},
+    {icon: Shield, title: "Secure Payments", description: "Integrated payment processing through eSewa and Khalti for entry fees and prize distribution with full transaction tracking."},
+    {icon: CheckCircle, title: "Result Verification", description: "Match results require verification from both players to ensure fairness and prevent disputes during tournament play."},
+    {icon: Users2, title: "Role-Based Access", description: "Different permission levels for administrators, organizers, and players with tailored dashboards for each role."},
+    {icon: Flag, title: "Content Moderation", description: "Community-driven moderation system allowing users to report inappropriate content and behavior for review."},
+    {icon: Bell, title: "Real-Time Alerts", description: "Instant notifications for match schedules, results, announcements, and important tournament updates."}
   ];
 
   const steps = [
-    {
-      number: "STEP 01", title: "Create Account", description: "Sign up with your email and complete your player profile to get started on the platform."
-    },
-    {
-      number: "STEP 02", title: "Browse & Join", description: "Explore available tournaments, review details, and register for competitions that match your skill level."
-    },
-    {
-      number: "STEP 03", title: "Compete & Submit", description: "Participate in matches, submit results, and advance through tournament brackets as you win."
-    },
-    {
-      number: "STEP 04", title: "Track & Withdraw", description: "Monitor your performance, view standings, and withdraw your prize money directly to your account."
-    }
+    {number: "STEP 01", title: "Create Account", description: "Sign up with your email and complete your player profile to get started on the platform."},
+    {number: "STEP 02", title: "Browse & Join", description: "Explore available tournaments, review details, and register for competitions that match your skill level." },
+    {number: "STEP 03", title: "Compete & Submit", description: "Participate in matches, submit results, and advance through tournament brackets as you win."},
+    {number: "STEP 04", title: "Track & Withdraw", description: "Monitor your performance, view standings, and withdraw your prize money directly to your account."}
   ];
 
   return (

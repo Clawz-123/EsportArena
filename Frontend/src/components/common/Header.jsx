@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { Menu, X, Gamepad2, ChevronDown } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { logoutUser } from "../../slices/auth";
+import { fetchUserProfile } from "../../slices/viewprofile";
 
 
 const navLinks = [
@@ -22,20 +23,22 @@ function Navbar() {
     const buttonRef = useRef(null);
 
     const { isAuthenticated, user } = useSelector((state) => state.auth || {});
+    const { profile } = useSelector((state) => state.profile || {});
 
     const isActive = (path) => location.pathname === path;
 
-    const getInitials = (u) => {
-        if (!u) return "U";
-        const name = u.name || u.email || "User";
+    const getInitials = (u, p) => {
+        if (!u && !p) return "U";
+        const name = p?.username || p?.organizer_name || p?.email || u?.name || u?.email || "User";
         const parts = String(name).trim().split(/\s+/);
         if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
         return `${parts[0]?.[0] || ""}${parts[parts.length - 1]?.[0] || ""}`.toUpperCase() || "U";
     };
 
-    const getDisplayName = (u) => {
-        if (!u) return "User";
-        return u.name || u.email || "User";
+    const getDisplayName = (u, p) => {
+        if (p) return p.username || p.organizer_name || p.email || "User";
+        if (u) return u.name || u.email || "User";
+        return "User";
     };
 
     const handleLogout = async () => {
@@ -56,11 +59,15 @@ function Navbar() {
     }, []);
 
     useEffect(() => {
-        // Close user menu on route change
         setShowUserMenu(false);
-        // Close mobile menu on route change
         setIsOpen(false);
     }, [location.pathname]);
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            dispatch(fetchUserProfile());
+        }
+    }, [isAuthenticated, dispatch]);
 
     useEffect(() => {
         const onClickOutside = (e) => {
@@ -82,44 +89,28 @@ function Navbar() {
         <div className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "bg-[#0a0e1a]/95 backdrop-blur-md border-b border-white/5" : "bg-transparent"}`}>
             <div className="container mx-auto px-6">
                 <div className="flex h-20 items-center justify-between">
-
-                    {/* Logo */}
                     <Link to="/" className="flex items-center gap-2">
                         <Gamepad2 className="h-6 w-6 text-blue-500" />
                         <span className="text-xl font-bold bg-clip-text text-transparent bg-linear-to-r from-blue-500 to-pink-500">
                             Esports Arena
                         </span>
                     </Link>
-
-
-                    {/* Desktop Navigation */}
                     <ul className="hidden md:flex items-center gap-8">
                         {navLinks.map((link) => (
                             <li key={link.path}>
-                                <Link
-                                    to={link.path}
-                                    className={`text-sm font-medium transition-colors ${isActive(link.path)
-                                        ? "text-white"
-                                        : "text-slate-400 hover:text-white"
-                                        }`}
-                                >
-                                    {link.label}
+                                <Link to={link.path}
+                                    className={`text-sm font-medium transition-colors ${isActive(link.path) ? "text-white" : "text-slate-400 hover:text-white"}`}> {link.label}
                                 </Link>
                             </li>
                         ))}
                     </ul>
-
-                    {/* Right Side: Auth Buttons or User Menu */}
                     <div className="hidden md:flex items-center gap-4">
                         {!isAuthenticated ? (
                             <>
                                 <Link to="/login" className="text-slate-300 text-sm font-medium hover:text-white transition-colors">
                                     Login
                                 </Link>
-                                <Link
-                                    to="/register"
-                                    className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-5 py-2 rounded-md transition-colors"
-                                >
+                                <Link to="/register" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-5 py-2 rounded-md transition-colors">
                                     Get Started
                                 </Link>
                             </>
@@ -131,9 +122,17 @@ function Navbar() {
                                     className="flex items-center gap-2 focus:outline-none"
                                     aria-label="User menu"
                                 >
-                                    <div className="h-9 w-9 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-semibold">
-                                        {getInitials(user)}
-                                    </div>
+                                    {profile?.profile_image ? (
+                                        <img
+                                            src={profile.profile_image}
+                                            alt={getDisplayName(user, profile)}
+                                            className="h-9 w-9 rounded-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="h-9 w-9 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-semibold">
+                                            {getInitials(user, profile)}
+                                        </div>
+                                    )}
                                 </button>
                                 {showUserMenu && (
                                     <div
@@ -142,12 +141,20 @@ function Navbar() {
                                     >
                                         <div className="px-3 py-3 border-b border-slate-800">
                                             <div className="flex items-center gap-3">
-                                                <div className="h-9 w-9 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-semibold">
-                                                    {getInitials(user)}
-                                                </div>
+                                                {profile?.profile_image ? (
+                                                    <img
+                                                        src={profile.profile_image}
+                                                        alt={getDisplayName(user, profile)}
+                                                        className="h-9 w-9 rounded-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="h-9 w-9 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-semibold">
+                                                        {getInitials(user, profile)}
+                                                    </div>
+                                                )}
                                                 <div className="min-w-0">
                                                     <div className="text-sm text-white truncate">
-                                                        {getDisplayName(user)}
+                                                        {getDisplayName(user, profile)}
                                                     </div>
                                                 </div>
                                             </div>
@@ -169,7 +176,7 @@ function Navbar() {
                                                     className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
                                                     onClick={() => {
                                                         setShowUserMenu(false);
-                                                        navigate("/profile");
+                                                        navigate("/view-profile");
                                                     }}
                                                 >
                                                     View Profile
@@ -191,7 +198,6 @@ function Navbar() {
                         )}
                     </div>
 
-                    {/* Mobile Menu Button */}
                     <button
                         className="md:hidden text-slate-300 hover:text-white"
                         onClick={() => setIsOpen(!isOpen)}
@@ -200,7 +206,6 @@ function Navbar() {
                     </button>
                 </div>
 
-                {/* Mobile Menu */}
                 {isOpen && (
                     <div className="md:hidden bg-[#0a0e1a] border-t border-slate-800 absolute top-20 left-0 right-0 p-4 space-y-4 shadow-xl">
                         {navLinks.map((link) => (
@@ -236,12 +241,20 @@ function Navbar() {
                         ) : (
                             <div className="border-t border-slate-800 my-2 pt-2">
                                 <div className="flex items-center gap-3 px-2 py-2">
-                                    <div className="h-9 w-9 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-semibold">
-                                        {getInitials(user)}
-                                    </div>
+                                    {profile?.profile_image ? (
+                                        <img
+                                            src={profile.profile_image}
+                                            alt={getDisplayName(user, profile)}
+                                            className="h-9 w-9 rounded-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="h-9 w-9 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-semibold">
+                                            {getInitials(user, profile)}
+                                        </div>
+                                    )}
                                     <div>
                                         <div className="text-sm text-white">
-                                            {user?.name || user?.username || "User"}
+                                            {getDisplayName(user, profile)}
                                         </div>
                                     </div>
                                 </div>
@@ -257,7 +270,7 @@ function Navbar() {
                                 <button
                                     onClick={() => {
                                         setIsOpen(false);
-                                        navigate("/profile");
+                                        navigate("/view-profile");
                                     }}
                                     className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
                                 >
