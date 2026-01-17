@@ -10,6 +10,8 @@ import ForgotPassword from './pages/auth/ForgotPassword.jsx';
 import ViewProfile from './pages/public/ViewProfile.jsx';
 import UpdateProfile from './pages/public/UpdateProfile.jsx';
 import OrgDashboard  from './pages/organizer/OrgDashboard.jsx';
+import OrgTournaments from './pages/organizer/OrgTournaments.jsx';
+import OrgCreateTournament from './pages/organizer/OrgCreateTournament.jsx';
 
 function App() {
   return (
@@ -25,6 +27,8 @@ function App() {
           <Route path='/view-profile' element={<ViewProfile />} />
           <Route path='/update-profile' element={<UpdateProfile />} />
           <Route path='/OrgDashboard' element={<OrgDashboard />} />
+          <Route path='/Orgtournaments' element={<OrgTournaments />} />
+          <Route path='/OrgCreateTournament' element={<OrgCreateTournament />} />
         </Routes>
       </Router>
     </Provider>
