@@ -2,4 +2,5 @@ Backend/env/
 Backend/__pycache__/
 *.pyc
 
+# Environement variables file
 .env

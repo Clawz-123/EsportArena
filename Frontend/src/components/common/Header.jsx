@@ -165,7 +165,7 @@ function Navbar() {
                                                     className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
                                                     onClick={() => {
                                                         setShowUserMenu(false);
-                                                        navigate("/dashboard");
+                                                        navigate("/OrgDashboard");
                                                     }}
                                                 >
                                                     Go to Dashboard
@@ -261,7 +261,7 @@ function Navbar() {
                                 <button
                                     onClick={() => {
                                         setIsOpen(false);
-                                        navigate("/dashboard");
+                                        navigate("/OrgDashboard");
                                     }}
                                     className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
                                 >

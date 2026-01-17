@@ -9,6 +9,7 @@ import ResetPassword from './pages/auth/ResetPassword.jsx';
 import ForgotPassword from './pages/auth/ForgotPassword.jsx';
 import ViewProfile from './pages/public/ViewProfile.jsx';
 import UpdateProfile from './pages/public/UpdateProfile.jsx';
+import OrgDashboard  from './pages/organizer/OrgDashboard.jsx';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
           <Route path='/forgot-password' element={<ForgotPassword />} />
           <Route path='/view-profile' element={<ViewProfile />} />
           <Route path='/update-profile' element={<UpdateProfile />} />
+          <Route path='/OrgDashboard' element={<OrgDashboard />} />
         </Routes>
       </Router>
     </Provider>

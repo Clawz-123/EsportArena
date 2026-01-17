@@ -92,7 +92,7 @@ const ViewProfile = () => {
 
             <div className="flex gap-4 mt-4 md:mt-0">
               <button 
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate('/OrgDashboard')}
                 className="bg-[#1e2538] hover:bg-slate-700 text-slate-200 px-6 py-2.5 rounded hover:text-white font-medium transition-colors"
               >
                 Dashboard
