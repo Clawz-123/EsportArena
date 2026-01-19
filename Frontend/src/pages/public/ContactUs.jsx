@@ -26,7 +26,6 @@ const ContactUs = () => {
 
     const handleSubmit = (values, { setSubmitting, resetForm }) => {
         console.log('Form values:', values)
-        // TODO: Implement actual form submission to backend
         setTimeout(() => {
             alert('Message sent successfully!')
             resetForm()
