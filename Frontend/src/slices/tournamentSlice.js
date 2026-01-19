@@ -23,8 +23,10 @@ export const fetchOrganizerTournaments = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.get("/tournament/list/");
+      console.log("Tournament API Response:", response.data);
       return response.data;
     } catch (error) {
+      console.error("Tournament API Error:", error.response?.data || error.message);
       return rejectWithValue(error.response?.data || error.message);
     }
   }
@@ -143,9 +145,11 @@ const tournamentSlice = createSlice({
     builder.addCase(createTournament.fulfilled, (state, action) => {
       state.createLoading = false;
       state.createSuccess = true;
+      // Handle both Result and result keys
+      const result = action.payload.Result || action.payload.result;
       // Add new tournament to list if result contains tournament data
-      if (action.payload.result?.tournament) {
-        state.tournaments.unshift(action.payload.result.tournament);
+      if (result?.tournament) {
+        state.tournaments.unshift(result.tournament);
       }
     });
     builder.addCase(createTournament.rejected, (state, action) => {
@@ -160,7 +164,9 @@ const tournamentSlice = createSlice({
     });
     builder.addCase(fetchOrganizerTournaments.fulfilled, (state, action) => {
       state.loading = false;
-      state.tournaments = action.payload.result?.tournaments || [];
+      // Handle both Result and result keys
+      const result = action.payload.Result || action.payload.result;
+      state.tournaments = result?.tournaments || [];
     });
     builder.addCase(fetchOrganizerTournaments.rejected, (state, action) => {
       state.loading = false;
@@ -174,7 +180,8 @@ const tournamentSlice = createSlice({
     });
     builder.addCase(fetchTournamentDetail.fulfilled, (state, action) => {
       state.detailLoading = false;
-      state.currentTournament = action.payload.result?.tournament || null;
+      const result = action.payload.Result || action.payload.result;
+      state.currentTournament = result?.tournament || null;
     });
     builder.addCase(fetchTournamentDetail.rejected, (state, action) => {
       state.detailLoading = false;
@@ -191,7 +198,8 @@ const tournamentSlice = createSlice({
       state.updateLoading = false;
       state.updateSuccess = true;
       // Update tournament in list
-      const updatedTournament = action.payload.result?.tournament;
+      const result = action.payload.Result || action.payload.result;
+      const updatedTournament = result?.tournament;
       if (updatedTournament) {
         const index = state.tournaments.findIndex(
           (t) => t.id === updatedTournament.id
@@ -217,7 +225,8 @@ const tournamentSlice = createSlice({
       state.updateLoading = false;
       state.updateSuccess = true;
       // Update tournament in list
-      const updatedTournament = action.payload.result?.tournament;
+      const result = action.payload.Result || action.payload.result;
+      const updatedTournament = result?.tournament;
       if (updatedTournament) {
         const index = state.tournaments.findIndex(
           (t) => t.id === updatedTournament.id

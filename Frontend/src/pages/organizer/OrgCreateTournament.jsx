@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Formik, Form, Field, ErrorMessage } from 'formik'
 import { toast } from 'react-toastify'
@@ -6,11 +6,16 @@ import { Calendar, ChevronDown } from 'lucide-react'
 import OrgSidebar from './OrgSidebar'
 import ProfileMenu from '../../components/common/ProfileMenu'
 import { tournamentValidationSchema } from '../utils/organizerCreateFromValidation'
-import axiosInstance from '../../axios/axiousinstance'
+import { useAppDispatch, useAppSelector } from '../../store/hooks'
+import { createTournament, clearError, clearSuccess } from '../../slices/tournamentSlice'
 
 const OrgCreateTournament = () => {
   const navigate = useNavigate()
-  const [isLoading, setIsLoading] = useState(false)
+  const dispatch = useAppDispatch()
+  
+  const { createLoading, createError, createSuccess } = useAppSelector(
+    (state) => state.tournament
+  )
 
   const initialValues = {
     name: '',
@@ -45,48 +50,61 @@ const OrgCreateTournament = () => {
   }
 
   const handleSubmit = async (values, actions) => {
+    const payload = {
+      name: values.name,
+      game_title: values.gameTitle,
+      match_format: values.matchFormat,
+      description: values.description,
+      registration_start: values.registrationStart,
+      registration_end: values.registrationEnd,
+      match_start: values.matchStart,
+      expected_end: values.expectedEnd || null,
+      max_participants: parseInt(values.maxParticipants),
+      auto_generate_bracket: values.autoGenerateBracket,
+      entry_fee: parseInt(values.entryFee),
+      prize_first: parseInt(values.prizeFirst),
+      prize_second: parseInt(values.prizeSecond),
+      prize_third: parseInt(values.prizeThird),
+      match_rules: values.matchRules,
+      require_result_proof: values.requireResultProof,
+      proof_type: values.proofType,
+      result_time_limit_hours: parseInt(values.resultTimeLimit),
+      visibility: values.visibility,
+      auto_start_tournament: values.autoStartTournament,
+      is_draft: values.isDraft,
+    }
+
     try {
-      setIsLoading(true)
-      const payload = {
-        name: values.name,
-        game_title: values.gameTitle,
-        match_format: values.matchFormat,
-        description: values.description,
-        registration_start: values.registrationStart,
-        registration_end: values.registrationEnd,
-        match_start: values.matchStart,
-        expected_end: values.expectedEnd,
-        max_participants: parseInt(values.maxParticipants),
-        auto_generate_bracket: values.autoGenerateBracket,
-        entry_fee: parseInt(values.entryFee),
-        prize_first: parseInt(values.prizeFirst),
-        prize_second: parseInt(values.prizeSecond),
-        prize_third: parseInt(values.prizeThird),
-        match_rules: values.matchRules,
-        require_result_proof: values.requireResultProof,
-        proof_type: values.proofType,
-        result_time_limit_hours: parseInt(values.resultTimeLimit),
-        visibility: values.visibility,
-        auto_start_tournament: values.autoStartTournament,
-        is_draft: values.isDraft,
-      }
-
-      const endpoint = '/api/tournament/create/'
-      const response = await axiosInstance.post(endpoint, payload)
-
-      if (response.data.is_success) {
-        toast.success(response.data.result.message || 'Tournament created successfully!')
-        navigate('/organizer/tournaments')
+      const result = await dispatch(createTournament(payload))
+      if (createTournament.fulfilled.match(result)) {
+        toast.success('Tournament created successfully!')
+        actions.resetForm()
+        navigate('/OrgTournaments')
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.error_message || 'Failed to create tournament'
+      console.error('Tournament creation error:', error)
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      dispatch(clearError())
+      dispatch(clearSuccess())
+    }
+  }, [])
+
+  useEffect(() => {
+    if (createError) {
+      const errorMessage =
+        createError?.error_message ||
+        createError?.Error_Message ||
+        createError?.message ||
+        'Failed to create tournament'
       toast.error(
         typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage)
       )
-    } finally {
-      setIsLoading(false)
     }
-  }
+  }, [createError])
 
   return (
     <div className="flex h-screen bg-[#0F172A]">
@@ -518,10 +536,10 @@ const OrgCreateTournament = () => {
               <div className="flex gap-4 justify-center pb-8">
                 <button
                   type="submit"
-                  disabled={isLoading || isSubmitting}
+                  disabled={createLoading || isSubmitting}
                   className="bg-[#3B82F6] hover:bg-[#2563EB] text-white font-semibold px-8 py-2.5 rounded-md transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {isLoading ? 'Creating...' : 'Create Tournament'}
+                  {createLoading ? 'Creating...' : 'Create Tournament'}
                 </button>
                 <button
                   type="button"
@@ -529,7 +547,7 @@ const OrgCreateTournament = () => {
                     // Set isDraft to true and submit
                     // Since we can't directly modify Formik values in button, we'll handle this in submit
                   }}
-                  disabled={isLoading || isSubmitting}
+                  disabled={createLoading || isSubmitting}
                   className="bg-transparent border border-[#3B82F6] text-[#3B82F6] hover:bg-[#3B82F6]/10 font-semibold px-8 py-2.5 rounded-md transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   Save as Draft
