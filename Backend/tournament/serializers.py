@@ -97,13 +97,25 @@ class TournamentUpdateSerializer(serializers.ModelSerializer):
 
 class TournamentDetailSerializer(serializers.ModelSerializer):
 	organizer_email = serializers.EmailField(source="organizer.email", read_only=True)
+	organizer_name = serializers.CharField(source="organizer.name", read_only=True)
+	organizer_profile_image = serializers.SerializerMethodField()
 	total_prize_pool = serializers.IntegerField(read_only=True)
+
+	def get_organizer_profile_image(self, obj):
+		if obj.organizer and obj.organizer.profile_image:
+			request = self.context.get('request')
+			if request:
+				return request.build_absolute_uri(obj.organizer.profile_image.url)
+			return obj.organizer.profile_image.url
+		return None
 
 	class Meta:
 		model = Tournament
 		fields = [
 			"id",
 			"organizer_email",
+			"organizer_name",
+			"organizer_profile_image",
 			"name",
 			"game_title",
 			"match_format",
@@ -132,6 +144,8 @@ class TournamentDetailSerializer(serializers.ModelSerializer):
 		read_only_fields = [
 			"id",
 			"organizer_email",
+			"organizer_name",
+			"organizer_profile_image",
 			"total_prize_pool",
 			"created_at",
 			"updated_at",

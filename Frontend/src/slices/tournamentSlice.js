@@ -17,6 +17,19 @@ export const createTournament = createAsyncThunk(
   }
 );
 
+// Thunk for fetching all public tournaments (for players)
+export const fetchPublicTournaments = createAsyncThunk(
+  "tournament/fetchPublic",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.get("/tournament/public/");
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
 // Thunk for fetching organizer's tournaments
 export const fetchOrganizerTournaments = createAsyncThunk(
   "tournament/fetchOrganizer",
@@ -169,6 +182,21 @@ const tournamentSlice = createSlice({
       state.tournaments = result?.tournaments || [];
     });
     builder.addCase(fetchOrganizerTournaments.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.payload;
+    });
+
+    // Fetch Public Tournaments
+    builder.addCase(fetchPublicTournaments.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    });
+    builder.addCase(fetchPublicTournaments.fulfilled, (state, action) => {
+      state.loading = false;
+      const result = action.payload.Result || action.payload.result;
+      state.tournaments = result?.tournaments || [];
+    });
+    builder.addCase(fetchPublicTournaments.rejected, (state, action) => {
       state.loading = false;
       state.error = action.payload;
     });

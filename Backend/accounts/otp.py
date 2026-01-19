@@ -1,60 +1,70 @@
 import random
 import string
 from datetime import timedelta
-from django.utils import timezone
-from django.core.mail import send_mail
 from django.conf import settings
-from .models import OTP, User
+from django.core.mail import send_mail
+from django.utils import timezone
+
+from .models import User, OTP
 
 
+# Function to generate OTP
 def generate_otp(length=6):
-    return ''.join(random.choices(string.digits, k=length))
+    return ''.join([str(random.randint(0, 9)) for _ in range(length)])
 
 
-def send_otp_email(email, otp):
-    subject = "Your OTP Code - EsportArena"
+# Function to send OTP via email
+def send_otp(email, otp):
+    subject = "Your OTP Code - EsportArena"  
     message = f"""
     Hello,
 
-    Your OTP code is: {otp}
-
+    your OTP code is: {otp}
     This code will expire in 10 minutes.
-    Please do not share this code with anyone.
+    please do not share this code with anyone.
 
-    Best regards,
+
+    Regards,
     EsportArena Team
     """
-    from_email = settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else 'noreply@esportarena.com'
+    from_email = settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else 'noreply@esportarena.np'
+    
+    print(f"[EMAIL DEBUG] Attempting to send OTP email")
+    print(f"[EMAIL DEBUG] From: {from_email}")
+    print(f"[EMAIL DEBUG] To: {email}")
+    print(f"[EMAIL DEBUG] OTP: {otp}")
+    print(f"[EMAIL DEBUG] EMAIL_HOST: {settings.EMAIL_HOST}")
+    print(f"[EMAIL DEBUG] EMAIL_HOST_USER: {settings.EMAIL_HOST_USER}")
     
     try:
-        send_mail(
+        result = send_mail(
             subject=subject,
-            message=message,
+            message=message,  
             from_email=from_email,
             recipient_list=[email],
             fail_silently=False,
         )
+        print(f"[EMAIL DEBUG] send_mail returned: {result}")
+        print(f"[EMAIL DEBUG] Email sent successfully!")
         return True
     except Exception as e:
-        print(f"Error sending email: {str(e)}")
+        print(f"[EMAIL ERROR] Error sending email: {e}")
+        import traceback
+        traceback.print_exc()
         return False
+    
 
-
+# Function to create OTP
 def create_otp(email):
     OTP.objects.filter(email=email, is_used=False).update(is_used=True)
-    
     otp_code = generate_otp()
+    otp_instance = OTP.objects.create(email=email, otp=otp_code)
     
-    otp_instance = OTP.objects.create(
-        email=email,
-        otp=otp_code
-    )
-    
-    email_sent = send_otp_email(email, otp_code)
-    
-    return otp_instance, email_sent
+    email_sent = send_otp(email, otp_code)
+    return otp_instance, email_sent  
 
 
+# Function to verify OTP
 def verify_otp(email, otp_code):
     try:
         otp_instance = OTP.objects.filter(
@@ -90,6 +100,7 @@ def verify_otp(email, otp_code):
         return False, f"Error verifying OTP: {str(e)}"
 
 
+# Function to resend OTP   
 def resend_otp(email):
     try:
         try:
@@ -119,4 +130,5 @@ def resend_otp(email):
         return False, f"Error resending OTP: {str(e)}"
 
 
+# Alias for backward compatibility
 create_and_send_otp = create_otp

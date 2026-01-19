@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, {  useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Formik, Form, Field, ErrorMessage } from 'formik'
 import { toast } from 'react-toastify'
@@ -13,7 +13,7 @@ const OrgCreateTournament = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   
-  const { createLoading, createError, createSuccess } = useAppSelector(
+  const { createLoading, createError } = useAppSelector(
     (state) => state.tournament
   )
 
@@ -91,7 +91,7 @@ const OrgCreateTournament = () => {
       dispatch(clearError())
       dispatch(clearSuccess())
     }
-  }, [])
+  }, [dispatch])
 
   useEffect(() => {
     if (createError) {
@@ -544,8 +544,7 @@ const OrgCreateTournament = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    // Set isDraft to true and submit
-                    // Since we can't directly modify Formik values in button, we'll handle this in submit
+                    // Set isDraft to true and submit the form
                   }}
                   disabled={createLoading || isSubmitting}
                   className="bg-transparent border border-[#3B82F6] text-[#3B82F6] hover:bg-[#3B82F6]/10 font-semibold px-8 py-2.5 rounded-md transition-colors disabled:opacity-60 disabled:cursor-not-allowed"

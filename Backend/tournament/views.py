@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, generics
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from django.db import transaction
@@ -308,6 +308,44 @@ class DeleteTournamentView(generics.DestroyAPIView):
                 is_success=False,
                 error_message="Tournament not found or you are not the organizer.",
                 status_code=status.HTTP_404_NOT_FOUND,
+            )
+        except Exception as e:
+            return api_response(
+                is_success=False,
+                error_message=str(e),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+# View for Getting All Public Tournaments (for players to browse)
+class GetAllPublicTournamentsView(generics.ListAPIView):
+    serializer_class = TournamentDetailSerializer
+    permission_classes = [AllowAny]
+    
+    def get_queryset(self):
+        # Exclude draft tournaments from public view
+        return Tournament.objects.filter(is_draft=False)
+
+    @swagger_auto_schema(
+        operation_description="Get all public tournaments created by all organizers (for players)",
+        responses={
+            200: openapi.Response(
+                description="Tournaments retrieved successfully",
+                schema=TournamentDetailSerializer(many=True),
+            ),
+            500: openapi.Response(description="Internal Server Error"),
+        },
+        tags=["Tournament"],
+    )
+
+    def get(self, request, *args, **kwargs):
+        try:
+            tournaments = self.get_queryset()
+            serializer = self.serializer_class(tournaments, many=True, context={'request': request})
+            return api_response(
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+                result={"count": tournaments.count(), "tournaments": serializer.data},
             )
         except Exception as e:
             return api_response(

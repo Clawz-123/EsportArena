@@ -1,11 +1,28 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Formik, Form, Field, ErrorMessage } from 'formik'
 import { Mail, Phone, MapPin, Send } from 'lucide-react'
+import { toast } from 'react-toastify'
 import Header from '../../components/common/Header'
 import Footer from '../../components/common/Footer'
 import { validationSchema } from '../utils/contactusValidation.js'
+import { useAppDispatch, useAppSelector } from '../../store/hooks'
+import { createContactMessage, clearError, clearSuccess } from '../../slices/contactMessage'
 
 const ContactUs = () => {
+    const dispatch = useAppDispatch()
+    const { loading, error, success } = useAppSelector((state) => state.contact)
+
+    useEffect(() => {
+        if (success) {
+            toast.success('Your message has been sent successfully! We\'ll get back to you soon.')
+            dispatch(clearSuccess())
+        }
+        if (error) {
+            toast.error(error.Error_Message || 'Failed to send message. Please try again.')
+            dispatch(clearError())
+        }
+    }, [success, error, dispatch])
+
     const contactInfo = [
         {
             icon: Mail,
@@ -15,22 +32,21 @@ const ContactUs = () => {
         {
             icon: Phone,
             label: 'Phone',
-            value: '+977 9800000000',
+            value: '+977 9704867942',
         },
         {
             icon: MapPin,
             label: 'Location',
-            value: 'Kathmandu, Nepal',
+            value: 'Khorsane, Nepal',
         },
     ]
 
-    const handleSubmit = (values, { setSubmitting, resetForm }) => {
-        console.log('Form values:', values)
-        setTimeout(() => {
-            alert('Message sent successfully!')
+    const handleSubmit = async (values, { setSubmitting, resetForm }) => {
+        const result = await dispatch(createContactMessage(values))
+        if (createContactMessage.fulfilled.match(result)) {
             resetForm()
-            setSubmitting(false)
-        }, 1000)
+        }
+        setSubmitting(false)
     }
 
     return (
@@ -120,7 +136,7 @@ const ContactUs = () => {
                                                         type="text"
                                                         id="name"
                                                         name="name"
-                                                        placeholder="John Doe"
+                                                        placeholder="Pukar Bohara"
                                                         className="w-full bg-[#0F172A] border border-[#1F2937] rounded-lg px-4 py-3 text-[14px] text-[#E5E7EB] placeholder-[#6B7280] focus:outline-none focus:border-[#3B82F6] transition-colors"
                                                     />
                                                     <ErrorMessage
@@ -142,7 +158,7 @@ const ContactUs = () => {
                                                         type="email"
                                                         id="email"
                                                         name="email"
-                                                        placeholder="john@example.com"
+                                                        placeholder="pukar@example.com"
                                                         className="w-full bg-[#0F172A] border border-[#1F2937] rounded-lg px-4 py-3 text-[14px] text-[#E5E7EB] placeholder-[#6B7280] focus:outline-none focus:border-[#3B82F6] transition-colors"
                                                     />
                                                     <ErrorMessage
@@ -201,11 +217,11 @@ const ContactUs = () => {
                                             {/* Submit Button */}
                                             <button
                                                 type="submit"
-                                                disabled={isSubmitting}
+                                                disabled={isSubmitting || loading}
                                                 className="w-full bg-[#3B82F6] hover:bg-[#2563EB] disabled:bg-[#1F2937] disabled:text-[#6B7280] text-white font-semibold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-colors text-[14px]"
                                             >
                                                 <Send className="w-4 h-4" />
-                                                {isSubmitting ? 'Sending...' : 'Send Message'}
+                                                {isSubmitting || loading ? 'Sending...' : 'Send Message'}
                                             </button>
                                         </Form>
                                     )}

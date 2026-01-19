@@ -53,9 +53,15 @@ class UserCreateSerializers(serializers.ModelSerializer):
             is_verified=False
         )
         try:
-            create_and_send_otp(user.email)
+            print(f"Attempting to send OTP to: {user.email}")
+            otp_instance, email_sent = create_and_send_otp(user.email)
+            print(f"OTP created: {otp_instance.otp}, Email sent: {email_sent}")
+            if not email_sent:
+                print("WARNING: OTP email failed to send!")
         except Exception as e:
             print(f"Error sending OTP: {e}")
+            import traceback
+            traceback.print_exc()
 
         return user
 
