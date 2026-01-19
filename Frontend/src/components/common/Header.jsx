@@ -9,7 +9,7 @@ import { fetchUserProfile } from "../../slices/viewprofile";
 const navLinks = [
     { path: "/", label: "Home" },
     { path: "/tournaments", label: "Tournaments" },
-    { path: "/contact", label: "Contact" },
+    { path: "/contact-us", label: "Contact" },
 ];
 
 function Navbar() {

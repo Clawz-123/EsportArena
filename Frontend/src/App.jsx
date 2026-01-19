@@ -12,6 +12,7 @@ import UpdateProfile from './pages/public/UpdateProfile.jsx';
 import OrgDashboard  from './pages/organizer/OrgDashboard.jsx';
 import OrgTournaments from './pages/organizer/OrgTournaments.jsx';
 import OrgCreateTournament from './pages/organizer/OrgCreateTournament.jsx';
+import ContactUs from './pages/public/ContactUs.jsx';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
           <Route path='/OrgDashboard' element={<OrgDashboard />} />
           <Route path='/Orgtournaments' element={<OrgTournaments />} />
           <Route path='/OrgCreateTournament' element={<OrgCreateTournament />} />
+          <Route path='/contact-us' element={<ContactUs />} />
         </Routes>
       </Router>
     </Provider>
