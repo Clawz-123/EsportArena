@@ -33,10 +33,11 @@ schema_view = get_schema_view(
     permission_classes=[permissions.AllowAny],
 )
 
-# Joining the urls of accounts app and admin panel
+# Joining the urls of accounts app, tournament app and admin panel
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/accounts/", include("accounts.urls")),
+    path("api/tournament/", include("tournament.urls")),
     path("swagger/", schema_view.with_ui("swagger", cache_timeout=0), name="swagger-ui"),
     path("redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="redoc"),
 ]

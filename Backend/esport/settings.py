@@ -50,7 +50,7 @@ INSTALLED_APPS = [
     
     #My apps
     'accounts', 
-    'organizer',
+    'tournament',
 ]
 
 MIDDLEWARE = [

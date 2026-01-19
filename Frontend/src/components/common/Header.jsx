@@ -25,6 +25,17 @@ function Navbar() {
     const { isAuthenticated, user } = useSelector((state) => state.auth || {});
     const { profile } = useSelector((state) => state.profile || {});
 
+    const isOrganizer = user?.is_organizer || false;
+
+    const handleDashboardNavigation = () => {
+        setShowUserMenu(false);
+        if (isOrganizer) {
+            navigate("/OrgDashboard");
+        } else {
+            navigate("/PlayerDashboard");
+        }
+    };
+
     const isActive = (path) => location.pathname === path;
 
     const getInitials = (u, p) => {
@@ -160,17 +171,16 @@ function Navbar() {
                                             </div>
                                         </div>
                                         <ul className="py-1">
-                                            <li>
-                                                <button
-                                                    className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
-                                                    onClick={() => {
-                                                        setShowUserMenu(false);
-                                                        navigate("/OrgDashboard");
-                                                    }}
-                                                >
-                                                    Go to Dashboard
-                                                </button>
-                                            </li>
+                                            {isOrganizer && (
+                                                <li>
+                                                    <button
+                                                        className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
+                                                        onClick={handleDashboardNavigation}
+                                                    >
+                                                        Go to Dashboard
+                                                    </button>
+                                                </li>
+                                            )}
                                             <li>
                                                 <button
                                                     className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
@@ -258,15 +268,17 @@ function Navbar() {
                                         </div>
                                     </div>
                                 </div>
-                                <button
-                                    onClick={() => {
-                                        setIsOpen(false);
-                                        navigate("/OrgDashboard");
-                                    }}
-                                    className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
-                                >
-                                    Go to Dashboard
-                                </button>
+                                {isOrganizer && (
+                                    <button
+                                        onClick={() => {
+                                            setIsOpen(false);
+                                            handleDashboardNavigation();
+                                        }}
+                                        className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
+                                    >
+                                        Go to Dashboard
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => {
                                         setIsOpen(false);
