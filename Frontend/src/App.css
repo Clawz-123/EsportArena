@@ -45,3 +45,14 @@
 .Toastify__close-button:focus {
 	color: #e2e8f0;
 }
+
+/* Dark theme select styling for tournament filters */
+.tournament-select {
+	color: #e5e7eb;
+	background-color: #111827;
+}
+
+.tournament-select option {
+	color: #e5e7eb;
+	background-color: #111827;
+}

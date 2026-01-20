@@ -1,19 +1,35 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Provider } from 'react-redux';
-import { store } from './store/store.js'; 
-import Home from './pages/public/home.jsx';
-import Login from './pages/auth/Login.jsx';
-import Register from './pages/auth/Register.jsx';
-import VerifyOtp from './pages/Otp/VerifyOtp.jsx';
-import ResetPassword from './pages/auth/ResetPassword.jsx';
-import ForgotPassword from './pages/auth/ForgotPassword.jsx';
-import ViewProfile from './pages/public/ViewProfile.jsx';
-import UpdateProfile from './pages/public/UpdateProfile.jsx';
-import OrgDashboard  from './pages/organizer/OrgDashboard.jsx';
-import OrgTournaments from './pages/organizer/OrgTournaments.jsx';
-import OrgCreateTournament from './pages/organizer/OrgCreateTournament.jsx';
-import ContactUs from './pages/public/ContactUs.jsx';
-import Tournament from './pages/public/Tournament.jsx';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { Provider, useSelector } from 'react-redux'
+import { toast } from 'react-toastify'
+import { store } from './store/store.js'
+import Home from './pages/public/home.jsx'
+import Login from './pages/auth/Login.jsx'
+import Register from './pages/auth/Register.jsx'
+import VerifyOtp from './pages/Otp/VerifyOtp.jsx'
+import ResetPassword from './pages/auth/ResetPassword.jsx'
+import ForgotPassword from './pages/auth/ForgotPassword.jsx'
+import ViewProfile from './pages/public/ViewProfile.jsx'
+import UpdateProfile from './pages/public/UpdateProfile.jsx'
+import OrgDashboard from './pages/organizer/OrgDashboard.jsx'
+import OrgTournaments from './pages/organizer/OrgTournaments.jsx'
+import OrgCreateTournament from './pages/organizer/OrgCreateTournament.jsx'
+import ContactUs from './pages/public/ContactUs.jsx'
+import Tournament from './pages/public/Tournament.jsx'
+
+// Gate keeps public pages when user is not authenticated
+const AuthGate = ({ children }) => {
+  const { isAuthenticated } = useSelector((state) => state.auth || {})
+  const location = useLocation()
+
+  if (!isAuthenticated) {
+    toast.info('You need to login first before watching other pages', {
+      toastId: `auth-required-${location.pathname}`,
+    })
+    return <Navigate to="/" replace />
+  }
+
+  return children
+}
 
 function App() {
   return (
@@ -26,13 +42,13 @@ function App() {
           <Route path='/verify-otp' element={<VerifyOtp />} />
           <Route path='/reset-password' element={<ResetPassword />} />
           <Route path='/forgot-password' element={<ForgotPassword />} />
-          <Route path='/view-profile' element={<ViewProfile />} />
-          <Route path='/update-profile' element={<UpdateProfile />} />
-          <Route path='/OrgDashboard' element={<OrgDashboard />} />
-          <Route path='/Orgtournaments' element={<OrgTournaments />} />
-          <Route path='/OrgCreateTournament' element={<OrgCreateTournament />} />
-          <Route path='/contact-us' element={<ContactUs />} />
-          <Route path='/tournaments' element={<Tournament />} />
+          <Route path='/view-profile' element={<AuthGate> <ViewProfile /></AuthGate>} />
+          <Route path='/update-profile' element={<AuthGate> <UpdateProfile /></AuthGate>} />
+          <Route path='/OrgDashboard' element={<AuthGate> <OrgDashboard /></AuthGate>} />
+          <Route path='/Orgtournaments' element={<AuthGate> <OrgTournaments /></AuthGate>} />
+          <Route path='/OrgCreateTournament' element={<AuthGate> <OrgCreateTournament /></AuthGate>} />
+          <Route path='/contact-us' element={<AuthGate> <ContactUs /></AuthGate>} />
+          <Route path='/tournaments' element={<AuthGate> <Tournament /></AuthGate>} />
         </Routes>
       </Router>
     </Provider>

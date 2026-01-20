@@ -13,6 +13,8 @@ const Tournament = () => {
   const [activeTab, setActiveTab] = useState('active')
   const [searchTerm, setSearchTerm] = useState('')
   const [filterDate, setFilterDate] = useState('')
+  const [gameFilter, setGameFilter] = useState('')
+  const [feeFilter, setFeeFilter] = useState('any')
   const [joinedTournaments, setJoinedTournaments] = useState([])
 
   useEffect(() => {
@@ -36,6 +38,34 @@ const Tournament = () => {
     return 'Unknown'
   }
 
+  const isSameDay = (dateString, filterValue) => {
+    if (!filterValue || !dateString) return true
+    const date = new Date(dateString)
+    const target = new Date(filterValue)
+    if (Number.isNaN(date) || Number.isNaN(target)) return false
+    return date.toISOString().slice(0, 10) === target.toISOString().slice(0, 10)
+  }
+
+  const matchesFeeFilter = (fee, filter) => {
+    const entry = Number(fee) || 0
+    switch (filter) {
+      case 'free':
+        return entry === 0
+      case 'lt100':
+        return entry > 0 && entry <= 100
+      case '100to500':
+        return entry > 100 && entry <= 500
+      case 'gt500':
+        return entry > 500
+      default:
+        return true
+    }
+  }
+
+  const uniqueGames = Array.from(
+    new Set(tournaments.map((t) => t.game_title).filter(Boolean))
+  ).sort()
+
   const filteredTournaments = (activeTab === 'active' 
     ? tournaments.filter(t => {
         const status = getTournamentStatus(t)
@@ -46,12 +76,17 @@ const Tournament = () => {
     : joinedTournaments
   ).filter((tournament) => {
     const matchesSearch = tournament.name.toLowerCase().includes(searchTerm.toLowerCase())
-    return matchesSearch
+    const matchesDate = isSameDay(tournament.match_start, filterDate)
+    const matchesGame = gameFilter ? (tournament.game_title || '').toLowerCase() === gameFilter.toLowerCase() : true
+    const matchesFee = matchesFeeFilter(tournament.entry_fee, feeFilter)
+    return matchesSearch && matchesDate && matchesGame && matchesFee
   })
 
   const handleClearFilters = () => {
     setSearchTerm('')
     setFilterDate('')
+    setGameFilter('')
+    setFeeFilter('any')
   }
 
   // Get organizer initials from name
@@ -86,6 +121,20 @@ const Tournament = () => {
     }
   }
 
+  const getTotalPrize = (tournament) => {
+    const prizePool = Number(tournament.total_prize_pool)
+    if (!Number.isNaN(prizePool) && prizePool > 0) return prizePool
+
+    const directPool = Number(tournament.prize_pool)
+    if (!Number.isNaN(directPool) && directPool > 0) return directPool
+
+    const first = Number(tournament.prize_first) || 0
+    const second = Number(tournament.prize_second) || 0
+    const third = Number(tournament.prize_third) || 0
+    const sum = first + second + third
+    return sum > 0 ? sum : 0
+  }
+
   return (
     <div className="min-h-screen bg-[#0F172A] flex flex-col">
       <Header />
@@ -105,9 +154,9 @@ const Tournament = () => {
       {/* Search & Filter Section */}
       <div className="px-6 pb-6">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row gap-4 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
             {/* Search Input */}
-            <div className="flex-1">
+            <div className="lg:col-span-2">
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#6B7280]" />
                 <input
@@ -120,26 +169,59 @@ const Tournament = () => {
               </div>
             </div>
 
-            {/* Date Filter */}
+            {/* Game Type Filter */}
             <div>
               <div className="relative">
+                <select
+                  value={gameFilter}
+                  onChange={(e) => setGameFilter(e.target.value)}
+                  className="w-full bg-[#111827] border border-[#1F2937] rounded-lg px-4 py-3 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors tournament-select"
+                >
+                  <option value="">All games</option>
+                  {uniqueGames.map((game) => (
+                    <option key={game} value={game}>
+                      {game}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Entry Fee Filter */}
+            <div>
+              <div className="relative">
+                <select
+                  value={feeFilter}
+                  onChange={(e) => setFeeFilter(e.target.value)}
+                  className="w-full bg-[#111827] border border-[#1F2937] rounded-lg px-4 py-3 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors tournament-select"
+                >
+                  <option value="any">Any fee</option>
+                  <option value="free">Free only</option>
+                  <option value="lt100">Up to 100</option>
+                  <option value="100to500">100 - 500</option>
+                  <option value="gt500">500+</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Date Filter + Clear */}
+            <div className="flex gap-2">
+              <div className="relative flex-1">
                 <Calendar className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#6B7280]" />
                 <input
                   type="date"
                   value={filterDate}
                   onChange={(e) => setFilterDate(e.target.value)}
-                  className="bg-[#111827] border border-[#1F2937] rounded-lg pl-12 pr-4 py-3 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors"
+                  className="w-full bg-[#111827] border border-[#1F2937] rounded-lg pl-12 pr-4 py-3 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors"
                 />
               </div>
+              <button
+                onClick={handleClearFilters}
+                className="text-[#3B82F6] hover:text-[#2563EB] text-[14px] font-medium transition-colors px-3"
+              >
+                Clear
+              </button>
             </div>
-
-            {/* Clear Filter Button */}
-            <button
-              onClick={handleClearFilters}
-              className="text-[#3B82F6] hover:text-[#2563EB] text-[14px] font-medium transition-colors"
-            >
-              Clear
-            </button>
           </div>
         </div>
       </div>
@@ -260,7 +342,7 @@ const Tournament = () => {
                     </div>
                     <div className="flex items-center gap-3 text-[13px]">
                       <Trophy className="w-4 h-4 text-[#EC4899]" />
-                      <span className="text-[#EC4899] font-medium">{tournament.prize_pool || 0} Prize</span>
+                      <span className="text-[#EC4899] font-medium">{getTotalPrize(tournament)} Prize</span>
                     </div>
                   </div>
 
