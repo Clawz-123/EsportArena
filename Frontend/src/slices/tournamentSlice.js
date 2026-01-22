@@ -107,10 +107,111 @@ export const deleteTournament = createAsyncThunk(
   }
 );
 
+// Thunk for joining tournament
+export const joinTournament = createAsyncThunk(
+  "tournament/join",
+  async (joinData, { rejectWithValue }) => {
+    try {
+      // If there's a team logo, use FormData for multipart upload
+      if (joinData.teamLogo) {
+        const formData = new FormData();
+        formData.append("tournament_id", joinData.tournamentId);
+        
+        if (joinData.teamName) {
+          formData.append("team_name", joinData.teamName);
+        }
+        
+        formData.append("team_logo", joinData.teamLogo);
+        
+        if (joinData.teamMembers && joinData.teamMembers.length > 0) {
+          joinData.teamMembers.forEach((memberId) => {
+            formData.append("team_members", memberId);
+          });
+        }
+        
+        formData.append("in_game_names", JSON.stringify(joinData.inGameNames));
+
+        const response = await axiosInstance.post(
+          "/tournament/join/",
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+        return response.data;
+      } else {
+        // No logo - send as JSON for better handling of nested data
+        const payload = {
+          tournament_id: joinData.tournamentId,
+          team_name: joinData.teamName || '',
+          team_members: joinData.teamMembers || [],
+          in_game_names: joinData.inGameNames,
+        };
+
+        const response = await axiosInstance.post(
+          "/tournament/join/",
+          payload
+        );
+        return response.data;
+      }
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+// Thunk for fetching tournament participants
+export const fetchTournamentParticipants = createAsyncThunk(
+  "tournament/fetchParticipants",
+  async (tournamentId, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.get(
+        `/tournament/participants/${tournamentId}/`
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+// Thunk for fetching tournament teams
+export const fetchTournamentTeams = createAsyncThunk(
+  "tournament/fetchTeams",
+  async (tournamentId, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.get(
+        `/tournament/teams/${tournamentId}/`
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+// Thunk for fetching user's joined tournaments
+export const fetchMyJoinedTournaments = createAsyncThunk(
+  "tournament/fetchMyJoined",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.get("/tournament/my-joined/");
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
 // Initial state for tournament slice
 const initialState = {
   tournaments: [],
+  joinedTournaments: [],
   currentTournament: null,
+  participants: [],
+  teams: [],
   loading: false,
   error: null,
   success: false,
@@ -125,6 +226,15 @@ const initialState = {
   deleteSuccess: false,
   detailLoading: false,
   detailError: null,
+  joinLoading: false,
+  joinError: null,
+  joinSuccess: false,
+  participantsLoading: false,
+  participantsError: null,
+  teamsLoading: false,
+  teamsError: null,
+  joinedLoading: false,
+  joinedError: null,
 };
 
 const tournamentSlice = createSlice({
@@ -137,15 +247,25 @@ const tournamentSlice = createSlice({
       state.updateError = null;
       state.deleteError = null;
       state.detailError = null;
+      state.joinError = null;
+      state.participantsError = null;
+      state.teamsError = null;
     },
     clearSuccess: (state) => {
       state.success = false;
       state.createSuccess = false;
       state.updateSuccess = false;
       state.deleteSuccess = false;
+      state.joinSuccess = false;
     },
     clearCurrentTournament: (state) => {
       state.currentTournament = null;
+    },
+    clearParticipants: (state) => {
+      state.participants = [];
+    },
+    clearTeams: (state) => {
+      state.teams = [];
     },
   },
   extraReducers: (builder) => {
@@ -291,9 +411,69 @@ const tournamentSlice = createSlice({
       state.deleteLoading = false;
       state.deleteError = action.payload;
     });
+
+    // Join Tournament
+    builder.addCase(joinTournament.pending, (state) => {
+      state.joinLoading = true;
+      state.joinError = null;
+      state.joinSuccess = false;
+    });
+    builder.addCase(joinTournament.fulfilled, (state) => {
+      state.joinLoading = false;
+      state.joinSuccess = true;
+    });
+    builder.addCase(joinTournament.rejected, (state, action) => {
+      state.joinLoading = false;
+      state.joinError = action.payload;
+    });
+
+    // Fetch Tournament Participants
+    builder.addCase(fetchTournamentParticipants.pending, (state) => {
+      state.participantsLoading = true;
+      state.participantsError = null;
+    });
+    builder.addCase(fetchTournamentParticipants.fulfilled, (state, action) => {
+      state.participantsLoading = false;
+      const result = action.payload.Result || action.payload.result;
+      state.participants = result?.participants || [];
+    });
+    builder.addCase(fetchTournamentParticipants.rejected, (state, action) => {
+      state.participantsLoading = false;
+      state.participantsError = action.payload;
+    });
+
+    // Fetch Tournament Teams
+    builder.addCase(fetchTournamentTeams.pending, (state) => {
+      state.teamsLoading = true;
+      state.teamsError = null;
+    });
+    builder.addCase(fetchTournamentTeams.fulfilled, (state, action) => {
+      state.teamsLoading = false;
+      const result = action.payload.Result || action.payload.result;
+      state.teams = result?.teams || [];
+    });
+    builder.addCase(fetchTournamentTeams.rejected, (state, action) => {
+      state.teamsLoading = false;
+      state.teamsError = action.payload;
+    });
+
+    // Fetch My Joined Tournaments
+    builder.addCase(fetchMyJoinedTournaments.pending, (state) => {
+      state.joinedLoading = true;
+      state.joinedError = null;
+    });
+    builder.addCase(fetchMyJoinedTournaments.fulfilled, (state, action) => {
+      state.joinedLoading = false;
+      const result = action.payload.Result || action.payload.result;
+      state.joinedTournaments = result?.tournaments || [];
+    });
+    builder.addCase(fetchMyJoinedTournaments.rejected, (state, action) => {
+      state.joinedLoading = false;
+      state.joinedError = action.payload;
+    });
   },
 });
 
-export const { clearError, clearSuccess, clearCurrentTournament } =
+export const { clearError, clearSuccess, clearCurrentTournament, clearParticipants, clearTeams } =
   tournamentSlice.actions;
 export default tournamentSlice.reducer;

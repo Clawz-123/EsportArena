@@ -1,3 +1,4 @@
+import json
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -233,10 +234,16 @@ class JoinTournamentSerializer(serializers.Serializer):
 		required=False,
 		allow_empty=True,
 	)
-	in_game_names = serializers.DictField(
-		child=serializers.CharField(max_length=100),
-		required=True,
-	)
+	in_game_names = serializers.JSONField(required=True)
+
+	def validate_in_game_names(self, value):
+		"""Parse in_game_names if it comes as a JSON string from FormData"""
+		if isinstance(value, str):
+			try:
+				return json.loads(value)
+			except json.JSONDecodeError:
+				raise serializers.ValidationError("Invalid JSON format for in_game_names")
+		return value
 
 	def validate(self, attrs):
 		tournament_id = attrs.get("tournament_id")

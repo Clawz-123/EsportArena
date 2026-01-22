@@ -5,23 +5,25 @@ import Header from '../../components/common/Header'
 import Footer from '../../components/common/Footer'
 import JoinTournament from './card/JoinTournament'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
-import { fetchPublicTournaments } from '../../slices/tournamentSlice'
+import { fetchPublicTournaments, fetchMyJoinedTournaments } from '../../slices/tournamentSlice'
 
 const Tournament = () => {
   const dispatch = useAppDispatch()
-  const { tournaments, loading } = useAppSelector((state) => state.tournament)
+  const { tournaments, joinedTournaments, loading, joinedLoading } = useAppSelector((state) => state.tournament)
+  const { user } = useAppSelector((state) => state.auth)
   const [activeTab, setActiveTab] = useState('active')
   const [searchTerm, setSearchTerm] = useState('')
   const [filterDate, setFilterDate] = useState('')
   const [gameFilter, setGameFilter] = useState('')
   const [feeFilter, setFeeFilter] = useState('any')
-  const [joinedTournaments, setJoinedTournaments] = useState([])
   const [showJoinModal, setShowJoinModal] = useState(false)
   const [selectedTournament, setSelectedTournament] = useState(null)
 
   useEffect(() => {
     // Fetch all public tournaments
     dispatch(fetchPublicTournaments())
+    // Fetch user's joined tournaments
+    dispatch(fetchMyJoinedTournaments())
   }, [dispatch])
 
   // Get tournament status
@@ -130,25 +132,17 @@ const Tournament = () => {
     }
   }
 
-  const handleSoloJoin = (tournament) => {
-    // Add tournament to joined list for solo
-    if (tournament && !joinedTournaments.find(j => j.id === tournament.id)) {
-      setJoinedTournaments([...joinedTournaments, tournament])
-      toast.success('Successfully joined the tournament!')
-    }
+  const handleSoloJoin = async (tournament) => {
+    // For solo tournaments, open the modal to collect IGN
+    toast.info('Please provide your in-game name to join')
+    setSelectedTournament(tournament)
+    setShowJoinModal(true)
   }
 
-  const handleModalJoin = (joinData) => {
-    // Handle team-based tournament join
-    console.log('Join data:', joinData)
-    
-    const tournament = tournaments.find(t => t.id === joinData.tournamentId)
-    if (tournament && !joinedTournaments.find(j => j.id === tournament.id)) {
-      setJoinedTournaments([...joinedTournaments, tournament])
-      toast.success('Successfully joined the tournament!')
-      setShowJoinModal(false)
-      setSelectedTournament(null)
-    }
+  const handleModalJoinSuccess = () => {
+    // Refresh tournaments after successful join
+    dispatch(fetchPublicTournaments())
+    dispatch(fetchMyJoinedTournaments())
   }
 
   const getTotalPrize = (tournament) => {
@@ -298,7 +292,7 @@ const Tournament = () => {
           </div>
 
           {/* Tournament Grid */}
-          {loading ? (
+          {(loading || joinedLoading) ? (
             <div className="text-center py-12">
               <p className="text-[16px] text-[#6B7280]">Loading tournaments...</p>
             </div>
@@ -406,7 +400,7 @@ const Tournament = () => {
           setShowJoinModal(false)
           setSelectedTournament(null)
         }}
-        onJoin={handleModalJoin}
+        onJoin={handleModalJoinSuccess}
       />
     </div>
   )

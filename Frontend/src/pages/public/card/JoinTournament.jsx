@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react'
 import { Formik, Form, Field, ErrorMessage } from 'formik'
 import { X, Star, Upload, Search, Users as UsersIcon, Loader2 } from 'lucide-react'
-import { useAppSelector } from '../../../store/hooks'
+import { useAppSelector, useAppDispatch } from '../../../store/hooks'
 import { toast } from 'react-toastify'
 import axiosInstance from '../../../axios/axiousinstance'
 import { stepOneSchema, stepTwoSchema } from '../../utils/joinTournamentValidation'
+import { joinTournament, clearSuccess, clearError } from '../../../slices/tournamentSlice'
 
 const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
+  const dispatch = useAppDispatch()
   const { user } = useAppSelector((state) => state.auth)
   const { profile } = useAppSelector((state) => state.profile || {})
+  const { joinLoading, joinSuccess, joinError } = useAppSelector((state) => state.tournament)
 
   const [searchTerm, setSearchTerm] = useState('')
   const [logoPreview, setLogoPreview] = useState(null)
@@ -22,8 +25,29 @@ const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
       setLogoPreview(null)
       setShowIGNSection(false)
       setSearchTerm('')
+      dispatch(clearSuccess())
+      dispatch(clearError())
     }
-  }, [isOpen])
+  }, [isOpen, dispatch])
+
+  useEffect(() => {
+    if (joinSuccess) {
+      toast.success('Successfully joined tournament!')
+      dispatch(clearSuccess())
+      if (onJoin) {
+        onJoin()
+      }
+      onClose()
+    }
+  }, [joinSuccess, dispatch, onClose, onJoin])
+
+  useEffect(() => {
+    if (joinError) {
+      const errorMessage = joinError?.error_message || joinError?.message || 'Failed to join tournament'
+      toast.error(errorMessage)
+      dispatch(clearError())
+    }
+  }, [joinError, dispatch])
 
   if (!isOpen || !tournament) return null
 
@@ -90,7 +114,9 @@ const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
     teamName: '',
     teamLogo: null,
     selectedMembers: [],
-    inGameNames: {},
+    inGameNames: captainId ? {
+      [captainId]: '',
+    } : {},
   }
 
   return (
@@ -116,17 +142,20 @@ const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
           return
         }
 
-        onJoin({
+        // Prepare data for backend
+        const joinData = {
           tournamentId: tournament.id,
-          teamName: isTeamBased ? values.teamName : null,
+          teamName: isTeamBased ? values.teamName : '',
           teamLogo: values.teamLogo,
-          members: values.selectedMembers,
+          teamMembers: values.selectedMembers.map((m) => m.id),
           inGameNames: values.inGameNames,
-        })
+        }
+
+        await dispatch(joinTournament(joinData))
         actions.setSubmitting(false)
       }}
     >
-      {({ values, setFieldValue, handleSubmit, isSubmitting }) => {
+      {({ values, setFieldValue, isSubmitting }) => {
         const filteredPlayers = allPlayers
           .filter((player) => {
             const searchLower = searchTerm.toLowerCase()
@@ -141,6 +170,8 @@ const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
             return
           }
           setFieldValue('selectedMembers', [...values.selectedMembers, player])
+          // Initialize IGN field for the new member to prevent controlled/uncontrolled warning
+          setFieldValue(`inGameNames.${player.id}`, '')
         }
 
         const handleRemoveMember = (playerId) => {
@@ -463,16 +494,24 @@ const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
                   <button
                     type="button"
                     onClick={onClose}
-                    className="flex-1 bg-[#111827] hover:bg-[#1F2937] text-[#E5E7EB] font-semibold py-3 px-4 rounded-lg text-[14px] transition-colors"
+                    disabled={joinLoading}
+                    className="flex-1 bg-[#111827] hover:bg-[#1F2937] text-[#E5E7EB] font-semibold py-3 px-4 rounded-lg text-[14px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    disabled={isSubmitting || (showIGNSection && userBalance < entryFee)}
-                    className="flex-1 bg-[#3B82F6] hover:bg-[#2563EB] text-white font-semibold py-3 px-4 rounded-lg text-[14px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isSubmitting || joinLoading || (showIGNSection && userBalance < entryFee)}
+                    className="flex-1 bg-[#3B82F6] hover:bg-[#2563EB] text-white font-semibold py-3 px-4 rounded-lg text-[14px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    {!showIGNSection ? 'Continue' : 'Continue to Payment'}
+                    {joinLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Joining...</span>
+                      </>
+                    ) : (
+                      <span>{!showIGNSection ? 'Continue' : 'Join Tournament'}</span>
+                    )}
                   </button>
                 </div>
               </div>

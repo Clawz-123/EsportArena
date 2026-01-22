@@ -583,3 +583,50 @@ class GetTournamentTeamsView(generics.ListAPIView):
                 error_message=str(e),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+# View for Getting User's Joined Tournaments
+class GetMyJoinedTournamentsView(generics.ListAPIView):
+    serializer_class = TournamentDetailSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Get all tournaments where the user is a participant
+        user = self.request.user
+        tournament_ids = TournamentParticipant.objects.filter(
+            player=user
+        ).values_list('tournament_id', flat=True)
+        
+        return Tournament.objects.filter(id__in=tournament_ids)
+
+    @swagger_auto_schema(
+        operation_description="Get all tournaments joined by the authenticated user",
+        responses={
+            200: openapi.Response(
+                description="Joined tournaments retrieved successfully",
+                schema=TournamentDetailSerializer(many=True),
+            ),
+            500: openapi.Response(description="Internal Server Error"),
+        },
+        tags=["Tournament"],
+    )
+
+    def get(self, request, *args, **kwargs):
+        try:
+            tournaments = self.get_queryset()
+            serializer = self.serializer_class(tournaments, many=True, context={'request': request})
+            return api_response(
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+                result={
+                    "count": tournaments.count(),
+                    "tournaments": serializer.data
+                },
+            )
+        except Exception as e:
+            return api_response(
+                is_success=False,
+                error_message=str(e),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
