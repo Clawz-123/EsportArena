@@ -361,16 +361,19 @@ class LogoutUserView(APIView):
     
 # View for Getting all Users
 class GetUserView(generics.ListAPIView):
-    """
-    Get all registered users
-    """
-    queryset = User.objects.all()
     serializer_class = UserResponseSerializers
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsSuperUser]
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return User.objects.filter(
+            is_organizer=False,
+            is_superuser=False,
+            is_verified=True
+        ).order_by('name')
 
     @swagger_auto_schema(
-        operation_description="Get list of all registered users",
+        operation_description="Get list of all verified players (excludes organizers and superusers)",
         responses={
             200: openapi.Response(
                 description="User list retrieved successfully",
@@ -380,7 +383,7 @@ class GetUserView(generics.ListAPIView):
         },
         tags=["User"],
     )
-# Created get method for getting all users by authenticated superuser
+# Created get method for getting all verified players
     def get(self, request, *args, **kwargs):
         try:
             users = self.get_queryset()

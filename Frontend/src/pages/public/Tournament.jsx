@@ -1,21 +1,23 @@
 import React, { useState, useEffect } from 'react'
 import { Clock, Search, Calendar, X, Trophy, Users, Coins, Zap } from 'lucide-react'
+import { toast } from 'react-toastify'
 import Header from '../../components/common/Header'
 import Footer from '../../components/common/Footer'
+import JoinTournament from './card/JoinTournament'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import { fetchPublicTournaments } from '../../slices/tournamentSlice'
 
 const Tournament = () => {
   const dispatch = useAppDispatch()
   const { tournaments, loading } = useAppSelector((state) => state.tournament)
-  const { user } = useAppSelector((state) => state.auth)
-
   const [activeTab, setActiveTab] = useState('active')
   const [searchTerm, setSearchTerm] = useState('')
   const [filterDate, setFilterDate] = useState('')
   const [gameFilter, setGameFilter] = useState('')
   const [feeFilter, setFeeFilter] = useState('any')
   const [joinedTournaments, setJoinedTournaments] = useState([])
+  const [showJoinModal, setShowJoinModal] = useState(false)
+  const [selectedTournament, setSelectedTournament] = useState(null)
 
   useEffect(() => {
     // Fetch all public tournaments
@@ -113,11 +115,39 @@ const Tournament = () => {
     return colors[hash]
   }
 
-  const handleJoinTournament = (tournamentId) => {
-    // Add tournament to joined list
-    const tournament = tournaments.find(t => t.id === tournamentId)
-    if (tournament && !joinedTournaments.find(j => j.id === tournamentId)) {
+  const handleJoinTournament = (tournament) => {
+    // Check if tournament is team-based (duo or squad)
+    const isTeamBased = tournament.match_format?.toLowerCase().includes('squad') || 
+                        tournament.match_format?.toLowerCase().includes('duo')
+
+    if (isTeamBased) {
+      // Open modal for team-based tournaments
+      setSelectedTournament(tournament)
+      setShowJoinModal(true)
+    } else {
+      // Direct join for solo tournaments
+      handleSoloJoin(tournament)
+    }
+  }
+
+  const handleSoloJoin = (tournament) => {
+    // Add tournament to joined list for solo
+    if (tournament && !joinedTournaments.find(j => j.id === tournament.id)) {
       setJoinedTournaments([...joinedTournaments, tournament])
+      toast.success('Successfully joined the tournament!')
+    }
+  }
+
+  const handleModalJoin = (joinData) => {
+    // Handle team-based tournament join
+    console.log('Join data:', joinData)
+    
+    const tournament = tournaments.find(t => t.id === joinData.tournamentId)
+    if (tournament && !joinedTournaments.find(j => j.id === tournament.id)) {
+      setJoinedTournaments([...joinedTournaments, tournament])
+      toast.success('Successfully joined the tournament!')
+      setShowJoinModal(false)
+      setSelectedTournament(null)
     }
   }
 
@@ -348,7 +378,7 @@ const Tournament = () => {
 
                   {/* CTA Button */}
                   <button
-                    onClick={() => handleJoinTournament(tournament.id)}
+                    onClick={() => handleJoinTournament(tournament)}
                     className="w-full bg-[#3B82F6] hover:bg-[#2563EB] text-white font-semibold py-3 px-4 rounded-lg text-[14px] transition-colors"
                   >
                     {joinedTournaments.find(j => j.id === tournament.id) ? 'Joined' : 'Join Tournament'}
@@ -367,6 +397,17 @@ const Tournament = () => {
       </div>
 
       <Footer />
+
+      {/* Join Tournament Modal */}
+      <JoinTournament
+        tournament={selectedTournament}
+        isOpen={showJoinModal}
+        onClose={() => {
+          setShowJoinModal(false)
+          setSelectedTournament(null)
+        }}
+        onJoin={handleModalJoin}
+      />
     </div>
   )
 }
