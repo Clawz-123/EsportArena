@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Tournament
+from .models import Tournament, TournamentTeam, TournamentParticipant
 
 
 class TournamentAdmin(admin.ModelAdmin):
@@ -56,3 +56,39 @@ class TournamentAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Tournament, TournamentAdmin)
+
+
+class TournamentTeamAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "team_name",
+        "tournament",
+        "captain",
+        "created_at",
+    ]
+    list_filter = ["tournament__game_title", "created_at"]
+    search_fields = ["team_name", "captain__email", "captain__name", "tournament__name"]
+    readonly_fields = ["id", "created_at", "updated_at"]
+    ordering = ["-created_at"]
+
+
+admin.site.register(TournamentTeam, TournamentTeamAdmin)
+
+
+class TournamentParticipantAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "player",
+        "tournament",
+        "team",
+        "in_game_name",
+        "is_captain",
+        "joined_at",
+    ]
+    list_filter = ["is_captain", "tournament__game_title", "joined_at"]
+    search_fields = ["player__email", "player__name", "tournament__name", "in_game_name"]
+    readonly_fields = ["id", "joined_at"]
+    ordering = ["-joined_at"]
+
+
+admin.site.register(TournamentParticipant, TournamentParticipantAdmin)

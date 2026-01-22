@@ -2,7 +2,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from accounts.models import User
-from .models import Tournament
+from .models import Tournament, TournamentTeam, TournamentParticipant
 
 
 class TournamentCreateSerializer(serializers.ModelSerializer):
@@ -150,3 +150,163 @@ class TournamentDetailSerializer(serializers.ModelSerializer):
 			"created_at",
 			"updated_at",
 		]
+
+
+class TournamentParticipantSerializer(serializers.ModelSerializer):
+	player_name = serializers.CharField(source="player.name", read_only=True)
+	player_email = serializers.EmailField(source="player.email", read_only=True)
+	player_profile_image = serializers.SerializerMethodField()
+	team_name = serializers.CharField(source="team.team_name", read_only=True)
+
+	def get_player_profile_image(self, obj):
+		if obj.player and obj.player.profile_image:
+			request = self.context.get('request')
+			if request:
+				return request.build_absolute_uri(obj.player.profile_image.url)
+			return obj.player.profile_image.url
+		return None
+
+	class Meta:
+		model = TournamentParticipant
+		fields = [
+			"id",
+			"player",
+			"player_name",
+			"player_email",
+			"player_profile_image",
+			"team",
+			"team_name",
+			"in_game_name",
+			"is_captain",
+			"joined_at",
+		]
+		read_only_fields = [
+			"id",
+			"player_name",
+			"player_email",
+			"player_profile_image",
+			"team_name",
+			"joined_at",
+		]
+
+
+class TournamentTeamSerializer(serializers.ModelSerializer):
+	captain_name = serializers.CharField(source="captain.name", read_only=True)
+	captain_email = serializers.EmailField(source="captain.email", read_only=True)
+	members = TournamentParticipantSerializer(many=True, read_only=True)
+	member_count = serializers.SerializerMethodField()
+
+	def get_member_count(self, obj):
+		return obj.members.count()
+
+	class Meta:
+		model = TournamentTeam
+		fields = [
+			"id",
+			"team_name",
+			"team_logo",
+			"captain",
+			"captain_name",
+			"captain_email",
+			"members",
+			"member_count",
+			"created_at",
+			"updated_at",
+		]
+		read_only_fields = [
+			"id",
+			"captain_name",
+			"captain_email",
+			"members",
+			"member_count",
+			"created_at",
+			"updated_at",
+		]
+
+
+class JoinTournamentSerializer(serializers.Serializer):
+	tournament_id = serializers.IntegerField()
+	team_name = serializers.CharField(max_length=100, required=False, allow_blank=True)
+	team_logo = serializers.ImageField(required=False, allow_null=True)
+	team_members = serializers.ListField(
+		child=serializers.IntegerField(),
+		required=False,
+		allow_empty=True,
+	)
+	in_game_names = serializers.DictField(
+		child=serializers.CharField(max_length=100),
+		required=True,
+	)
+
+	def validate(self, attrs):
+		tournament_id = attrs.get("tournament_id")
+		team_members = attrs.get("team_members", [])
+		in_game_names = attrs.get("in_game_names", {})
+
+		# Validate tournament exists
+		try:
+			tournament = Tournament.objects.get(id=tournament_id)
+		except Tournament.DoesNotExist:
+			raise serializers.ValidationError({"tournament_id": "Tournament not found."})
+
+		attrs["tournament"] = tournament
+
+		# Validate registration period
+		today = timezone.now().date()
+		if tournament.registration_start > today:
+			raise serializers.ValidationError("Registration has not started yet.")
+		if tournament.registration_end < today:
+			raise serializers.ValidationError("Registration has ended.")
+
+		# Validate tournament is not full
+		current_participants = TournamentParticipant.objects.filter(tournament=tournament).count()
+		is_team_based = tournament.match_format in [Tournament.MatchFormats.DUO, Tournament.MatchFormats.SQUAD]
+
+		if is_team_based:
+			required_members = 1 if tournament.match_format == Tournament.MatchFormats.DUO else 3
+			total_new_members = 1 + len(team_members)  # captain + members
+
+			if current_participants + total_new_members > tournament.max_participants:
+				raise serializers.ValidationError("Tournament is full.")
+
+			# Validate team name is provided
+			if not attrs.get("team_name"):
+				raise serializers.ValidationError({"team_name": "Team name is required for team-based tournaments."})
+
+			# Validate correct number of members
+			if len(team_members) != required_members:
+				raise serializers.ValidationError({
+					"team_members": f"You need exactly {required_members} teammate{'s' if required_members > 1 else ''} for {tournament.match_format} format."
+				})
+
+			# Validate all members exist and are valid players
+			if team_members:
+				members = User.objects.filter(
+					id__in=team_members,
+					is_verified=True,
+					is_organizer=False,
+					is_superuser=False,
+				)
+				if members.count() != len(team_members):
+					raise serializers.ValidationError({"team_members": "One or more team members are invalid."})
+
+			# Validate in-game names for captain and all members
+			user = self.context.get("request").user
+			required_ign_ids = [str(user.id)] + [str(mid) for mid in team_members]
+			for member_id in required_ign_ids:
+				if member_id not in in_game_names or not in_game_names[member_id].strip():
+					raise serializers.ValidationError({
+						"in_game_names": f"In-game name is required for all team members."
+					})
+
+		else:
+			# Solo tournament
+			if current_participants + 1 > tournament.max_participants:
+				raise serializers.ValidationError("Tournament is full.")
+
+			# Validate captain has in-game name
+			user = self.context.get("request").user
+			if str(user.id) not in in_game_names or not in_game_names[str(user.id)].strip():
+				raise serializers.ValidationError({"in_game_names": "In-game name is required."})
+
+		return attrs

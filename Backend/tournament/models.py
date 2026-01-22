@@ -89,3 +89,77 @@ class Tournament(models.Model):
 		if self.expected_end and self.match_start:
 			if self.expected_end < self.match_start:
 				raise ValidationError("Expected end must be on or after match start.")
+
+
+class TournamentTeam(models.Model):
+	tournament = models.ForeignKey(
+		Tournament,
+		on_delete=models.CASCADE,
+		related_name="teams",
+	)
+	team_name = models.CharField(max_length=100)
+	team_logo = models.ImageField(upload_to="tournament_teams/", null=True, blank=True)
+	captain = models.ForeignKey(
+		settings.AUTH_USER_MODEL,
+		on_delete=models.CASCADE,
+		related_name="captained_teams",
+	)
+	created_at = models.DateTimeField(auto_now_add=True)
+	updated_at = models.DateTimeField(auto_now=True)
+
+	class Meta:
+		ordering = ["-created_at"]
+		unique_together = [["tournament", "team_name"]]
+
+	def __str__(self) -> str:
+		return f"{self.team_name} - {self.tournament.name}"
+
+	def clean(self) -> None:
+		# Validate team already exists in tournament
+		if self.pk is None and TournamentTeam.objects.filter(
+			tournament=self.tournament, 
+			team_name__iexact=self.team_name
+		).exists():
+			raise ValidationError("A team with this name already exists in the tournament.")
+
+
+class TournamentParticipant(models.Model):
+	tournament = models.ForeignKey(
+		Tournament,
+		on_delete=models.CASCADE,
+		related_name="participants",
+	)
+	player = models.ForeignKey(
+		settings.AUTH_USER_MODEL,
+		on_delete=models.CASCADE,
+		related_name="tournament_participations",
+	)
+	team = models.ForeignKey(
+		TournamentTeam,
+		on_delete=models.CASCADE,
+		related_name="members",
+		null=True,
+		blank=True,
+	)
+	in_game_name = models.CharField(max_length=100)
+	is_captain = models.BooleanField(default=False)
+	joined_at = models.DateTimeField(auto_now_add=True)
+
+	class Meta:
+		ordering = ["-joined_at"]
+		unique_together = [["tournament", "player"]]
+
+	def __str__(self) -> str:
+		return f"{self.player.email} - {self.tournament.name}"
+
+	def clean(self) -> None:
+		# Validate player is not organizer or superuser
+		if self.player and (getattr(self.player, "is_organizer", False) or getattr(self.player, "is_superuser", False)):
+			raise ValidationError("Organizers and superusers cannot participate in tournaments.")
+		
+		# Validate player is not already in tournament
+		if self.pk is None and TournamentParticipant.objects.filter(
+			tournament=self.tournament,
+			player=self.player
+		).exists():
+			raise ValidationError("Player is already registered in this tournament.")

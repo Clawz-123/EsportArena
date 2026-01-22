@@ -8,11 +8,14 @@ from django.db import transaction
 from django.core.exceptions import ValidationError
 
 from esport.response import api_response
-from .models import Tournament
+from .models import Tournament, TournamentTeam, TournamentParticipant
 from .serializers import (
     TournamentCreateSerializer,
     TournamentUpdateSerializer,
     TournamentDetailSerializer,
+    JoinTournamentSerializer,
+    TournamentTeamSerializer,
+    TournamentParticipantSerializer,
 )
 
 from drf_yasg.utils import swagger_auto_schema
@@ -346,6 +349,233 @@ class GetAllPublicTournamentsView(generics.ListAPIView):
                 is_success=True,
                 status_code=status.HTTP_200_OK,
                 result={"count": tournaments.count(), "tournaments": serializer.data},
+            )
+        except Exception as e:
+            return api_response(
+                is_success=False,
+                error_message=str(e),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+# View for Joining a Tournament
+class JoinTournamentView(generics.CreateAPIView):
+    serializer_class = JoinTournamentSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def perform_join(self, validated_data, user):
+        tournament = validated_data["tournament"]
+        team_name = validated_data.get("team_name")
+        team_logo = validated_data.get("team_logo")
+        team_members = validated_data.get("team_members", [])
+        in_game_names = validated_data["in_game_names"]
+
+        is_team_based = tournament.match_format in [Tournament.MatchFormats.DUO, Tournament.MatchFormats.SQUAD]
+
+        # Check if user is already registered
+        if TournamentParticipant.objects.filter(tournament=tournament, player=user).exists():
+            raise ValidationError("You are already registered in this tournament.")
+
+        # Check if any team member is already registered
+        if team_members:
+            existing_participants = TournamentParticipant.objects.filter(
+                tournament=tournament,
+                player_id__in=team_members
+            ).values_list('player__email', flat=True)
+            if existing_participants:
+                raise ValidationError(f"Some team members are already registered: {', '.join(existing_participants)}")
+
+        if is_team_based:
+            # Create team
+            team = TournamentTeam(
+                tournament=tournament,
+                team_name=team_name,
+                team_logo=team_logo,
+                captain=user,
+            )
+            team.full_clean()
+            team.save()
+
+            # Add captain
+            captain_participant = TournamentParticipant(
+                tournament=tournament,
+                player=user,
+                team=team,
+                in_game_name=in_game_names[str(user.id)],
+                is_captain=True,
+            )
+            captain_participant.full_clean()
+            captain_participant.save()
+
+            # Add team members
+            for member_id in team_members:
+                member_participant = TournamentParticipant(
+                    tournament=tournament,
+                    player_id=member_id,
+                    team=team,
+                    in_game_name=in_game_names[str(member_id)],
+                    is_captain=False,
+                )
+                member_participant.full_clean()
+                member_participant.save()
+
+            return team
+
+        else:
+            # Solo tournament - no team needed
+            participant = TournamentParticipant(
+                tournament=tournament,
+                player=user,
+                in_game_name=in_game_names[str(user.id)],
+                is_captain=False,
+            )
+            participant.full_clean()
+            participant.save()
+            return participant
+
+    @swagger_auto_schema(
+        operation_description="Join a tournament (Players only)",
+        request_body=JoinTournamentSerializer,
+        responses={
+            201: openapi.Response(description="Successfully joined tournament"),
+            400: openapi.Response(description="Bad Request"),
+            403: openapi.Response(description="Forbidden - Only verified players can join"),
+            500: openapi.Response(description="Internal Server Error"),
+        },
+        tags=["Tournament"],
+    )
+
+    def post(self, request):
+        try:
+            # Validate user is a player
+            if getattr(request.user, "is_organizer", False) or getattr(request.user, "is_superuser", False):
+                return api_response(
+                    is_success=False,
+                    error_message="Organizers and superusers cannot participate in tournaments.",
+                    status_code=status.HTTP_403_FORBIDDEN,
+                )
+
+            serializer = self.serializer_class(
+                data=request.data,
+                context={"request": request}
+            )
+
+            if serializer.is_valid():
+                result = self.perform_join(serializer.validated_data, request.user)
+
+                if isinstance(result, TournamentTeam):
+                    result_serializer = TournamentTeamSerializer(result, context={'request': request})
+                    message = f"Successfully joined tournament '{result.tournament.name}' with team '{result.team_name}'."
+                else:
+                    result_serializer = TournamentParticipantSerializer(result, context={'request': request})
+                    message = f"Successfully joined tournament '{result.tournament.name}'."
+
+                return api_response(
+                    is_success=True,
+                    status_code=status.HTTP_201_CREATED,
+                    result={
+                        "message": message,
+                        "data": result_serializer.data,
+                    },
+                )
+
+            return api_response(
+                is_success=False,
+                error_message=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        except ValidationError as e:
+            return api_response(
+                is_success=False,
+                error_message=e.message_dict if hasattr(e, "message_dict") else str(e),
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception as e:
+            return api_response(
+                is_success=False,
+                error_message=str(e),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+# View for Getting Tournament Participants
+class GetTournamentParticipantsView(generics.ListAPIView):
+    serializer_class = TournamentParticipantSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        tournament_id = self.kwargs.get("tournament_id")
+        return TournamentParticipant.objects.filter(tournament_id=tournament_id)
+
+    @swagger_auto_schema(
+        operation_description="Get all participants for a specific tournament",
+        responses={
+            200: openapi.Response(
+                description="Participants retrieved successfully",
+                schema=TournamentParticipantSerializer(many=True),
+            ),
+            500: openapi.Response(description="Internal Server Error"),
+        },
+        tags=["Tournament"],
+    )
+
+    def get(self, request, tournament_id):
+        try:
+            participants = self.get_queryset()
+            serializer = self.serializer_class(participants, many=True, context={'request': request})
+            return api_response(
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+                result={
+                    "count": participants.count(),
+                    "participants": serializer.data
+                },
+            )
+        except Exception as e:
+            return api_response(
+                is_success=False,
+                error_message=str(e),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+# View for Getting Tournament Teams
+class GetTournamentTeamsView(generics.ListAPIView):
+    serializer_class = TournamentTeamSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        tournament_id = self.kwargs.get("tournament_id")
+        return TournamentTeam.objects.filter(tournament_id=tournament_id)
+
+    @swagger_auto_schema(
+        operation_description="Get all teams for a specific tournament",
+        responses={
+            200: openapi.Response(
+                description="Teams retrieved successfully",
+                schema=TournamentTeamSerializer(many=True),
+            ),
+            500: openapi.Response(description="Internal Server Error"),
+        },
+        tags=["Tournament"],
+    )
+
+    def get(self, request, tournament_id):
+        try:
+            teams = self.get_queryset()
+            serializer = self.serializer_class(teams, many=True, context={'request': request})
+            return api_response(
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+                result={
+                    "count": teams.count(),
+                    "teams": serializer.data
+                },
             )
         except Exception as e:
             return api_response(
