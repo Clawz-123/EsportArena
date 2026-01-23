@@ -171,16 +171,14 @@ function Navbar() {
                                             </div>
                                         </div>
                                         <ul className="py-1">
-                                            {isOrganizer && (
-                                                <li>
-                                                    <button
-                                                        className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
-                                                        onClick={handleDashboardNavigation}
-                                                    >
-                                                        Go to Dashboard
-                                                    </button>
-                                                </li>
-                                            )}
+                                            <li>
+                                                <button
+                                                    className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
+                                                    onClick={handleDashboardNavigation}
+                                                >
+                                                    Go to Dashboard
+                                                </button>
+                                            </li>
                                             <li>
                                                 <button
                                                     className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
@@ -268,17 +266,15 @@ function Navbar() {
                                         </div>
                                     </div>
                                 </div>
-                                {isOrganizer && (
-                                    <button
-                                        onClick={() => {
-                                            setIsOpen(false);
-                                            handleDashboardNavigation();
-                                        }}
-                                        className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
-                                    >
-                                        Go to Dashboard
-                                    </button>
-                                )}
+                                <button
+                                    onClick={() => {
+                                        setIsOpen(false);
+                                        handleDashboardNavigation();
+                                    }}
+                                    className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
+                                >
+                                    Go to Dashboard
+                                </button>
                                 <button
                                     onClick={() => {
                                         setIsOpen(false);
