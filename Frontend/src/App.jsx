@@ -16,6 +16,8 @@ import OrgCreateTournament from './pages/organizer/OrgCreateTournament.jsx'
 import ContactUs from './pages/public/ContactUs.jsx'
 import Tournament from './pages/public/Tournament.jsx'
 import PlayerDashboard from './pages/player/PlayerDashboard.jsx'
+import PlayerMyTournament from './pages/player/PlayerMyTournament.jsx'
+
 
 // Gate keeps public pages when user is not authenticated
 const AuthGate = ({ children }) => {
@@ -51,6 +53,8 @@ function App() {
           <Route path='/contact-us' element={<AuthGate> <ContactUs /></AuthGate>} />
           <Route path='/tournaments' element={<AuthGate> <Tournament /></AuthGate>} />
           <Route path='/PlayerDashboard' element={<AuthGate> <PlayerDashboard /></AuthGate>} />
+          <Route path='/PlayerMyTournament' element={<AuthGate> <PlayerMyTournament /></AuthGate>} />
+
         </Routes>
       </Router>
     </Provider>

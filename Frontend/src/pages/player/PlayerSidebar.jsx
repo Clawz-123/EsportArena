@@ -13,7 +13,7 @@ import { logoutUser } from '../../slices/auth'
 
 const items = [
     { label: 'Dashboard', to: '/PlayerDashboard', icon: LayoutDashboard },
-    { label: 'My Tournaments', to: '/player/tournaments', icon: Trophy },
+    { label: 'My Tournaments', to: '/PlayerMyTournament', icon: Trophy },
     { label: 'Wallet & Transactions', to: '/player/wallet', icon: Wallet },
     { label: 'Notifications', to: '/player/notifications', icon: Bell },
 ]
