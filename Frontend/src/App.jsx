@@ -13,6 +13,7 @@ import UpdateProfile from './pages/public/UpdateProfile.jsx'
 import OrgDashboard from './pages/organizer/OrgDashboard.jsx'
 import OrgTournaments from './pages/organizer/OrgTournaments.jsx'
 import OrgCreateTournament from './pages/organizer/OrgCreateTournament.jsx'
+import OrgParticipant from './pages/organizer/individual/OrgParticiapant.jsx'
 import ContactUs from './pages/public/ContactUs.jsx'
 import Tournament from './pages/public/Tournament.jsx'
 import PlayerDashboard from './pages/player/PlayerDashboard.jsx'
@@ -50,6 +51,7 @@ function App() {
           <Route path='/OrgDashboard' element={<AuthGate> <OrgDashboard /></AuthGate>} />
           <Route path='/Orgtournaments' element={<AuthGate> <OrgTournaments /></AuthGate>} />
           <Route path='/OrgCreateTournament' element={<AuthGate> <OrgCreateTournament /></AuthGate>} />
+          <Route path='/organizer/tournaments/:id' element={<AuthGate> <OrgParticipant /></AuthGate>} />
           <Route path='/contact-us' element={<AuthGate> <ContactUs /></AuthGate>} />
           <Route path='/tournaments' element={<AuthGate> <Tournament /></AuthGate>} />
           <Route path='/PlayerDashboard' element={<AuthGate> <PlayerDashboard /></AuthGate>} />

@@ -59,17 +59,19 @@ const PlayerMyTournament = () => {
     ]
 
     const getStatusStyle = (status) => {
-        switch (status) {
-            case 'ongoing':
-                return 'text-[#3B82F6] text-white border border-[#3B82F6]'
-            case 'registration':
-                return 'bg-[#0F172A] text-[#F59E0B] border border-[#F59E0B]'
-            case 'completed':
-                return 'bg-[#111827] text-[#10B981] border border-[#10B981]'
-            default:
-                return 'bg-[#111827] text-[#9CA3AF]'
-        }
+    switch (status) {
+      case 'ongoing':
+        return 'bg-[#3B82F6] text-white'
+      case 'registration':
+        return 'bg-[#020617] text-white border border-[#374151]'
+      case 'completed':
+        return 'bg-[#111827] text-[#E5E7EB] border border-[#374151]'
+      case 'upcoming':
+        return 'bg-[#1E293B] text-[#3B82F6]'
+      default:
+        return 'bg-[#111827] text-[#6B7280]'
     }
+  }
 
     return (
         <div className="flex min-h-screen bg-[#0F172A]">
@@ -179,7 +181,7 @@ const PlayerMyTournament = () => {
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <span
-                                                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium capitalize border ${getStatusStyle(
+                                                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium capitalize  ${getStatusStyle(
                                                                 tournament.status
                                                             )}`}
                                                         >
