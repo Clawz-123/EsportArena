@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../../../store/hooks'
-import { fetchTournamentDetail } from '../../../slices/tournamentSlice'
+import {
+  fetchTournamentDetail,
+  fetchTournamentTeams,
+  clearTeams,
+} from '../../../slices/tournamentSlice'
 import OrgSidebar from '../OrgSidebar'
 import ProfileMenu from '../../../components/common/ProfileMenu'
 import ParticipantCard from './ParticapantCard'
@@ -21,12 +25,16 @@ const OrgTournamentHeader = () => {
   const navigate = useNavigate()
   const { id } = useParams()
   const dispatch = useAppDispatch()
-  const { currentTournament, loading } = useAppSelector((state) => state.tournament)
+  const { currentTournament, loading, teams } = useAppSelector((state) => state.tournament)
   const [activeTab, setActiveTab] = useState('participants')
 
   useEffect(() => {
     if (id) {
       dispatch(fetchTournamentDetail(id))
+      dispatch(fetchTournamentTeams(id))
+    }
+    return () => {
+      dispatch(clearTeams())
     }
   }, [id, dispatch])
 
@@ -59,8 +67,8 @@ const OrgTournamentHeader = () => {
 
   const summaryCards = [
     {
-      label: 'Participants',
-      value: `${tournament.current_participants || 0}/${tournament.max_participants || 0}`,
+      label: 'Teams Registered',
+      value: `${teams?.length || 0}/${tournament.max_participants || 0}`,
       icon: Users,
     },
     {
@@ -70,7 +78,7 @@ const OrgTournamentHeader = () => {
     },
     {
       label: 'Prize Pool',
-      value: `Rs. ${(tournament.prize_first || 0) + (tournament.prize_second || 0) + (tournament.prize_third || 0)}`,
+      value: `Rs. ${tournament.total_prize_pool || (tournament.prize_first || 0) + (tournament.prize_second || 0) + (tournament.prize_third || 0)}`,
       icon: Trophy,
     },
     {
