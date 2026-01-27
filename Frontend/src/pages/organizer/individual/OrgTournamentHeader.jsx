@@ -33,9 +33,6 @@ const OrgTournamentHeader = () => {
       dispatch(fetchTournamentDetail(id))
       dispatch(fetchTournamentTeams(id))
     }
-    return () => {
-      dispatch(clearTeams())
-    }
   }, [id, dispatch])
 
   if (loading) {

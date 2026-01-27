@@ -16,9 +16,6 @@ const ParticipantCard = ({ tournamentId }) => {
     useEffect(() => {
         if (!tournamentId) return
         dispatch(fetchTournamentTeams(tournamentId))
-        return () => {
-            dispatch(clearTeams())
-        }
     }, [dispatch, tournamentId])
 
     const filteredTeams = useMemo(() => {
