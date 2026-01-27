@@ -18,6 +18,9 @@ import ContactUs from './pages/public/ContactUs.jsx'
 import Tournament from './pages/public/Tournament.jsx'
 import PlayerDashboard from './pages/player/PlayerDashboard.jsx'
 import PlayerMyTournament from './pages/player/PlayerMyTournament.jsx'
+import TournaHeader from './pages/public/TounamentPage/TournaHeader.jsx'
+
+
 
 
 // Gate keeps public pages when user is not authenticated
@@ -54,8 +57,12 @@ function App() {
           <Route path='/organizer/tournaments/:id' element={<AuthGate> <OrgParticipant /></AuthGate>} />
           <Route path='/contact-us' element={<AuthGate> <ContactUs /></AuthGate>} />
           <Route path='/tournaments' element={<AuthGate> <Tournament /></AuthGate>} />
+          <Route path='/tournaments/:id' element={<AuthGate> <TournaHeader /></AuthGate>} />
           <Route path='/PlayerDashboard' element={<AuthGate> <PlayerDashboard /></AuthGate>} />
           <Route path='/PlayerMyTournament' element={<AuthGate> <PlayerMyTournament /></AuthGate>} />
+          <Route path='/Tournaheader' element={<AuthGate> <TournaHeader /></AuthGate>} />
+
+
 
         </Routes>
       </Router>

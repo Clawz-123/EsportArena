@@ -4,7 +4,6 @@ import { useAppDispatch, useAppSelector } from '../../../store/hooks'
 import {
   fetchTournamentDetail,
   fetchTournamentTeams,
-  clearTeams,
 } from '../../../slices/tournamentSlice'
 import OrgSidebar from '../OrgSidebar'
 import ProfileMenu from '../../../components/common/ProfileMenu'

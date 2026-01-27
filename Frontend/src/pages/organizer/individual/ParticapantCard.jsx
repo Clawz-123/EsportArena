@@ -3,7 +3,6 @@ import { Search, Eye } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '../../../store/hooks'
 import {
     fetchTournamentTeams,
-    clearTeams,
 } from '../../../slices/tournamentSlice'
 
 const ParticipantCard = ({ tournamentId }) => {

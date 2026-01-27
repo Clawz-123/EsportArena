@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Formik, Form, Field, ErrorMessage } from 'formik'
 import { X, Star, Upload, Search, Users as UsersIcon, Loader2 } from 'lucide-react'
 import { useAppSelector, useAppDispatch } from '../../../store/hooks'
@@ -8,6 +9,7 @@ import { stepOneSchema, stepTwoSchema } from '../../utils/joinTournamentValidati
 import { joinTournament, clearSuccess, clearError } from '../../../slices/tournamentSlice'
 
 const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
+  const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { user } = useAppSelector((state) => state.auth)
   const { profile } = useAppSelector((state) => state.profile || {})
@@ -117,6 +119,26 @@ const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
     inGameNames: captainId ? {
       [captainId]: '',
     } : {},
+  }
+
+  if (joinSuccess) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+        <div className="bg-[#0F172A] border border-[#1F2937] rounded-xl shadow-2xl w-full max-w-md p-8 flex flex-col items-center">
+          <h2 className="text-2xl font-bold text-white mb-2">Successfully Joined!</h2>
+          <p className="text-[#9CA3AF] mb-6 text-center">You have joined <span className="font-semibold text-white">{tournament.name}</span>.</p>
+          <button
+            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-semibold py-3 px-6 rounded-lg text-[15px] transition-colors mb-2 w-full"
+            onClick={() => {
+              onClose && onClose()
+              navigate(`/tournaments/${tournament.id}`)
+            }}
+          >
+            View Tournament
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (

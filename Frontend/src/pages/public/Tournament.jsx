@@ -10,7 +10,6 @@ import { fetchPublicTournaments, fetchMyJoinedTournaments } from '../../slices/t
 const Tournament = () => {
   const dispatch = useAppDispatch()
   const { tournaments, joinedTournaments, loading, joinedLoading } = useAppSelector((state) => state.tournament)
-  const { user } = useAppSelector((state) => state.auth)
   const [activeTab, setActiveTab] = useState('active')
   const [searchTerm, setSearchTerm] = useState('')
   const [filterDate, setFilterDate] = useState('')
@@ -74,7 +73,6 @@ const Tournament = () => {
     ? tournaments.filter(t => {
         const status = getTournamentStatus(t)
         const isNotJoined = !joinedTournaments.find(j => j.id === t.id)
-        // Active tab shows: Upcoming, Registration, Registration Closed
         return isNotJoined && ['Upcoming', 'Registration', 'Registration Closed'].includes(status)
       })
     : joinedTournaments
@@ -371,12 +369,21 @@ const Tournament = () => {
                   </div>
 
                   {/* CTA Button */}
-                  <button
-                    onClick={() => handleJoinTournament(tournament)}
-                    className="w-full bg-[#3B82F6] hover:bg-[#2563EB] text-white font-semibold py-3 px-4 rounded-lg text-[14px] transition-colors"
-                  >
-                    {joinedTournaments.find(j => j.id === tournament.id) ? 'Joined' : 'Join Tournament'}
-                  </button>
+                  {joinedTournaments.find(j => j.id === tournament.id) ? (
+                    <button
+                      onClick={() => window.location.href = `/tournaments/${tournament.id}`}
+                      className="w-full bg-[#22C55E] hover:bg-[#16A34A] text-white font-semibold py-3 px-4 rounded-lg text-[14px] transition-colors cursor-pointer"
+                    >
+                      Joined
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleJoinTournament(tournament)}
+                      className="w-full bg-[#3B82F6] hover:bg-[#2563EB] text-white font-semibold py-3 px-4 rounded-lg text-[14px] transition-colors"
+                    >
+                      Join Tournament
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
