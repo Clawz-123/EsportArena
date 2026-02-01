@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'accounts', 
     'tournament',
     'contactMessage',
+    'TournamentBaracket',
 ]
 
 MIDDLEWARE = [

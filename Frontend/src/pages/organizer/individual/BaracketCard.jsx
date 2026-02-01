@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react"
 import { Shuffle } from "lucide-react"
 import { useAppDispatch, useAppSelector } from '../../../store/hooks'
 import { fetchTournamentTeams, fetchTournamentDetail } from '../../../slices/tournamentSlice'
+import { fetchTournamentBracket, saveTournamentBracket } from '../../../slices/BracketSlice'
 import { toast } from 'react-toastify'
 
 function shuffleArray(array) {
@@ -17,13 +18,15 @@ function shuffleArray(array) {
 const BracketCard = ({ tournamentId }) => {
   const dispatch = useAppDispatch()
   const { teams, teamsLoading, currentTournament } = useAppSelector((state) => state.tournament)
-  const [bracket, setBracket] = useState(null)
+  const bracketState = useAppSelector((state) => state.bracket)
   const [error, setError] = useState("")
+  const [selectedGroup, setSelectedGroup] = useState('A')
 
   useEffect(() => {
     if (tournamentId) {
       dispatch(fetchTournamentTeams(tournamentId))
       dispatch(fetchTournamentDetail(tournamentId))
+      dispatch(fetchTournamentBracket(tournamentId))
     }
   }, [dispatch, tournamentId])
 
@@ -34,7 +37,7 @@ const BracketCard = ({ tournamentId }) => {
     return now > regEnd && (teams?.length || 0) > 0
   }
 
-  const handleGenerateBracket = () => {
+  const handleGenerateBracket = async () => {
     setError("")
     if (!currentTournament) return
     const now = new Date()
@@ -62,7 +65,13 @@ const BracketCard = ({ tournamentId }) => {
     } else {
       groups = [{ name: 'A', teams: shuffled }]
     }
-    setBracket(groups)
+    // Save bracket to backend
+    try {
+      await dispatch(saveTournamentBracket({ tournamentId, bracket_data: groups }))
+      toast.success('Bracket saved to database!')
+    } catch {
+      toast.error('Failed to save bracket!')
+    }
   }
 
   return (
@@ -108,23 +117,55 @@ const BracketCard = ({ tournamentId }) => {
       )}
 
       {/* Bracket Display */}
-      {bracket ? (
-        <div className="flex flex-wrap gap-8 justify-center">
-          {bracket.map((group) => (
-            <div key={group.name} className="bg-[#232c3b] rounded-xl p-6 min-w-[260px] max-w-xs w-full">
-              <h2 className="text-lg font-bold text-[#60a5fa] mb-3">Group {group.name}</h2>
-              <ul className="space-y-2">
-                {group.teams.map((team, idx) => (
-                  <li key={team.id || idx} className="bg-[#1e293b] rounded px-3 py-2 text-white text-sm font-medium flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-[#2563eb] flex items-center justify-center text-xs font-bold">
-                      {idx + 1}
-                    </span>
-                    {team.team_name || team.name || 'Team'}
-                  </li>
-                ))}
-              </ul>
+      {bracketState.bracket && bracketState.bracket.bracket_data ? (
+        <div>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <Shuffle className="w-5 h-5 text-[#60a5fa]" />
+              <h2 className="text-xl font-semibold text-white">Teams</h2>
             </div>
-          ))}
+            <select
+              className="bg-[#232c3b] text-white px-4 py-2 rounded-lg border border-[#243044] focus:outline-none"
+              value={selectedGroup}
+              onChange={e => setSelectedGroup(e.target.value)}
+            >
+              {bracketState.bracket.bracket_data.map(group => (
+                <option key={group.name} value={group.name}>Group {group.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full bg-[#232c3b] rounded-xl">
+              <thead>
+                <tr className="text-[#94a3b8] text-left text-sm">
+                  <th className="py-3 px-4 font-medium">#</th>
+                  <th className="py-3 px-4 font-medium">Team Logo</th>
+                  <th className="py-3 px-4 font-medium">Team Name</th>
+                  <th className="py-3 px-4 font-medium">Members</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bracketState.bracket.bracket_data.find(g => g.name === selectedGroup)?.teams.map((team, idx) => (
+                  <tr key={team.id || idx} className="border-b border-[#1e293b]">
+                    <td className="py-2 px-4 text-white font-semibold">{idx + 1}</td>
+                    <td className="py-2 px-4">
+                      {team.team_logo ? (
+                        <img src={team.team_logo} alt="logo" className="w-10 h-10 rounded-full object-cover bg-[#1e293b]" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-[#334155] flex items-center justify-center text-white font-bold">
+                          {team.team_name ? team.team_name.charAt(0).toUpperCase() : 'T'}
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-2 px-4 text-white">{team.team_name || team.name || 'Team'}</td>
+                    <td className="py-2 px-4 text-white">
+                      {team.members && Array.isArray(team.members) ? team.members.length : 0}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-20">
