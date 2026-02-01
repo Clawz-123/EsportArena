@@ -374,7 +374,7 @@ const Tournament = () => {
                       onClick={() => window.location.href = `/tournaments/${tournament.id}`}
                       className="w-full bg-[#22C55E] hover:bg-[#16A34A] text-white font-semibold py-3 px-4 rounded-lg text-[14px] transition-colors cursor-pointer"
                     >
-                      Joined
+                      View Tournament
                     </button>
                   ) : (
                     <button

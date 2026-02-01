@@ -381,9 +381,9 @@ const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
                             )}
 
                             {/* Selected Members Display */}
-                            <div className="min-h-[120px] bg-[#111827] border border-[#1F2937] rounded-lg p-4">
+                            <div className="min-h-30 bg-[#111827] border border-[#1F2937] rounded-lg p-4">
                               {values.selectedMembers.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-[100px] text-center">
+                                <div className="flex flex-col items-center justify-center h-25 text-center">
                                   <UsersIcon className="w-10 h-10 text-[#374151] mb-2" />
                                   <p className="text-[12px] text-[#6B7280]">
                                     Search and select {requiredMembers} teammate{requiredMembers > 1 ? 's' : ''}
