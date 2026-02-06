@@ -40,6 +40,7 @@ urlpatterns = [
     path("api/tournament/", include("tournament.urls")),
     path("api/tournamentbaracket/", include("TournamentBaracket.urls")),
     path("api/contact/", include("contactMessage.urls")),
+    path("api/match/", include("Match.urls")),
     path("swagger/", schema_view.with_ui("swagger", cache_timeout=0), name="swagger-ui"),
     path("redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="redoc"),
 ]
