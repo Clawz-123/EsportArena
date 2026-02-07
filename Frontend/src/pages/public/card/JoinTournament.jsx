@@ -22,7 +22,42 @@ const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
   const [showIGNSection, setShowIGNSection] = useState(false)
 
   useEffect(() => {
-    if (isOpen) {
+    const fetchPlayers = async () => {
+      if (!tournament?.id) {
+        return
+      }
+
+      setLoadingPlayers(true)
+      try {
+        const [usersResponse, participantsResponse] = await Promise.all([
+          axiosInstance.get('/accounts/users/'),
+          axiosInstance.get(`/tournament/participants/${tournament.id}/`),
+        ])
+
+        const usersResult = usersResponse.data.Result || usersResponse.data.result || usersResponse.data
+        const users = usersResult.users || []
+
+        const participantsResult =
+          participantsResponse.data.Result || participantsResponse.data.result || participantsResponse.data
+        const participants = participantsResult.participants || []
+
+        const registeredIds = new Set(participants.map((participant) => participant.player))
+
+        // Filter out current user, organizers, and already registered players
+        const players = users.filter(
+          (u) => u.id !== user?.id && !u.is_organizer && !registeredIds.has(u.id)
+        )
+        setAllPlayers(players)
+      } catch (error) {
+        console.error('Error fetching players:', error)
+        toast.error('Failed to load players')
+        setAllPlayers([])
+      } finally {
+        setLoadingPlayers(false)
+      }
+    }
+
+    if (isOpen && tournament?.id) {
       fetchPlayers()
       setLogoPreview(null)
       setShowIGNSection(false)
@@ -30,7 +65,7 @@ const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
       dispatch(clearSuccess())
       dispatch(clearError())
     }
-  }, [isOpen, dispatch])
+  }, [isOpen, tournament?.id, dispatch, user?.id])
 
   useEffect(() => {
     if (joinSuccess) {
@@ -63,28 +98,6 @@ const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
 
   const captainName = profile?.username || user?.name || user?.email || 'Player'
   const captainId = user?.id
-
-  // Fetch all players from API
-  const fetchPlayers = async () => {
-    setLoadingPlayers(true)
-    try {
-      const response = await axiosInstance.get('/accounts/users/')
-      const result = response.data.Result || response.data.result || response.data
-      const users = result.users || []
-      
-      // Filter out current user and organizers
-      const players = users.filter(
-        (u) => u.id !== captainId && !u.is_organizer
-      )
-      setAllPlayers(players)
-    } catch (error) {
-      console.error('Error fetching players:', error)
-      toast.error('Failed to load players')
-      setAllPlayers([])
-    } finally {
-      setLoadingPlayers(false)
-    }
-  }
 
   const handleLogoUpload = (e, setFieldValue) => {
     const file = e.target.files?.[0]

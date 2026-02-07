@@ -249,6 +249,8 @@ class JoinTournamentSerializer(serializers.Serializer):
 		tournament_id = attrs.get("tournament_id")
 		team_members = attrs.get("team_members", [])
 		in_game_names = attrs.get("in_game_names", {})
+		request = self.context.get("request")
+		user = request.user if request else None
 
 		# Validate tournament exists
 		try:
@@ -264,6 +266,20 @@ class JoinTournamentSerializer(serializers.Serializer):
 			raise serializers.ValidationError("Registration has not started yet.")
 		if tournament.registration_end < today:
 			raise serializers.ValidationError("Registration has ended.")
+
+		# Validate none of the selected players are already registered in this tournament
+		if user:
+			participant_ids = [user.id] + [member_id for member_id in team_members]
+			existing_participants = list(
+				TournamentParticipant.objects.filter(
+					tournament=tournament,
+					player_id__in=participant_ids,
+				).values_list("player__email", flat=True)
+			)
+			if existing_participants:
+				raise serializers.ValidationError({
+					"team_members": f"Some players are already registered: {', '.join(existing_participants)}"
+				})
 
 		# Validate tournament is not full
 		current_participants = TournamentParticipant.objects.filter(tournament=tournament).count()
@@ -298,7 +314,6 @@ class JoinTournamentSerializer(serializers.Serializer):
 					raise serializers.ValidationError({"team_members": "One or more team members are invalid."})
 
 			# Validate in-game names for captain and all members
-			user = self.context.get("request").user
 			required_ign_ids = [str(user.id)] + [str(mid) for mid in team_members]
 			for member_id in required_ign_ids:
 				if member_id not in in_game_names or not in_game_names[member_id].strip():
@@ -312,7 +327,6 @@ class JoinTournamentSerializer(serializers.Serializer):
 				raise serializers.ValidationError("Tournament is full.")
 
 			# Validate captain has in-game name
-			user = self.context.get("request").user
 			if str(user.id) not in in_game_names or not in_game_names[str(user.id)].strip():
 				raise serializers.ValidationError({"in_game_names": "In-game name is required."})
 
