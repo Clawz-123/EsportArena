@@ -8,6 +8,7 @@ import matchReducer from "../slices/MatchSlice";
 import leaderBoardReducer from "../slices/leaderBoardSlice";
 
 export const store = configureStore({
+  // Adding reducers for different created slices
   reducer: {
     auth: authReducer,
     profile: profileReducer,
@@ -17,5 +18,6 @@ export const store = configureStore({
     match: matchReducer,
     leaderboard: leaderBoardReducer,
   },
+  // Enabling Redux DevTools only in development mode
   devTools: import.meta.env.DEV,
 });
