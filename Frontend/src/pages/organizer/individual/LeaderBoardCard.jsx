@@ -1,15 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Trophy, Medal, ChevronDown } from 'lucide-react'
+import { Trophy, Medal, ChevronDown, Pencil } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '../../../store/hooks'
 import { fetchTournamentBracket } from '../../../slices/BracketSlice'
-import { fetchLeaderboardEntries } from '../../../slices/leaderBoardSlice'
+import { fetchLeaderboardEntries, updateLeaderboardEntry } from '../../../slices/leaderBoardSlice'
 
 const LeaderBoardCard = ({ tournamentId }) => {
   const dispatch = useAppDispatch()
   const { bracket } = useAppSelector((state) => state.bracket)
-  const { entries, loading, error } = useAppSelector((state) => state.leaderboard || {})
+  const { entries, loading, error, updateLoading } = useAppSelector((state) => state.leaderboard || {})
   const [groups, setGroups] = useState([])
   const [selectedGroup, setSelectedGroup] = useState('')
+  const [editingEntry, setEditingEntry] = useState(null)
+  const [editForm, setEditForm] = useState({
+    placement_points: '',
+    kill_points: '',
+    wwcd: '',
+  })
 
   useEffect(() => {
     if (tournamentId) {
@@ -46,13 +52,49 @@ const LeaderBoardCard = ({ tournamentId }) => {
     }
   }, [dispatch, tournamentId, bracket?.id, selectedGroup])
 
-  const leaderboard = useMemo(() => entries || [], [entries])
+  const leaderboard = useMemo(() => {
+    const data = Array.isArray(entries) ? [...entries] : []
+    data.sort((a, b) => {
+      const totalA = Number(a.total_points || 0)
+      const totalB = Number(b.total_points || 0)
+      if (totalB !== totalA) return totalB - totalA
+      const killsA = Number(a.kill_points || 0)
+      const killsB = Number(b.kill_points || 0)
+      if (killsB !== killsA) return killsB - killsA
+      return Number(b.placement_points || 0) - Number(a.placement_points || 0)
+    })
+    return data
+  }, [entries])
 
-  const getRankIcon = (rank) => {
-    if (rank === 1) return <Trophy className="w-5 h-5 text-yellow-500" />
-    if (rank === 2) return <Medal className="w-5 h-5 text-gray-400" />
-    if (rank === 3) return <Medal className="w-5 h-5 text-orange-600" />
-    return null
+  const openEditPoints = (entry) => {
+    setEditingEntry(entry)
+    setEditForm({
+      placement_points: String(entry.placement_points ?? ''),
+      kill_points: String(entry.kill_points ?? ''),
+      wwcd: String(entry.wwcd ?? ''),
+    })
+  }
+
+  const closeEditPoints = () => {
+    setEditingEntry(null)
+    setEditForm({ placement_points: '', kill_points: '', wwcd: '' })
+  }
+
+  const handleEditSubmit = async (event) => {
+    event.preventDefault()
+    if (!editingEntry) return
+
+    await dispatch(
+      updateLeaderboardEntry({
+        entryId: editingEntry.id,
+        entryData: {
+          placement_points: Number(editForm.placement_points || 0),
+          kill_points: Number(editForm.kill_points || 0),
+          wwcd: Number(editForm.wwcd || 0),
+        },
+      })
+    )
+    closeEditPoints()
   }
 
   return (
@@ -69,7 +111,7 @@ const LeaderBoardCard = ({ tournamentId }) => {
             <select
               value={selectedGroup}
               onChange={(e) => setSelectedGroup(e.target.value)}
-              className="appearance-none bg-[#111827] border border-[#1F2937] rounded-lg px-4 py-2.5 pr-10 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer min-w-[160px]"
+              className="appearance-none bg-[#111827] border border-[#1F2937] rounded-lg px-4 py-2.5 pr-10 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer min-w-40"
             >
               {groups.length === 0 && <option value="">No groups</option>}
               {groups.map((group) => (
@@ -90,40 +132,51 @@ const LeaderBoardCard = ({ tournamentId }) => {
                 <th className="px-6 py-3 text-left text-xs font-semibold text-[#9CA3AF] uppercase">Team</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-[#9CA3AF] uppercase">Points</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-[#9CA3AF] uppercase">Kills</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-[#9CA3AF] uppercase">Wins</th>
-              </tr>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-[#9CA3AF] uppercase">WWCD</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-[#9CA3AF] uppercase">Total</th>
+                <th className="px-6 py-3 text-right text-xs font-semibold text-[#9CA3AF] uppercase">Edit</th>
+               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-8 text-center">
+                  <td colSpan="7" className="px-6 py-8 text-center">
                     <p className="text-sm text-[#9CA3AF]">Loading leaderboard...</p>
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-8 text-center">
+                  <td colSpan="7" className="px-6 py-8 text-center">
                     <p className="text-sm text-red-400">Failed to load leaderboard.</p>
                   </td>
                 </tr>
               ) : leaderboard.length > 0 ? (
-                leaderboard.map((entry) => (
+                leaderboard.map((entry, index) => (
                   <tr key={entry.id} className="border-b border-[#2D3748] last:border-0 hover:bg-[#2D3748]/30 transition-colors">
                     <td className="px-6 py-4 text-sm text-white">
                       <div className="flex items-center gap-2">
-                        {getRankIcon(entry.rank)}
-                        <span className="font-semibold">#{entry.rank}</span>
+                        <span className="font-semibold">#{index + 1}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-white font-medium">{entry.team_name}</td>
-                    <td className="px-6 py-4 text-sm text-white font-semibold">{entry.total_points}</td>
+                    <td className="px-6 py-4 text-sm text-white font-semibold">{entry.placement_points}</td>
                     <td className="px-6 py-4 text-sm text-white">{entry.kill_points}</td>
                     <td className="px-6 py-4 text-sm text-[#10B981]">{entry.wwcd}</td>
+                    <td className="px-6 py-4 text-sm text-white font-semibold">{entry.total_points}</td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        className="text-[#9CA3AF] hover:text-white inline-flex items-center gap-2 text-sm transition-colors"
+                        onClick={() => openEditPoints(entry)}
+                        title="Edit points"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="px-6 py-8 text-center">
+                  <td colSpan="7" className="px-6 py-8 text-center">
                     <p className="text-sm text-[#9CA3AF]">No leaderboard data yet.</p>
                   </td>
                 </tr>
@@ -132,6 +185,85 @@ const LeaderBoardCard = ({ tournamentId }) => {
           </table>
         </div>
       </div>
+      {editingEntry && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#0f172a] rounded-xl shadow-2xl w-full max-w-md border border-[#1e293b] overflow-hidden">
+            <div className="p-6 pb-2">
+              <div className="flex justify-between items-start mb-2">
+                <div className="flex items-center gap-2 text-white">
+                  <Pencil className="w-5 h-5 text-[#3b82f6]" />
+                  <h2 className="text-xl font-bold">Edit Points</h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeEditPoints}
+                  className="text-[#94a3b8] hover:text-white transition-colors"
+                >
+                  <span className="sr-only">Close</span>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <p className="text-[#94a3b8] text-sm">
+                Update points for {editingEntry.team_name}.
+              </p>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="p-6 pt-2 space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-white text-sm font-medium">Placement Points</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editForm.placement_points}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, placement_points: e.target.value }))}
+                  className="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-white text-sm font-medium">Kill Points</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editForm.kill_points}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, kill_points: e.target.value }))}
+                  className="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-white text-sm font-medium">WWCD</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editForm.wwcd}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, wwcd: e.target.value }))}
+                  className="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-3">
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded-lg text-white hover:bg-[#1e293b] transition-colors text-sm font-medium"
+                  onClick={closeEditPoints}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-lg bg-[#3b82f6] text-white text-sm font-medium hover:bg-[#2563eb] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={updateLoading}
+                >
+                  {updateLoading ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
