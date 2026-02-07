@@ -13,11 +13,3 @@ class TournamentBracket(models.Model):
     def __str__(self):
         return f"Bracket for {self.tournament.name}"
 
-class TournamentLeaderboard(models.Model):
-    tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE, related_name='leaderboards')
-    leaderboard_data = models.JSONField(default=list)  
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"Leaderboard for {self.tournament.name}"

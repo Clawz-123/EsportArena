@@ -5,6 +5,7 @@ import tournamentReducer from "../slices/tournamentSlice";
 import contactReducer from "../slices/contactMessage";
 import  bracketReducer  from "../slices/BracketSlice";
 import matchReducer from "../slices/MatchSlice";
+import leaderBoardReducer from "../slices/leaderBoardSlice";
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
     contact: contactReducer,
     bracket: bracketReducer,
     match: matchReducer,
+    leaderboard: leaderBoardReducer,
   },
   devTools: import.meta.env.DEV,
 });
