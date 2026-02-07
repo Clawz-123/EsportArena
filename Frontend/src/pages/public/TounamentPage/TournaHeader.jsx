@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../../../store/hooks'
-import { fetchTournamentDetail } from '../../../slices/tournamentSlice'
+import { fetchTournamentDetail, fetchTournamentParticipants, fetchTournamentTeams } from '../../../slices/tournamentSlice'
 import { ChevronLeft, Calendar, Users, DollarSign, Trophy } from 'lucide-react'
 import Header from '../../../components/common/Header'
 import ProfileMenu from '../../../components/common/ProfileMenu'
@@ -14,12 +14,14 @@ const TournaHeader = () => {
   const navigate = useNavigate()
   const { id } = useParams()
   const dispatch = useAppDispatch()
-  const { currentTournament, loading } = useAppSelector((state) => state.tournament)
+  const { currentTournament, loading, participants, teams } = useAppSelector((state) => state.tournament)
   const [activeTab, setActiveTab] = useState('overview')
 
   useEffect(() => {
     if (id) {
       dispatch(fetchTournamentDetail(id))
+      dispatch(fetchTournamentParticipants(id))
+      dispatch(fetchTournamentTeams(id))
     }
   }, [id, dispatch])
 
@@ -49,6 +51,10 @@ const TournaHeader = () => {
 
   const status = getTournamentStatus(tournament)
 
+  const participantCount = participants?.length || 0
+  const teamCount = teams?.length || 0
+  const isTeamBased = ['Duo', 'Squad'].includes(tournament.match_format)
+
   const statsCards = [
     {
       label: 'Start Date',
@@ -58,8 +64,8 @@ const TournaHeader = () => {
       icon: Calendar,
     },
     {
-      label: 'Teams',
-      value: `${tournament.max_participants || 0}`,
+      label: isTeamBased ? 'Teams' : 'Participants',
+      value: `${isTeamBased ? teamCount : participantCount}`,
       icon: Users,
     },
     {
@@ -102,7 +108,7 @@ const TournaHeader = () => {
       <Header />
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 pt-24 pb-8">
         {/* Back Navigation */}
         <button
           onClick={() => navigate('/tournaments')}
@@ -119,11 +125,10 @@ const TournaHeader = () => {
             <div className="mb-4">
               <div className="flex items-center gap-3 mb-2">
                 <h1 className="text-4xl font-bold text-white">{tournament.name}</h1>
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold text-white ${
-                  status === 'ongoing' ? 'bg-[#10B981]' :
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold text-white ${status === 'ongoing' ? 'bg-[#10B981]' :
                   status === 'completed' ? 'bg-[#6B7280]' :
-                  'bg-[#2563EB]'
-                }`}>
+                    'bg-[#2563EB]'
+                  }`}>
                   {status}
                 </span>
               </div>
@@ -171,22 +176,18 @@ const TournaHeader = () => {
         </div>
 
         {/* Tab Navigation */}
-        <div className="border-b border-[#1F2937] mb-6">
-          <div className="flex gap-6">
+        <div className="mb-6">
+          <div className="flex bg-[#111827] p-1 rounded-lg w-full border border-[#1F2937]">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-3 px-1 text-sm font-medium transition-colors relative ${
-                  activeTab === tab.id
-                    ? 'text-[#2563EB]'
-                    : 'text-[#9CA3AF] hover:text-white'
-                }`}
+                className={`flex-1 py-3 text-sm font-medium rounded-md transition-all text-center ${activeTab === tab.id
+                  ? 'bg-[#2563EB] text-white shadow-lg'
+                  : 'text-[#9CA3AF] hover:text-white hover:bg-white/5'
+                  }`}
               >
                 {tab.label}
-                {activeTab === tab.id && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#2563EB]" />
-                )}
               </button>
             ))}
           </div>

@@ -10,6 +10,7 @@ import { fetchPublicTournaments, fetchMyJoinedTournaments } from '../../slices/t
 const Tournament = () => {
   const dispatch = useAppDispatch()
   const { tournaments, joinedTournaments, loading, joinedLoading } = useAppSelector((state) => state.tournament)
+  const { user } = useAppSelector((state) => state.auth || {})
   const [activeTab, setActiveTab] = useState('active')
   const [searchTerm, setSearchTerm] = useState('')
   const [filterDate, setFilterDate] = useState('')
@@ -69,20 +70,25 @@ const Tournament = () => {
     new Set(tournaments.map((t) => t.game_title).filter(Boolean))
   ).sort()
 
-  const filteredTournaments = (activeTab === 'active' 
-    ? tournaments.filter(t => {
-        const status = getTournamentStatus(t)
-        const isNotJoined = !joinedTournaments.find(j => j.id === t.id)
-        return isNotJoined && ['Upcoming', 'Registration', 'Registration Closed'].includes(status)
-      })
-    : joinedTournaments
-  ).filter((tournament) => {
+  const activeBase = tournaments.filter((t) => {
+    const status = getTournamentStatus(t)
+    const isNotJoined = !joinedTournaments.find((j) => j.id === t.id)
+    return isNotJoined && status === 'Registration'
+  })
+
+  const applyFilters = (tournament) => {
     const matchesSearch = tournament.name.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesDate = isSameDay(tournament.match_start, filterDate)
-    const matchesGame = gameFilter ? (tournament.game_title || '').toLowerCase() === gameFilter.toLowerCase() : true
+    const matchesGame = gameFilter
+      ? (tournament.game_title || '').toLowerCase() === gameFilter.toLowerCase()
+      : true
     const matchesFee = matchesFeeFilter(tournament.entry_fee, feeFilter)
     return matchesSearch && matchesDate && matchesGame && matchesFee
-  })
+  }
+
+  const activeFiltered = activeBase.filter(applyFilters)
+  const joinedFiltered = joinedTournaments.filter(applyFilters)
+  const filteredTournaments = activeTab === 'active' ? activeFiltered : joinedFiltered
 
   const handleClearFilters = () => {
     setSearchTerm('')
@@ -116,6 +122,10 @@ const Tournament = () => {
   }
 
   const handleJoinTournament = (tournament) => {
+    if (user?.is_organizer || user?.role?.toLowerCase() === 'organizer') {
+      toast.info('Organizers cannot join tournaments')
+      return
+    }
     // Check if tournament is team-based (duo or squad)
     const isTeamBased = tournament.match_format?.toLowerCase().includes('squad') || 
                         tournament.match_format?.toLowerCase().includes('duo')
@@ -162,7 +172,7 @@ const Tournament = () => {
       <Header />
 
       {/* Page Header */}
-      <div className="pt-20 pb-8 px-6">
+      <div className="pt-20 pb-20 px-6">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-[28px] font-bold text-[#E5E7EB] mb-2">
             Tournaments
@@ -261,7 +271,7 @@ const Tournament = () => {
               }`}
             >
               <Zap className="w-4 h-4" />
-              Active ({tournaments.length - joinedTournaments.length})
+              Active ({activeFiltered.length})
             </button>
             <button
               onClick={() => setActiveTab('joined')}
@@ -272,7 +282,7 @@ const Tournament = () => {
               }`}
             >
               <Trophy className="w-4 h-4" />
-              Joined ({joinedTournaments.length})
+              Joined ({joinedFiltered.length})
             </button>
           </div>
         </div>

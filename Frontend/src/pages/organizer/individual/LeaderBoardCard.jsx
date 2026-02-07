@@ -84,7 +84,7 @@ const LeaderBoardCard = ({ tournamentId }) => {
     event.preventDefault()
     if (!editingEntry) return
 
-    await dispatch(
+     dispatch(
       updateLeaderboardEntry({
         entryId: editingEntry.id,
         entryData: {
