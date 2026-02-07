@@ -12,9 +12,7 @@ def validate_email(email: str) -> None:
 
 
 class CustomUserManager(BaseUserManager):
-    """
-    Custom manager for User model with email as the unique identifier.
-    """
+    # Using email as the unique identifier for authentication instead of usernames
     def _create_user(self, email: str, password: str, **extra_fields: Any):
         if not email:
             raise ValueError(_("An email address is required."))
@@ -22,19 +20,21 @@ class CustomUserManager(BaseUserManager):
             raise ValueError(_("A password is required."))
         
 
+        #  Validate email format
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
         return user
 
-
+    # Used for creating regular users and superusers
     def create_user(self, email: str, password: str = None, **extra_fields: Any):
         extra_fields.setdefault('is_staff', False)
         extra_fields.setdefault('is_superuser', False)
         return self._create_user(email, password, **extra_fields)
 
 
+    # Used for creating superusers with elevated permissions
     def create_superuser(self, email: str, password: str = None, **extra_fields: Any):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)

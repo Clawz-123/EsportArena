@@ -12,9 +12,6 @@ class UserResponseSerializers(serializers.ModelSerializer):
         fields = ['id', 'email', 'name', 'is_organizer', 'phone_number', 'role', 'is_verified', 'date_joined']
         read_only_fields = ['id', 'date_joined', 'role', 'is_verified']
 
-        def get_role(self, obj):
-            return obj.role
-
 
 # Serializer for User Creation
 class UserCreateSerializers(serializers.ModelSerializer):
@@ -43,6 +40,7 @@ class UserCreateSerializers(serializers.ModelSerializer):
             raise serializers.ValidationError("Phone number must contain only digits.")
         return value
     
+    #  Creating a function to create a new user and sending OTP to their email address for verification
     def create(self, validated_data):
         user = User.objects.create_user(
             email=validated_data['email'],
@@ -67,7 +65,7 @@ class UserCreateSerializers(serializers.ModelSerializer):
 
 # Serializer for Verifying OTP
 class VerifyOTPSerializer(serializers.Serializer):
-    email = serializers.EmailField(required=True)
+    email = serializers.EmailField(required=True)   
     otp = serializers.CharField(max_length=6, min_length=6, required=True)
 
 
@@ -141,6 +139,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['email', 'username', 'organizer_name', 'contact', 'role', 'date_joined', 'last_login']
 
+    # Overriding the to_representation method to customize the output based on user role and include absolute URL for profile image
     def to_representation(self, instance):
         data = super().to_representation(instance)
         role = (instance.role or '').lower()
@@ -148,7 +147,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         if instance.profile_image:
             request = self.context.get('request')
             if request:
-                data['profile_image'] = request.build_absolute_uri(instance.profile_image.url)
+                data['profile_image'] = request.build_absolute_uri(instance.profile_image.url)  
             else:
                 data['profile_image'] = instance.profile_image.url
         

@@ -116,6 +116,7 @@ class VerifyOTPView(APIView):
 
             is_valid, message = verify_otp(email, otp)
 
+            # Checking OTP validity and storing the email in session for reseting password if OTP is valid
             if is_valid:
                 request.session["reset_email"] = email
                 request.session.set_expiry(600)
@@ -405,9 +406,6 @@ class GetUserView(generics.ListAPIView):
         
 # View for Getting User Details
 class UserDetailView(generics.RetrieveAPIView):
-    """
-    Get details of a specific user by ID
-    """
     queryset = User.objects.all()
     serializer_class = UserResponseSerializers
     authentication_classes = [JWTAuthentication]
@@ -588,8 +586,6 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
         },
         tags=["Profile"],
     )
+    # Allowing put method for fully updating the profile of authenticated user
     def put(self, request, *args, **kwargs):
-        """
-        PUT delegates to PATCH logic to keep validation consistent.
-        """
         return self.patch(request, *args, **kwargs)

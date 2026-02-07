@@ -5,6 +5,7 @@ from django.utils.translation import gettext_lazy as _
 from .managers import CustomUserManager
 
 
+# Created a custom user model for user authentication and management
 class User(AbstractUser):
     class UserRoles(models.TextChoices):
         ORGANIZER = "Organizer", _("Organizer")
@@ -51,6 +52,7 @@ class User(AbstractUser):
         ordering = ['-date_joined']
 
 
+# Created OTP model to store OTP codes and their status
 class OTP(models.Model):
     email = models.EmailField()
     otp = models.CharField(max_length=6)

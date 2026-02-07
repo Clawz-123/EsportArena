@@ -1,5 +1,4 @@
 import random
-import string
 from datetime import timedelta
 from django.conf import settings
 from django.core.mail import send_mail
@@ -8,12 +7,12 @@ from django.utils import timezone
 from .models import User, OTP
 
 
-# Function to generate OTP
+# Created a generate otp function to generate a random 6-digit OTP code
 def generate_otp(length=6):
     return ''.join([str(random.randint(0, 9)) for _ in range(length)])
 
 
-# Function to send OTP via email
+# Created a send otp function to send the generated OTP code to the user's email address
 def send_otp(email, otp):
     subject = "Your OTP Code - EsportArena"  
     message = f"""
@@ -54,7 +53,7 @@ def send_otp(email, otp):
         return False
     
 
-# Function to create OTP
+# Created a function to create OTP and send it to the user's email address
 def create_otp(email):
     OTP.objects.filter(email=email, is_used=False).update(is_used=True)
     otp_code = generate_otp()
@@ -64,7 +63,7 @@ def create_otp(email):
     return otp_instance, email_sent  
 
 
-# Function to verify OTP
+# Created a function to verify the OTP code entered by the user and mark it as used if it's valid
 def verify_otp(email, otp_code):
     try:
         otp_instance = OTP.objects.filter(
@@ -100,7 +99,7 @@ def verify_otp(email, otp_code):
         return False, f"Error verifying OTP: {str(e)}"
 
 
-# Function to resend OTP   
+# Created a function to resend OTP to the user's email address with rate limiting to prevent abuse
 def resend_otp(email):
     try:
         try:
