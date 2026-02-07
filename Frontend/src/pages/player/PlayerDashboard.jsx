@@ -38,7 +38,6 @@ const PlayerDashboard = () => {
   }
 
   // Count tournaments by status
-  const ongoingCount = joinedTournaments.filter(t => getTournamentStatus(t) === 'ongoing').length
   const completedCount = joinedTournaments.filter(t => getTournamentStatus(t) === 'completed').length
   const pendingCount = joinedTournaments.filter(t => getTournamentStatus(t) === 'registration').length
 

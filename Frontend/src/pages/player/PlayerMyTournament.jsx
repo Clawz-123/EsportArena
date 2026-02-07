@@ -192,7 +192,7 @@ const PlayerMyTournament = () => {
                                                         <button
                                                             onClick={() =>
                                                                 navigate(
-                                                                    `/player/tournaments/${tournament.id}`
+                                                                    `/tournaments/${tournament.id}`
                                                                 )
                                                             }
                                                             className="text-sm text-[#3B82F6] hover:text-[#2563EB] font-medium transition-colors"
