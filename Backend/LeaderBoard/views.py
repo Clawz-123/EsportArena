@@ -11,6 +11,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
 
+# Creating a view to create a leaderboard entry in the database
 class CreateLeaderboardEntryView(generics.CreateAPIView):
 	serializer_class = GroupLeaderboardEntrySerializer
 	authentication_classes = [JWTAuthentication]
@@ -53,6 +54,7 @@ class CreateLeaderboardEntryView(generics.CreateAPIView):
 			)
 
 
+# Creating a view to list all the leaderboard entry for a tournament and filter it by bracket and group name
 class ListLeaderboardEntriesView(generics.ListAPIView):
 	serializer_class = GroupLeaderboardEntrySerializer
 	permission_classes = [AllowAny]
@@ -102,6 +104,7 @@ class ListLeaderboardEntriesView(generics.ListAPIView):
 			)
 
 
+# Creating a view to update a leaderboard entry in the database and only the organizer of the tournament can update it
 class UpdateLeaderboardEntryView(generics.UpdateAPIView):
 	serializer_class = GroupLeaderboardEntrySerializer
 	authentication_classes = [JWTAuthentication]
@@ -153,6 +156,7 @@ class UpdateLeaderboardEntryView(generics.UpdateAPIView):
 			)
 
 
+# Creating a view to delete a leaderboard entry in the database and only the organizer of the tournament can delete it
 class DeleteLeaderboardEntryView(generics.DestroyAPIView):
 	authentication_classes = [JWTAuthentication]
 	permission_classes = [IsAuthenticated]

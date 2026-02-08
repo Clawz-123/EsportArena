@@ -30,6 +30,7 @@ class GroupLeaderboardEntry(models.Model):
 	created_at = models.DateTimeField(auto_now_add=True)
 	updated_at = models.DateTimeField(auto_now=True)
 
+	# Created a meta class to define verbose names, ordering, and unique constraints for the GroupLeaderboardEntry model
 	class Meta:
 		verbose_name = "Group Leaderboard Entry"
 		verbose_name_plural = "Group Leaderboard Entries"
@@ -42,6 +43,6 @@ class GroupLeaderboardEntry(models.Model):
 	def save(self, *args, **kwargs):
 		if self.bracket_id and self.tournament_id and self.bracket.tournament_id != self.tournament_id:
 			raise ValueError("Bracket tournament must match leaderboard tournament.")
-		# Total points = placement points + kill points
+		# Calculating the total point  using plavement points and kill points and saving it to the database
 		self.total_points = (self.placement_points or 0) + (self.kill_points or 0)
 		super().save(*args, **kwargs)

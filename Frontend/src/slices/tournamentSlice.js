@@ -30,6 +30,19 @@ export const fetchPublicTournaments = createAsyncThunk(
   }
 );
 
+// Thunk for fetching all users (used for join tournament flow)
+export const fetchUsers = createAsyncThunk(
+  "tournament/fetchUsers",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.get("/accounts/users/");
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
 // Thunk for fetching organizer's tournaments
 export const fetchOrganizerTournaments = createAsyncThunk(
   "tournament/fetchOrganizer",
@@ -212,6 +225,7 @@ const initialState = {
   currentTournament: null,
   participants: [],
   teams: [],
+  users: [],
   loading: false,
   error: null,
   success: false,
@@ -233,6 +247,8 @@ const initialState = {
   participantsError: null,
   teamsLoading: false,
   teamsError: null,
+  usersLoading: false,
+  usersError: null,
   joinedLoading: false,
   joinedError: null,
 };
@@ -250,6 +266,7 @@ const tournamentSlice = createSlice({
       state.joinError = null;
       state.participantsError = null;
       state.teamsError = null;
+      state.usersError = null;
     },
     clearSuccess: (state) => {
       state.success = false;
@@ -455,6 +472,21 @@ const tournamentSlice = createSlice({
     builder.addCase(fetchTournamentTeams.rejected, (state, action) => {
       state.teamsLoading = false;
       state.teamsError = action.payload;
+    });
+
+    // Fetch Users
+    builder.addCase(fetchUsers.pending, (state) => {
+      state.usersLoading = true;
+      state.usersError = null;
+    });
+    builder.addCase(fetchUsers.fulfilled, (state, action) => {
+      state.usersLoading = false;
+      const result = action.payload.Result || action.payload.result || action.payload;
+      state.users = result?.users || [];
+    });
+    builder.addCase(fetchUsers.rejected, (state, action) => {
+      state.usersLoading = false;
+      state.usersError = action.payload;
     });
 
     // Fetch My Joined Tournaments

@@ -4,11 +4,14 @@ from django.core.validators import MinValueValidator
 from django.db import models
 
 
+# Model for Tournament
 class Tournament(models.Model):
+	# Defining choices for game titles, match formats, proof types, and visibility
 	class GameTitles(models.TextChoices):
 		PUBG_MOBILE = "PUBG Mobile", "PUBG Mobile"
 		FREE_FIRE = "Free Fire", "Free Fire"
 
+	# Defining choices for match formats, proof types, and visibility
 	class MatchFormats(models.TextChoices):
 		SOLO = "Solo", "Solo"
 		DUO = "Duo", "Duo"
@@ -90,7 +93,7 @@ class Tournament(models.Model):
 			if self.expected_end < self.match_start:
 				raise ValidationError("Expected end must be on or after match start.")
 
-
+# Model for Tournament Team
 class TournamentTeam(models.Model):
 	tournament = models.ForeignKey(
 		Tournament,
@@ -123,6 +126,7 @@ class TournamentTeam(models.Model):
 			raise ValidationError("A team with this name already exists in the tournament.")
 
 
+# Model for Tournament Participant
 class TournamentParticipant(models.Model):
 	tournament = models.ForeignKey(
 		Tournament,

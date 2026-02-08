@@ -358,7 +358,7 @@ class GetAllPublicTournamentsView(generics.ListAPIView):
             )
 
 
-# View for Joining a Tournament
+# View for Joining Tournament (for players to join a tournament and create a team if it's a team-based tournament)
 class JoinTournamentView(generics.CreateAPIView):
     serializer_class = JoinTournamentSerializer
     authentication_classes = [JWTAuthentication]
@@ -374,11 +374,11 @@ class JoinTournamentView(generics.CreateAPIView):
 
         is_team_based = tournament.match_format in [Tournament.MatchFormats.DUO, Tournament.MatchFormats.SQUAD]
 
-        # Check if user is already registered
+        # For checking the validity of team members and team name only if it's a team-based tournament
         if TournamentParticipant.objects.filter(tournament=tournament, player=user).exists():
             raise ValidationError("You are already registered in this tournament.")
 
-        # Check if any team member is already registered
+        # For checking team name uniqueness and team members validity only if it's a team-based tournament
         if team_members:
             existing_participants = TournamentParticipant.objects.filter(
                 tournament=tournament,
@@ -388,7 +388,7 @@ class JoinTournamentView(generics.CreateAPIView):
                 raise ValidationError(f"Some team members are already registered: {', '.join(existing_participants)}")
 
         if is_team_based:
-            # Create team
+            # Create team and add captain and members
             team = TournamentTeam(
                 tournament=tournament,
                 team_name=team_name,

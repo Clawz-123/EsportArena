@@ -17,6 +17,7 @@ from .serializers import (
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
+# Creating a view to create a match in the database and only the organizer of the tournament can create a match
 class CreateMatchView(generics.CreateAPIView):
     serializer_class = MatchCreateSerializer
     authentication_classes = [JWTAuthentication]
@@ -38,7 +39,6 @@ class CreateMatchView(generics.CreateAPIView):
     )
     def post(self, request):
         try:
-            # Add request context to serializer for validation
             serializer = self.serializer_class(
                 data=request.data, context={"request": request}
             )
@@ -64,6 +64,7 @@ class CreateMatchView(generics.CreateAPIView):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+# Creating a view to list all the matches for a specific tournament and only the organizer of the tournament can create a match
 class ListMatchesByTournamentView(generics.ListAPIView):
     serializer_class = MatchDetailSerializer
     permission_classes = [AllowAny] 
@@ -82,7 +83,6 @@ class ListMatchesByTournamentView(generics.ListAPIView):
     )
     def get(self, request, tournament_id):
         try:
-            # Verify tournament exists
             get_object_or_404(Tournament, pk=tournament_id)
             
             matches = Match.objects.filter(tournament_id=tournament_id).order_by('date_time')
@@ -99,6 +99,7 @@ class ListMatchesByTournamentView(generics.ListAPIView):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+# Creating a view to get the details of a match by its id and any user can access this endpoint
 class GetMatchDetailView(generics.RetrieveAPIView):
     serializer_class = MatchDetailSerializer
     permission_classes = [AllowAny]
@@ -131,6 +132,7 @@ class GetMatchDetailView(generics.RetrieveAPIView):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+# Creating a view to update the details of a match and only the organizer of the tournament can update the match details
 class UpdateMatchView(generics.UpdateAPIView):
     serializer_class = MatchUpdateSerializer
     authentication_classes = [JWTAuthentication]
@@ -154,7 +156,6 @@ class UpdateMatchView(generics.UpdateAPIView):
         try:
             match = get_object_or_404(Match, pk=match_id)
             
-            # Check permission: Only tournament organizer can update
             if match.tournament.organizer != request.user:
                 return api_response(
                     is_success=False,
@@ -185,6 +186,7 @@ class UpdateMatchView(generics.UpdateAPIView):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+# Creating a view to delete a match and only the organizer of the tournament can delete the match
 class DeleteMatchView(generics.DestroyAPIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -203,7 +205,7 @@ class DeleteMatchView(generics.DestroyAPIView):
         try:
             match = get_object_or_404(Match, pk=match_id)
             
-            # Check permission
+            # Cchecking the permission of the user to delete the match only
             if match.tournament.organizer != request.user:
                 return api_response(
                     is_success=False,

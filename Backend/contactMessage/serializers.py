@@ -2,7 +2,9 @@ from rest_framework import serializers
 from .models import ContactMessage
 
 
+
 class ContactMessageCreateSerializer(serializers.ModelSerializer):
+    # Serializer for creating a new contact message
     class Meta:
         model = ContactMessage
         fields = ['name', 'email', 'subject', 'message']
@@ -29,7 +31,9 @@ class ContactMessageCreateSerializer(serializers.ModelSerializer):
         return value.strip()
 
 
+
 class ContactMessageListSerializer(serializers.ModelSerializer):
+    # Serializer for listing contact messages
     class Meta:
         model = ContactMessage
         fields = ['id', 'name', 'email', 'subject', 'message', 'created_at', 'is_read', 'is_resolved']
@@ -37,6 +41,7 @@ class ContactMessageListSerializer(serializers.ModelSerializer):
 
 
 class ContactMessageDetailSerializer(serializers.ModelSerializer):
+    # Serializer for detailed view of a contact message
     class Meta:
         model = ContactMessage
         fields = '__all__'

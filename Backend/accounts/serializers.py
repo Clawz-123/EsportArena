@@ -144,6 +144,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         role = (instance.role or '').lower()
         
+        # Adding absolute URL for profile image if it exists
         if instance.profile_image:
             request = self.context.get('request')
             if request:

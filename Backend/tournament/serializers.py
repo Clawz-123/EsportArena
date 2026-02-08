@@ -6,6 +6,7 @@ from accounts.models import User
 from .models import Tournament, TournamentTeam, TournamentParticipant
 
 
+# Serializer for creating a tournament
 class TournamentCreateSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Tournament
@@ -50,6 +51,7 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
 		return tournament
 
 
+# Serializer for updating a tournament
 class TournamentUpdateSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Tournament
@@ -88,6 +90,7 @@ class TournamentUpdateSerializer(serializers.ModelSerializer):
 
 		return attrs
 
+	# Overriding the update method to call full_clean for model validation before saving
 	def update(self, instance, validated_data):
 		for field, value in validated_data.items():
 			setattr(instance, field, value)
@@ -96,6 +99,7 @@ class TournamentUpdateSerializer(serializers.ModelSerializer):
 		return instance
 
 
+# Serializer for listing tournaments with organizer details and total prize pool
 class TournamentDetailSerializer(serializers.ModelSerializer):
 	organizer_email = serializers.EmailField(source="organizer.email", read_only=True)
 	organizer_name = serializers.CharField(source="organizer.name", read_only=True)
@@ -153,6 +157,7 @@ class TournamentDetailSerializer(serializers.ModelSerializer):
 		]
 
 
+# Serializer for listing tournaments in a simple format (for tournament listing page)
 class TournamentParticipantSerializer(serializers.ModelSerializer):
 	player_name = serializers.CharField(source="player.name", read_only=True)
 	player_email = serializers.EmailField(source="player.email", read_only=True)
@@ -191,6 +196,7 @@ class TournamentParticipantSerializer(serializers.ModelSerializer):
 		]
 
 
+# Serializer for listing tournament teams with captain details and member count
 class TournamentTeamSerializer(serializers.ModelSerializer):
 	captain_name = serializers.CharField(source="captain.name", read_only=True)
 	captain_email = serializers.EmailField(source="captain.email", read_only=True)
@@ -225,6 +231,7 @@ class TournamentTeamSerializer(serializers.ModelSerializer):
 		]
 
 
+# Serializer for joining a tournament (for players to join a tournament and create a team if it's a team-based tournament)
 class JoinTournamentSerializer(serializers.Serializer):
 	tournament_id = serializers.IntegerField()
 	team_name = serializers.CharField(max_length=100, required=False, allow_blank=True)

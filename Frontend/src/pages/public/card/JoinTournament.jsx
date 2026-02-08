@@ -1,71 +1,65 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Formik, Form, Field, ErrorMessage } from 'formik'
 import { X, Star, Upload, Search, Users as UsersIcon, Loader2 } from 'lucide-react'
 import { useAppSelector, useAppDispatch } from '../../../store/hooks'
 import { toast } from 'react-toastify'
-import axiosInstance from '../../../axios/axiousinstance'
 import { stepOneSchema, stepTwoSchema } from '../../utils/joinTournamentValidation'
-import { joinTournament, clearSuccess, clearError } from '../../../slices/tournamentSlice'
+import {
+  joinTournament,
+  clearSuccess,
+  clearError,
+  fetchUsers,
+  fetchTournamentParticipants,
+} from '../../../slices/tournamentSlice'
 
 const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { user } = useAppSelector((state) => state.auth)
   const { profile } = useAppSelector((state) => state.profile || {})
-  const { joinLoading, joinSuccess, joinError } = useAppSelector((state) => state.tournament)
+  const {
+    joinLoading,
+    joinSuccess,
+    joinError,
+    users,
+    usersLoading,
+    usersError,
+    participants,
+    participantsLoading,
+    participantsError,
+  } = useAppSelector((state) => state.tournament)
 
   const [searchTerm, setSearchTerm] = useState('')
   const [logoPreview, setLogoPreview] = useState(null)
-  const [allPlayers, setAllPlayers] = useState([])
-  const [loadingPlayers, setLoadingPlayers] = useState(false)
   const [showIGNSection, setShowIGNSection] = useState(false)
 
   useEffect(() => {
-    const fetchPlayers = async () => {
-      if (!tournament?.id) {
-        return
-      }
-
-      setLoadingPlayers(true)
-      try {
-        const [usersResponse, participantsResponse] = await Promise.all([
-          axiosInstance.get('/accounts/users/'),
-          axiosInstance.get(`/tournament/participants/${tournament.id}/`),
-        ])
-
-        const usersResult = usersResponse.data.Result || usersResponse.data.result || usersResponse.data
-        const users = usersResult.users || []
-
-        const participantsResult =
-          participantsResponse.data.Result || participantsResponse.data.result || participantsResponse.data
-        const participants = participantsResult.participants || []
-
-        const registeredIds = new Set(participants.map((participant) => participant.player))
-
-        // Filter out current user, organizers, and already registered players
-        const players = users.filter(
-          (u) => u.id !== user?.id && !u.is_organizer && !registeredIds.has(u.id)
-        )
-        setAllPlayers(players)
-      } catch (error) {
-        console.error('Error fetching players:', error)
-        toast.error('Failed to load players')
-        setAllPlayers([])
-      } finally {
-        setLoadingPlayers(false)
-      }
-    }
-
     if (isOpen && tournament?.id) {
-      fetchPlayers()
-      setLogoPreview(null)
-      setShowIGNSection(false)
-      setSearchTerm('')
+      dispatch(fetchUsers())
+      dispatch(fetchTournamentParticipants(tournament.id))
       dispatch(clearSuccess())
       dispatch(clearError())
     }
-  }, [isOpen, tournament?.id, dispatch, user?.id])
+  }, [isOpen, tournament?.id, dispatch])
+
+  useEffect(() => {
+    if (isOpen && (usersError || participantsError)) {
+      toast.error('Failed to load players')
+    }
+  }, [isOpen, usersError, participantsError])
+
+  const allPlayers = useMemo(() => {
+    if (usersError || participantsError) {
+      return []
+    }
+
+    const registeredIds = new Set((participants || []).map((participant) => participant.player))
+
+    return (users || []).filter(
+      (u) => u.id !== user?.id && !u.is_organizer && !registeredIds.has(u.id)
+    )
+  }, [users, participants, usersError, participantsError, user?.id])
 
   useEffect(() => {
     if (joinSuccess) {
@@ -86,7 +80,7 @@ const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
     }
   }, [joinError, dispatch])
 
-  if (!isOpen || !tournament) return null
+  const loadingPlayers = usersLoading || participantsLoading
 
   const isTeamBased = tournament.match_format?.toLowerCase().includes('squad') || 
                        tournament.match_format?.toLowerCase().includes('duo')
@@ -134,6 +128,15 @@ const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
     } : {},
   }
 
+  const handleClose = () => {
+    setLogoPreview(null)
+    setShowIGNSection(false)
+    setSearchTerm('')
+    if (onClose) {
+      onClose()
+    }
+  }
+
   if (joinSuccess) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
@@ -143,7 +146,7 @@ const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
           <button
             className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-semibold py-3 px-6 rounded-lg text-[15px] transition-colors mb-2 w-full"
             onClick={() => {
-              onClose && onClose()
+              handleClose()
               navigate(`/tournaments/${tournament.id}`)
             }}
           >
@@ -222,7 +225,7 @@ const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
             {/* Backdrop */}
             <div
               className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
-              onClick={onClose}
+              onClick={handleClose}
             />
 
             {/* Modal */}
@@ -243,7 +246,7 @@ const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
                   </div>
                   <button
                     type="button"
-                    onClick={onClose}
+                    onClick={handleClose}
                     className="text-[#6B7280] hover:text-[#E5E7EB] transition-colors"
                   >
                     <X className="w-5 h-5" />
@@ -528,7 +531,7 @@ const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
                 <div className="sticky bottom-0 bg-[#0F172A] border-t border-[#1F2937] px-6 py-4 flex gap-3">
                   <button
                     type="button"
-                    onClick={onClose}
+                    onClick={handleClose}
                     disabled={joinLoading}
                     className="flex-1 bg-[#111827] hover:bg-[#1F2937] text-[#E5E7EB] font-semibold py-3 px-4 rounded-lg text-[14px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >

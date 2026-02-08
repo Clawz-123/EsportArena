@@ -4,6 +4,7 @@ from .models import GroupLeaderboardEntry
 
 
 class GroupLeaderboardEntrySerializer(serializers.ModelSerializer):
+	# Serializer for the GroupLeaderboardEntry model
 	team_name = serializers.CharField(source="team.team_name", read_only=True)
 
 	class Meta:
@@ -31,6 +32,7 @@ class GroupLeaderboardEntrySerializer(serializers.ModelSerializer):
 			"updated_at",
 		]
 
+	# Adding validation for checking the baracked are of same tu=ournament
 	def validate(self, attrs):
 		instance = getattr(self, "instance", None)
 		tournament = attrs.get("tournament") or (instance.tournament if instance else None)

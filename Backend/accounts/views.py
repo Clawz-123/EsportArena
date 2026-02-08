@@ -505,16 +505,16 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
         tags=["Profile"],
     )
 
-    # For updating the profile of authenticated user
+    # Allowing patch method for partially updating the profile of authenticated user
     def patch(self, request, *args, **kwargs):
         try:
             user = self.get_object()
             
-            # Only allow updating specific fields
+            # Only allowing name, phone_number, and profile_image to be updated through this endpoint
             allowed_fields = ['name', 'phone_number', 'profile_image']
             update_data = {k: v for k, v in request.data.items() if k in allowed_fields}
 
-            # Explicitly handle uploaded file from request.FILES
+            # Handling profile image update if provided in the request files
             if 'profile_image' in request.FILES:
                 update_data['profile_image'] = request.FILES['profile_image']
             

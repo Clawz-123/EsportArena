@@ -1,15 +1,17 @@
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
-
+// Creating a hepler function to get the access token from local storage
 const getAccessToken = () => {
   return localStorage.getItem('access_token');
 };
 
+// Creating a helper function to get the refresh token from local storage
 const getRefreshToken = () => {
   return localStorage.getItem('refresh_token');
 };
 
+// Creating an axios instance with the base URL and default headers
 const axiosInstance = axios.create({
   baseURL: API_URL,
   headers: {
@@ -18,7 +20,7 @@ const axiosInstance = axios.create({
   withCredentials: true,
 });
 
-// Request interceptor
+// Creaed a request interceptor to add the access token to the Authorization header of each request
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = getAccessToken();
@@ -32,13 +34,13 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// Response interceptor for token refresh
+// Created a response interceptor to handle 401 errors and refresh the access token using the refresh token
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
     
-    // If error is 401 and we haven't tried refreshing yet
+    // Checking if the error is a 401 Unauthorized and we haven't already tried to refresh the token
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
@@ -55,11 +57,11 @@ axiosInstance.interceptors.response.use(
         const { access } = response.data;
         localStorage.setItem('access_token', access);
         
-        // Retry original request with new token
+        // Updating the Authorization header of the original request with the new access token and retrying the request
         originalRequest.headers['Authorization'] = `Bearer ${access}`;
         return axiosInstance(originalRequest);
       } catch (refreshError) {
-        // Refresh failed, logout user
+        // If failed it send the user to login page clearing the local storage
         localStorage.clear();
         window.location.href = '/login';
         return Promise.reject(refreshError);

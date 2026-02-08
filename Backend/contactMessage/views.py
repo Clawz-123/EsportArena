@@ -28,6 +28,7 @@ class CreateContactMessageView(APIView):
         },
         tags=["Contact"],
     )
+    # Using post method to create a new contact message and save it to the database
     def post(self, request):
         try:
             serializer = ContactMessageCreateSerializer(data=request.data)
@@ -51,7 +52,7 @@ class CreateContactMessageView(APIView):
             )
 
 
-# View for Listing Contact Messages (Admin Only)
+# Created a view to list all the contact message in the database
 class ListContactMessagesView(APIView):
     permission_classes = [IsAdminUser]
 
@@ -81,7 +82,7 @@ class ListContactMessagesView(APIView):
             )
 
 
-# View for Deleting Contact Message (Admin Only)
+# Created a view to delete a contact message from the database
 class DeleteContactMessageView(APIView):
     permission_classes = [IsAdminUser]
 
