@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "../axios/axiousinstance";
 
 
-// Thunk for user registration
+// Creatinf a thunk for posting the registration data to the backend and storing the registered data in local storage for later use in OTP verification
 export const registerUser = createAsyncThunk(
   "auth/register",
   async (userData, { rejectWithValue }) => {
@@ -36,7 +36,7 @@ export const registerUser = createAsyncThunk(
   }
 );
 
-// Thunk for user login
+// Creating a thunk for posting the login data to the backend and storing the access token, refresh token, and user data in local storage upon successful login
 export const loginUser = createAsyncThunk(
   "auth/login",
   async (credentials, { rejectWithValue }) => {
@@ -61,7 +61,7 @@ export const loginUser = createAsyncThunk(
   }
 );
 
-// Thunk for OTP verification
+// Creating a thunk for verifying the OTP sent to the user's email during registration and removing the registered data from local storage upon successful verification
 export const verifyOtp = createAsyncThunk(
   "auth/verifyOtp",
   async (otpData, { rejectWithValue }) => {
@@ -79,7 +79,7 @@ export const verifyOtp = createAsyncThunk(
 );
 
 
-// Thunk for resending OTP
+// Creating a thunk for resending the OTP to the user's email during registration
 export const resendOtp = createAsyncThunk(
   "auth/resendOtp",
   async (emailData, { rejectWithValue }) => {
@@ -95,7 +95,7 @@ export const resendOtp = createAsyncThunk(
   }
 );
 
-// Thunk for user logout
+// Creating a thunk for logging out the user by sending a request to the backend to invalidate the refresh token and clearing the local storage upon successful logout or if an error occurs during logout
 export const logoutUser = createAsyncThunk(
   "auth/logout",
   async (_, { rejectWithValue }) => {
@@ -112,7 +112,7 @@ export const logoutUser = createAsyncThunk(
 );
 
 
-// Thunk for password reset
+// Creating a thunk for password reset
 export const resetPassword = createAsyncThunk(
   "auth/resetPassword",
   async (passwordData, { rejectWithValue }) => {
@@ -128,11 +128,12 @@ export const resetPassword = createAsyncThunk(
   }
 );
 
-// Setting up the initial state for the auth slices
+// Creating a helper function to get the access token from local storage
 const getInitialState = () => {
   const storedUser = localStorage.getItem("user");
   const token = localStorage.getItem("access_token");
 
+  // Returning the initial state for all the needed properties in the auth slice
   return {
     user: storedUser ? JSON.parse(storedUser) : null,
     token: token || null,
@@ -154,6 +155,7 @@ const getInitialState = () => {
   };
 };
 
+// Creating the auth slice with reducers and extra reducers for handling authentication-related actions
 const authSlice = createSlice({
   name: "auth",
   initialState: getInitialState(),
@@ -176,11 +178,13 @@ const authSlice = createSlice({
     clearSuccess: (state) => {
       state.success = false;
     },
+    // Creating a reducer to set the user data in the state and local storage
     setUser: (state, action) => {
       state.user = action.payload;
       localStorage.setItem("user", JSON.stringify(action.payload));
     },
   },
+  // Creating extra reducers to handle the pending, fulfilled, and rejected states of the authentication-related thunks and updating the state accordingly
   extraReducers: (builder) => {
     builder.addCase(registerUser.pending, (state) => {
       state.registerLoading = true;

@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axiosInstance from '../axios/axiousinstance';
 import { logoutUser } from './auth';
 
-// Thunk for fetching user profile
+// Creating a thunk for fetching the authenticated user's profile
 export const fetchUserProfile = createAsyncThunk(
   'profile/fetchUserProfile',
   async (_, { rejectWithValue }) => {
@@ -15,7 +15,7 @@ export const fetchUserProfile = createAsyncThunk(
   }
 );
 
-// Thunk for updating user profile
+// Creating a thunk for updating the authenticated user's profile
 export const updateUserProfile = createAsyncThunk(
   'profile/updateUserProfile',
   async (profileData, { rejectWithValue, dispatch }) => {
@@ -40,6 +40,7 @@ export const updateUserProfile = createAsyncThunk(
   }
 );
 
+// Setting up the initial state for profile slice
 const initialState = {
   profile: null,
   loading: false,
@@ -49,17 +50,21 @@ const initialState = {
   updateSuccess: false,
 };
 
+// Creating the profile slice with reducers and extra reducers
 const profileSlice = createSlice({
   name: 'profile',
   initialState,
   reducers: {
+    // Clearing profile-related errors
     clearProfileError: (state) => {
       state.error = null;
       state.updateError = null;
     },
+    // Clearing profile update success state
     clearUpdateSuccess: (state) => {
       state.updateSuccess = false;
     },
+    // Resetting profile state (e.g., on logout)
     resetProfile: (state) => {
       state.profile = null;
       state.error = null;
@@ -67,6 +72,7 @@ const profileSlice = createSlice({
       state.updateSuccess = false;
     },
   },
+  // Handling pending, fulfilled, and rejected states for profile thunks
   extraReducers: (builder) => {
     // Fetch Profile
     builder.addCase(fetchUserProfile.pending, (state) => {

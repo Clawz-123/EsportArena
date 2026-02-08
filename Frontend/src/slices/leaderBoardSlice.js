@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "../axios/axiousinstance";
 
-// Create leaderboard entry
+// Creating a thunk for creating a leaderboard entry
 export const createLeaderboardEntry = createAsyncThunk(
 	"leaderboard/create",
 	async (entryData, { rejectWithValue }) => {
@@ -17,7 +17,7 @@ export const createLeaderboardEntry = createAsyncThunk(
 	}
 );
 
-// Fetch leaderboard entries by tournament (optional bracket_id & group_name)
+// Creating a thunk for fetching leaderboard entries by tournament
 export const fetchLeaderboardEntries = createAsyncThunk(
 	"leaderboard/fetchByTournament",
 	async ({ tournamentId, bracketId, groupName } = {}, { rejectWithValue }) => {
@@ -39,7 +39,7 @@ export const fetchLeaderboardEntries = createAsyncThunk(
 	}
 );
 
-// Update leaderboard entry
+// Creating a thunk for updating a leaderboard entry
 export const updateLeaderboardEntry = createAsyncThunk(
 	"leaderboard/update",
 	async ({ entryId, entryData }, { rejectWithValue }) => {
@@ -55,7 +55,7 @@ export const updateLeaderboardEntry = createAsyncThunk(
 	}
 );
 
-// Delete leaderboard entry
+// Creating a thunk for deleting a leaderboard entry
 export const deleteLeaderboardEntry = createAsyncThunk(
 	"leaderboard/delete",
 	async (entryId, { rejectWithValue }) => {
@@ -70,6 +70,7 @@ export const deleteLeaderboardEntry = createAsyncThunk(
 	}
 );
 
+// Setting up the initial state for leaderboard slice
 const initialState = {
 	entries: [],
 	loading: false,
@@ -85,25 +86,30 @@ const initialState = {
 	deleteSuccess: false,
 };
 
+// Creating the leaderboard slice with reducers and extra reducers
 const leaderBoardSlice = createSlice({
 	name: "leaderboard",
 	initialState,
 	reducers: {
+		// Clearing leaderboard-related errors
 		clearLeaderBoardError: (state) => {
 			state.error = null;
 			state.createError = null;
 			state.updateError = null;
 			state.deleteError = null;
 		},
+		// Clearing leaderboard success flags
 		clearLeaderBoardSuccess: (state) => {
 			state.createSuccess = false;
 			state.updateSuccess = false;
 			state.deleteSuccess = false;
 		},
+		// Clearing leaderboard entries from state
 		clearLeaderBoardEntries: (state) => {
 			state.entries = [];
 		},
 	},
+	// Handling pending, fulfilled, and rejected states for leaderboard thunks
 	extraReducers: (builder) => {
 		// Create entry
 		builder.addCase(createLeaderboardEntry.pending, (state) => {

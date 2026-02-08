@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "../axios/axiousinstance";
 
-// Fetch bracket for a tournament
+// Creating a thunk for fetching bracket data for a specific tournament
 export const fetchTournamentBracket = createAsyncThunk(
   "bracket/fetchBracket",
   async (tournamentId, { rejectWithValue }) => {
@@ -14,7 +14,7 @@ export const fetchTournamentBracket = createAsyncThunk(
   }
 );
 
-// Save (create/update) bracket for a tournament
+// Creating a thunk for saving (create/update) bracket data for a tournament
 export const saveTournamentBracket = createAsyncThunk(
   "bracket/saveBracket",
   async ({ tournamentId, bracket_data }, { rejectWithValue }) => {
@@ -30,6 +30,7 @@ export const saveTournamentBracket = createAsyncThunk(
   }
 );
 
+// Setting up the initial state for the bracket slice
 const initialState = {
   bracket: null,
   loading: false,
@@ -38,18 +39,22 @@ const initialState = {
   saveError: null,
 };
 
+// Creating the bracket slice with reducers and extra reducers for bracket actions
 const bracketSlice = createSlice({
   name: "bracket",
   initialState,
   reducers: {
+    // Clearing bracket-related errors
     clearBracketError: (state) => {
       state.error = null;
       state.saveError = null;
     },
+    // Clearing bracket data from state
     clearBracket: (state) => {
       state.bracket = null;
     },
   },
+  // Handling pending, fulfilled, and rejected states for bracket thunks
   extraReducers: (builder) => {
     builder
       .addCase(fetchTournamentBracket.pending, (state) => {

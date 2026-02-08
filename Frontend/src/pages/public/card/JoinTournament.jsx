@@ -80,9 +80,13 @@ const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
     }
   }, [joinError, dispatch])
 
+  if (!isOpen || !tournament) {
+    return null
+  }
+
   const loadingPlayers = usersLoading || participantsLoading
 
-  const isTeamBased = tournament.match_format?.toLowerCase().includes('squad') || 
+  const isTeamBased = tournament.match_format?.toLowerCase().includes('squad') ||
                        tournament.match_format?.toLowerCase().includes('duo')
 
   // For squad: captain + 3 members = 4, For duo: captain + 1 member = 2

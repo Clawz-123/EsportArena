@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "../axios/axiousinstance";
 
-// Create a match
+// Creating a thunk for creating a match
 export const createMatch = createAsyncThunk(
 	"match/create",
 	async (matchData, { rejectWithValue }) => {
@@ -14,7 +14,7 @@ export const createMatch = createAsyncThunk(
 	}
 );
 
-// Fetch matches by tournament
+// Creating a thunk for fetching matches by tournament
 export const fetchMatchesByTournament = createAsyncThunk(
 	"match/fetchByTournament",
 	async (tournamentId, { rejectWithValue }) => {
@@ -29,7 +29,7 @@ export const fetchMatchesByTournament = createAsyncThunk(
 	}
 );
 
-// Fetch match detail
+// Creating a thunk for fetching match detail by match id
 export const fetchMatchDetail = createAsyncThunk(
 	"match/fetchDetail",
 	async (matchId, { rejectWithValue }) => {
@@ -42,7 +42,7 @@ export const fetchMatchDetail = createAsyncThunk(
 	}
 );
 
-// Update match
+// Creating a thunk for updating a match
 export const updateMatch = createAsyncThunk(
 	"match/update",
 	async ({ matchId, matchData }, { rejectWithValue }) => {
@@ -58,7 +58,7 @@ export const updateMatch = createAsyncThunk(
 	}
 );
 
-// Delete match
+// Creating a thunk for deleting a match
 export const deleteMatch = createAsyncThunk(
 	"match/delete",
 	async (matchId, { rejectWithValue }) => {
@@ -71,6 +71,7 @@ export const deleteMatch = createAsyncThunk(
 	}
 );
 
+// Setting up the initial state for match slice
 const initialState = {
 	matches: [],
 	currentMatch: null,
@@ -89,10 +90,12 @@ const initialState = {
 	detailError: null,
 };
 
+// Creating the match slice with reducers and extra reducers
 const matchSlice = createSlice({
 	name: "match",
 	initialState,
 	reducers: {
+		// Clearing match-related errors
 		clearMatchError: (state) => {
 			state.error = null;
 			state.createError = null;
@@ -100,18 +103,22 @@ const matchSlice = createSlice({
 			state.deleteError = null;
 			state.detailError = null;
 		},
+		// Clearing match success flags
 		clearMatchSuccess: (state) => {
 			state.createSuccess = false;
 			state.updateSuccess = false;
 			state.deleteSuccess = false;
 		},
+		// Clearing the current match from state
 		clearCurrentMatch: (state) => {
 			state.currentMatch = null;
 		},
+		// Clearing the matches list from state
 		clearMatches: (state) => {
 			state.matches = [];
 		},
 	},
+	// Handling pending, fulfilled, and rejected states for match thunks
 	extraReducers: (builder) => {
 		// Create match
 		builder.addCase(createMatch.pending, (state) => {

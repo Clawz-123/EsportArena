@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "../axios/axiousinstance";
 
-// Thunk for creating contact message
+// Creating a thunk for sending a contact message to the backend
 export const createContactMessage = createAsyncThunk(
   "contact/create",
   async (contactData, { rejectWithValue }) => {
@@ -17,24 +17,28 @@ export const createContactMessage = createAsyncThunk(
   }
 );
 
-// Initial state for contact message slice
+// Setting up the initial state for contact message slice
 const initialState = {
   loading: false,
   error: null,
   success: false,
 };
 
+// Creating the contact message slice with reducers and extra reducers
 const contactMessageSlice = createSlice({
   name: "contact",
   initialState,
   reducers: {
+    // Clearing contact message errors
     clearError: (state) => {
       state.error = null;
     },
+    // Clearing contact message success state
     clearSuccess: (state) => {
       state.success = false;
     },
   },
+  // Handling pending, fulfilled, and rejected states for contact message thunk
   extraReducers: (builder) => {
     // Create Contact Message
     builder.addCase(createContactMessage.pending, (state) => {

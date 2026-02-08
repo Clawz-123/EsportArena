@@ -15,6 +15,7 @@ const TournaHeader = () => {
   const { id } = useParams()
   const dispatch = useAppDispatch()
   const { currentTournament, loading, participants, teams } = useAppSelector((state) => state.tournament)
+  const { profile } = useAppSelector((state) => state.profile || {})
   const [activeTab, setActiveTab] = useState('overview')
 
   useEffect(() => {
@@ -159,11 +160,19 @@ const TournaHeader = () => {
           <div className="bg-[#111827] border border-[#1F2937] rounded-lg p-6 h-fit">
             <p className="text-xs text-[#9CA3AF] uppercase mb-3">Organizer</p>
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-[#2563EB] flex items-center justify-center flex-shrink-0">
-                <span className="text-lg font-bold text-white">
-                  {tournament.organizer_name?.charAt(0) || 'O'}
-                </span>
-              </div>
+              {tournament.organizer_profile_image || profile?.profile_image ? (
+                <img
+                  src={tournament.organizer_profile_image || profile?.profile_image}
+                  alt={tournament.organizer_name || 'Organizer'}
+                  className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-[#2563EB] flex items-center justify-center flex-shrink-0">
+                  <span className="text-lg font-bold text-white">
+                    {tournament.organizer_name?.charAt(0) || 'O'}
+                  </span>
+                </div>
+              )}
               <div>
                 <p className="text-white font-semibold text-sm">{tournament.organizer_name || 'Unknown'}</p>
                 <p className="text-[#6B7280] text-xs">Verified Organizer</p>

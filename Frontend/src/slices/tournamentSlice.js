@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "../axios/axiousinstance";
 
-// Thunk for creating tournament
+// Creating a thunk for creating a tournament
 export const createTournament = createAsyncThunk(
   "tournament/create",
   async (tournamentData, { rejectWithValue }) => {
@@ -17,7 +17,7 @@ export const createTournament = createAsyncThunk(
   }
 );
 
-// Thunk for fetching all public tournaments (for players)
+// Creating a thunk for fetching all public tournaments (for players)
 export const fetchPublicTournaments = createAsyncThunk(
   "tournament/fetchPublic",
   async (_, { rejectWithValue }) => {
@@ -30,7 +30,7 @@ export const fetchPublicTournaments = createAsyncThunk(
   }
 );
 
-// Thunk for fetching all users (used for join tournament flow)
+// Creating a thunk for fetching all users (used for join tournament flow)
 export const fetchUsers = createAsyncThunk(
   "tournament/fetchUsers",
   async (_, { rejectWithValue }) => {
@@ -43,7 +43,7 @@ export const fetchUsers = createAsyncThunk(
   }
 );
 
-// Thunk for fetching organizer's tournaments
+// Creating a thunk for fetching organizer's tournaments
 export const fetchOrganizerTournaments = createAsyncThunk(
   "tournament/fetchOrganizer",
   async (_, { rejectWithValue }) => {
@@ -58,7 +58,7 @@ export const fetchOrganizerTournaments = createAsyncThunk(
   }
 );
 
-// Thunk for fetching tournament detail by ID
+// Creating a thunk for fetching tournament detail by ID
 export const fetchTournamentDetail = createAsyncThunk(
   "tournament/fetchDetail",
   async (tournamentId, { rejectWithValue }) => {
@@ -73,7 +73,7 @@ export const fetchTournamentDetail = createAsyncThunk(
   }
 );
 
-// Thunk for updating tournament
+// Creating a thunk for updating tournament data (PUT)
 export const updateTournament = createAsyncThunk(
   "tournament/update",
   async ({ tournamentId, tournamentData }, { rejectWithValue }) => {
@@ -89,7 +89,7 @@ export const updateTournament = createAsyncThunk(
   }
 );
 
-// Thunk for partially updating tournament
+// Creating a thunk for partially updating tournament data (PATCH)
 export const patchTournament = createAsyncThunk(
   "tournament/patch",
   async ({ tournamentId, tournamentData }, { rejectWithValue }) => {
@@ -105,7 +105,7 @@ export const patchTournament = createAsyncThunk(
   }
 );
 
-// Thunk for deleting tournament
+// Creating a thunk for deleting a tournament
 export const deleteTournament = createAsyncThunk(
   "tournament/delete",
   async (tournamentId, { rejectWithValue }) => {
@@ -120,7 +120,7 @@ export const deleteTournament = createAsyncThunk(
   }
 );
 
-// Thunk for joining tournament
+// Creating a thunk for joining a tournament (handles multipart if logo exists)
 export const joinTournament = createAsyncThunk(
   "tournament/join",
   async (joinData, { rejectWithValue }) => {
@@ -175,7 +175,7 @@ export const joinTournament = createAsyncThunk(
   }
 );
 
-// Thunk for fetching tournament participants
+// Creating a thunk for fetching tournament participants
 export const fetchTournamentParticipants = createAsyncThunk(
   "tournament/fetchParticipants",
   async (tournamentId, { rejectWithValue }) => {
@@ -190,7 +190,7 @@ export const fetchTournamentParticipants = createAsyncThunk(
   }
 );
 
-// Thunk for fetching tournament teams
+// Creating a thunk for fetching tournament teams
 export const fetchTournamentTeams = createAsyncThunk(
   "tournament/fetchTeams",
   async (tournamentId, { rejectWithValue }) => {
@@ -205,7 +205,7 @@ export const fetchTournamentTeams = createAsyncThunk(
   }
 );
 
-// Thunk for fetching user's joined tournaments
+// Creating a thunk for fetching the current user's joined tournaments
 export const fetchMyJoinedTournaments = createAsyncThunk(
   "tournament/fetchMyJoined",
   async (_, { rejectWithValue }) => {
@@ -218,7 +218,7 @@ export const fetchMyJoinedTournaments = createAsyncThunk(
   }
 );
 
-// Initial state for tournament slice
+// Setting up the initial state for tournament slice
 const initialState = {
   tournaments: [],
   joinedTournaments: [],
@@ -253,10 +253,12 @@ const initialState = {
   joinedError: null,
 };
 
+// Creating the tournament slice with reducers and extra reducers
 const tournamentSlice = createSlice({
   name: "tournament",
   initialState,
   reducers: {
+    // Clearing tournament-related errors
     clearError: (state) => {
       state.error = null;
       state.createError = null;
@@ -268,6 +270,7 @@ const tournamentSlice = createSlice({
       state.teamsError = null;
       state.usersError = null;
     },
+    // Clearing tournament success flags
     clearSuccess: (state) => {
       state.success = false;
       state.createSuccess = false;
@@ -275,16 +278,20 @@ const tournamentSlice = createSlice({
       state.deleteSuccess = false;
       state.joinSuccess = false;
     },
+    // Clearing the current tournament from state
     clearCurrentTournament: (state) => {
       state.currentTournament = null;
     },
+    // Clearing tournament participants from state
     clearParticipants: (state) => {
       state.participants = [];
     },
+    // Clearing tournament teams from state
     clearTeams: (state) => {
       state.teams = [];
     },
   },
+  // Handling pending, fulfilled, and rejected states for tournament thunks
   extraReducers: (builder) => {
     // Create Tournament
     builder.addCase(createTournament.pending, (state) => {
