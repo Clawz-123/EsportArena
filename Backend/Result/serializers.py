@@ -14,6 +14,15 @@ class ResultDetailSerializer(serializers.ModelSerializer):
 	submitted_by_name = serializers.CharField(source='submitted_by.name', read_only=True)
 	team_name = serializers.CharField(source='team.team_name', read_only=True)
 	verified_by_email = serializers.EmailField(source='verified_by.email', read_only=True)
+	proof_image = serializers.SerializerMethodField()
+
+	def get_proof_image(self, obj):
+		if not obj.proof_image:
+			return None
+		request = self.context.get('request')
+		if request:
+			return request.build_absolute_uri(obj.proof_image.url)
+		return obj.proof_image.url
 
 	class Meta:
 		model = Result

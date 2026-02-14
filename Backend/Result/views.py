@@ -38,7 +38,7 @@ class CreateResultView(generics.CreateAPIView):
 					status_code=status.HTTP_201_CREATED,
 					result={
 						"message": "Result submitted successfully.",
-						"result": ResultDetailSerializer(result).data,
+						"result": ResultDetailSerializer(result, context={"request": request}).data,
 					},
 				)
 			return api_response(
@@ -92,7 +92,7 @@ class ListResultsByMatchView(generics.ListAPIView):
 				)
 
 			results = self.get_queryset()
-			serializer = self.serializer_class(results, many=True)
+			serializer = self.serializer_class(results, many=True, context={"request": request})
 			return api_response(
 				is_success=True,
 				status_code=status.HTTP_200_OK,
@@ -160,7 +160,7 @@ class UpdateResultStatusView(generics.UpdateAPIView):
 					status_code=status.HTTP_200_OK,
 					result={
 						"message": "Result updated successfully.",
-						"result": ResultDetailSerializer(updated).data,
+						"result": ResultDetailSerializer(updated, context={"request": request}).data,
 					},
 				)
 
@@ -168,6 +168,43 @@ class UpdateResultStatusView(generics.UpdateAPIView):
 				is_success=False,
 				error_message=serializer.errors,
 				status_code=status.HTTP_400_BAD_REQUEST,
+			)
+		except Exception as e:
+			return api_response(
+				is_success=False,
+				error_message=str(e),
+				status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			)
+
+
+class ListResultsByOrganizerView(generics.ListAPIView):
+	serializer_class = ResultDetailSerializer
+	authentication_classes = [JWTAuthentication]
+	permission_classes = [IsAuthenticated]
+
+	def get_queryset(self):
+		user = self.request.user
+		return Result.objects.filter(tournament__organizer=user)
+
+	@swagger_auto_schema(
+		operation_description="Get all results for tournaments organized by the authenticated user",
+		responses={
+			200: openapi.Response(description="Results retrieved successfully"),
+			500: openapi.Response(description="Internal Server Error"),
+		},
+		tags=["Result"],
+	)
+	def get(self, request):
+		try:
+			results = self.get_queryset()
+			serializer = self.serializer_class(results, many=True, context={"request": request})
+			return api_response(
+				is_success=True,
+				status_code=status.HTTP_200_OK,
+				result={
+					"count": results.count(),
+					"results": serializer.data,
+				},
 			)
 		except Exception as e:
 			return api_response(

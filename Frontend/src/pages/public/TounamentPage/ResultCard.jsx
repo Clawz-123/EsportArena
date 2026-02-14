@@ -1,15 +1,42 @@
-import React, { useState } from 'react'
-import { Upload } from 'lucide-react'
+import React, { useEffect, useMemo, useState } from 'react'
+import { Upload, ChevronDown } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { useAppDispatch, useAppSelector } from '../../../store/hooks'
 import { createResult } from '../../../slices/resultSlice'
+import { fetchMatchesByTournament } from '../../../slices/MatchSlice'
 
 const ResultCard = ({ tournament }) => {
   const dispatch = useAppDispatch()
   const { createLoading } = useAppSelector((state) => state.result || {})
+  const { matches, loading: matchesLoading } = useAppSelector((state) => state.match || {})
   const [matchId, setMatchId] = useState('')
   const [groupName, setGroupName] = useState('')
   const [file, setFile] = useState(null)
+
+  useEffect(() => {
+    if (tournament?.id) {
+      dispatch(fetchMatchesByTournament(tournament.id))
+    }
+  }, [dispatch, tournament?.id])
+
+  const selectedMatch = useMemo(() => {
+    const id = Number(matchId)
+    if (!id) return null
+    return (matches || []).find((match) => match.id === id) || null
+  }, [matches, matchId])
+
+  const groupOptions = useMemo(() => {
+    if (selectedMatch?.group) {
+      return [selectedMatch.group]
+    }
+    return Array.from(new Set((matches || []).map((match) => match.group).filter(Boolean)))
+  }, [matches, selectedMatch])
+
+  useEffect(() => {
+    if (selectedMatch?.group) {
+      setGroupName(selectedMatch.group)
+    }
+  }, [selectedMatch])
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -35,12 +62,12 @@ const ResultCard = ({ tournament }) => {
     }
 
     if (!matchId || Number.isNaN(Number(matchId))) {
-      toast.error('Please enter a valid match id')
+      toast.error('Please select a match')
       return
     }
 
     if (!groupName.trim()) {
-      toast.error('Please enter a group name')
+      toast.error('Please select a group')
       return
     }
 
@@ -82,27 +109,47 @@ const ResultCard = ({ tournament }) => {
       </h3>
 
       <div className="space-y-6">
-        {/* Match ID and Group Name Row */}
+        {/* Match and Group */}
         <div className="flex flex-col md:flex-row gap-6">
           <div className="flex-1 space-y-2">
-            <label className="text-xs font-medium text-gray-400">Match Id</label>
-            <input
-              type="text"
-              value={matchId}
-              onChange={(e) => setMatchId(e.target.value)}
-              className="w-full bg-[#0B1220] border-none rounded-md px-4 py-3 text-sm text-white focus:ring-1 focus:ring-[#2563EB] placeholder-gray-600"
-              placeholder="0"
-            />
+            <label className="text-xs font-medium text-gray-400">Match</label>
+            <div className="relative">
+              <select
+                value={matchId}
+                onChange={(e) => setMatchId(e.target.value)}
+                className="w-full bg-[#0B1220] border border-[#1F2937] rounded-md px-4 py-3 pr-10 text-sm text-white focus:outline-none focus:border-[#2563EB] appearance-none"
+              >
+                <option value="">Select match</option>
+                {(matches || []).map((match) => (
+                  <option key={match.id} value={match.id}>
+                    Match {match.match_number || match.id}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+            </div>
+            {matchesLoading && (
+              <p className="text-xs text-gray-500">Loading matches...</p>
+            )}
           </div>
           <div className="flex-1 space-y-2">
-            <label className="text-xs font-medium text-gray-400">Group Name</label>
-            <input
-              type="text"
-              value={groupName}
-              onChange={(e) => setGroupName(e.target.value)}
-              className="w-full bg-[#0B1220] border-none rounded-md px-4 py-3 text-sm text-white focus:ring-1 focus:ring-[#2563EB] placeholder-gray-600"
-              placeholder="A"
-            />
+            <label className="text-xs font-medium text-gray-400">Group</label>
+            <div className="relative">
+              <select
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+                className="w-full bg-[#0B1220] border border-[#1F2937] rounded-md px-4 py-3 pr-10 text-sm text-white focus:outline-none focus:border-[#2563EB] appearance-none"
+                disabled={!matchId && groupOptions.length === 0}
+              >
+                <option value="">Select group</option>
+                {groupOptions.map((group) => (
+                  <option key={group} value={group}>
+                    {group}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+            </div>
           </div>
         </div>
 

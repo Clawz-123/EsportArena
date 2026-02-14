@@ -19,6 +19,7 @@ import Tournament from './pages/public/Tournament.jsx'
 import PlayerDashboard from './pages/player/PlayerDashboard.jsx'
 import PlayerMyTournament from './pages/player/PlayerMyTournament.jsx'
 import TournaHeader from './pages/public/TounamentPage/TournaHeader.jsx'
+import OrgResultVerification from './pages/organizer/OrgResultVerification.jsx'
 
 // Creating a component to protect routes that require authentication
 const AuthGate = ({ children }) => {
@@ -59,6 +60,7 @@ function App() {
           <Route path='/PlayerDashboard' element={<AuthGate> <PlayerDashboard /></AuthGate>} />
           <Route path='/PlayerMyTournament' element={<AuthGate> <PlayerMyTournament /></AuthGate>} />
           <Route path='/Tournaheader' element={<AuthGate> <TournaHeader /></AuthGate>} />
+          <Route path='/OrgResultVerification' element={<AuthGate> <OrgResultVerification /></AuthGate>} />
 
 
 

@@ -38,6 +38,19 @@ export const fetchResultsByMatch = createAsyncThunk(
 	}
 )
 
+// Fetch all results for organizer tournaments
+export const fetchOrganizerResults = createAsyncThunk(
+	'result/fetchOrganizer',
+	async (_, { rejectWithValue }) => {
+		try {
+			const response = await axiosInstance.get('/result/organizer/')
+			return response.data
+		} catch (error) {
+			return rejectWithValue(error.response?.data || error.message)
+		}
+	}
+)
+
 // Update result status (organizer only)
 export const updateResultStatus = createAsyncThunk(
 	'result/updateStatus',
@@ -115,6 +128,21 @@ const resultSlice = createSlice({
 				state.results = result?.results || []
 			})
 			.addCase(fetchResultsByMatch.rejected, (state, action) => {
+				state.loading = false
+				state.error = action.payload
+			})
+
+			// Fetch organizer results
+			.addCase(fetchOrganizerResults.pending, (state) => {
+				state.loading = true
+				state.error = null
+			})
+			.addCase(fetchOrganizerResults.fulfilled, (state, action) => {
+				state.loading = false
+				const result = action.payload.Result || action.payload.result
+				state.results = result?.results || []
+			})
+			.addCase(fetchOrganizerResults.rejected, (state, action) => {
 				state.loading = false
 				state.error = action.payload
 			})

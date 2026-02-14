@@ -190,7 +190,7 @@ const MatchesCard = ({ tournamentId }) => {
     }
 
     try {
-      const result = await dispatch(updateMatch({
+      const result = dispatch(updateMatch({
         matchId: announcementMatch.id,
         matchData: {
           room_id: announcementForm.roomId,

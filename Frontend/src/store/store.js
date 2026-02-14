@@ -6,6 +6,7 @@ import contactReducer from "../slices/contactMessage";
 import  bracketReducer  from "../slices/BracketSlice";
 import matchReducer from "../slices/MatchSlice";
 import leaderBoardReducer from "../slices/leaderBoardSlice";
+import resultReducer from "../slices/resultSlice";
 
 export const store = configureStore({
   // Adding reducers for different created slices
@@ -17,6 +18,7 @@ export const store = configureStore({
     bracket: bracketReducer,
     match: matchReducer,
     leaderboard: leaderBoardReducer,
+    result: resultReducer,
   },
   // Enabling Redux DevTools only in development mode
   devTools: import.meta.env.DEV,
