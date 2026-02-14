@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'TournamentBaracket',
     'Match',
     'LeaderBoard',
+    'Result',
 ]
 
 MIDDLEWARE = [

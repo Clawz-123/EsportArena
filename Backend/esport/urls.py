@@ -42,6 +42,7 @@ urlpatterns = [
     path("api/contact/", include("contactMessage.urls")),
     path("api/match/", include("Match.urls")),
     path("api/leaderboard/", include("LeaderBoard.urls")),
+    path("api/result/", include("Result.urls")),
     path("swagger/", schema_view.with_ui("swagger", cache_timeout=0), name="swagger-ui"),
     path("redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="redoc"),
 ]
