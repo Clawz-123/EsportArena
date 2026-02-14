@@ -1,7 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { MessageSquare, Send } from 'lucide-react'
+import { useAppDispatch, useAppSelector } from '../../../store/hooks'
+import { fetchMatchesByTournament } from '../../../slices/MatchSlice'
 
-const ForumCard = () => {
+const ForumCard = ({ tournament }) => {
+  const dispatch = useAppDispatch()
+  const { matches, loading: matchesLoading } = useAppSelector((state) => state.match || {})
   const [activeTab, setActiveTab] = useState('General')
   const [messages, setMessages] = useState([
     
@@ -39,36 +43,45 @@ const ForumCard = () => {
     },
   ])
 
-  // ... (keep activeTab and announcements state as is, or reconstruct if needed)
-  const [announcements] = useState([
-    {
-      id: 1,
-      author: 'Organizer',
-      role: 'Organizer',
-      message: 'Match schedule for Round 2 has been posted. Check the bracket section for full details.',
-      timestamp: 'Today, 9:00 AM',
-    },
-    {
-      id: 2,
-      author: 'Referee',
-      role: 'Referee',
-      message: 'Reminder: Submit results with screenshots within 30 minutes of match completion.',
-      timestamp: 'Today, 10:00 AM',
-    },
-    {
-      id: 3,
-      author: 'Organizer',
-      role: 'Organizer',
-      message: 'Semifinals will begin at 3:00 PM. All teams please be ready 15 minutes prior.',
-      timestamp: 'Today, 1:00 PM',
-    },
-  ])
   const [newMessage, setNewMessage] = useState('')
+
+  useEffect(() => {
+    if (tournament?.id) {
+      dispatch(fetchMatchesByTournament(tournament.id))
+    }
+  }, [dispatch, tournament?.id])
+
+  const formatTimestamp = (value) => {
+    if (!value) return 'TBD'
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return 'TBD'
+    return date.toLocaleString()
+  }
+
+  const matchAnnouncements = useMemo(() => {
+    return (matches || [])
+      .filter((match) => match.announcement || match.room_id || match.room_pass)
+      .sort((a, b) => new Date(a.date_time) - new Date(b.date_time))
+      .map((match) => ({
+        id: match.id,
+        role: 'Organizer',
+        timestamp: formatTimestamp(match.announcement_sent_at || match.date_time),
+        message: {
+          group: match.group,
+          matchNumber: match.match_number,
+          dateTime: formatTimestamp(match.date_time),
+          map: match.map || 'TBD',
+          mode: match.mode || 'TBD',
+          roomId: match.room_id || 'TBD',
+          roomPass: match.room_pass || 'TBD',
+          announcement: match.announcement || '',
+        },
+      }))
+  }, [matches])
 
   const handlePostMessage = () => {
     if (newMessage.trim()) {
-      const now = new Date()
-      // Format to mimic "Just now" or relative time for this demo
+      // Creating a timestamp for displaying new messages
       const timeString = 'Just now'
 
       setMessages([
@@ -177,22 +190,36 @@ const ForumCard = () => {
             })
           ) : (
             <div className="space-y-4">
-              {announcements.map((announcement) => (
-                <div key={announcement.id} className="bg-[#1F2937] border border-[#374151] rounded-lg p-5 shadow-sm">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className={`px-2.5 py-0.5 rounded text-[11px] font-bold uppercase tracking-wide border ${announcement.role === 'Organizer'
-                      ? 'bg-blue-900/30 text-blue-400 border-blue-500/30'
-                      : 'bg-indigo-900/30 text-indigo-400 border-indigo-500/30'
-                      }`}>
-                      {announcement.role}
-                    </span>
-                    <span className="text-xs text-[#6B7280]">{announcement.timestamp}</span>
+              {matchesLoading ? (
+                <div className="text-sm text-[#9CA3AF]">Loading announcements...</div>
+              ) : matchAnnouncements.length > 0 ? (
+                matchAnnouncements.map((announcement) => (
+                  <div key={announcement.id} className="bg-[#1F2937] border border-[#374151] rounded-lg p-5 shadow-sm">
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="px-2.5 py-0.5 rounded text-[11px] font-bold uppercase tracking-wide border bg-blue-900/30 text-blue-400 border-blue-500/30">
+                        {announcement.role}
+                      </span>
+                      <span className="text-xs text-[#6B7280]">{announcement.timestamp}</span>
+                    </div>
+                    <div className="text-[#E5E7EB] text-sm leading-relaxed space-y-2">
+                      <p>
+                        Group {announcement.message.group} • Match {announcement.message.matchNumber}
+                      </p>
+                      <p>
+                        Start: {announcement.message.dateTime} • Mode: {announcement.message.mode} • Map: {announcement.message.map}
+                      </p>
+                      <p>
+                        Room ID: {announcement.message.roomId} • Room Pass: {announcement.message.roomPass}
+                      </p>
+                      {announcement.message.announcement && (
+                        <p>{announcement.message.announcement}</p>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-[#E5E7EB] text-sm leading-relaxed">
-                    {announcement.message}
-                  </p>
-                </div>
-              ))}
+                ))
+              ) : (
+                <div className="text-sm text-[#9CA3AF]">No announcements yet.</div>
+              )}
             </div>
           )}
         </div>

@@ -4,7 +4,6 @@ import { useAppDispatch, useAppSelector } from '../../../store/hooks'
 import { fetchTournamentDetail, fetchTournamentParticipants, fetchTournamentTeams } from '../../../slices/tournamentSlice'
 import { ChevronLeft, Calendar, Users, DollarSign, Trophy } from 'lucide-react'
 import Header from '../../../components/common/Header'
-import ProfileMenu from '../../../components/common/ProfileMenu'
 import OverviewCard from './OverviewCard'
 import ForumCard from './ForumCard'
 import ResultCard from './ResultCard'
@@ -164,10 +163,10 @@ const TournaHeader = () => {
                 <img
                   src={tournament.organizer_profile_image || profile?.profile_image}
                   alt={tournament.organizer_name || 'Organizer'}
-                  className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                  className="w-12 h-12 rounded-full object-cover shrink-0"
                 />
               ) : (
-                <div className="w-12 h-12 rounded-full bg-[#2563EB] flex items-center justify-center flex-shrink-0">
+                <div className="w-12 h-12 rounded-full bg-[#2563EB] flex items-center justify-center shrink-0">
                   <span className="text-lg font-bold text-white">
                     {tournament.organizer_name?.charAt(0) || 'O'}
                   </span>

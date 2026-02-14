@@ -20,11 +20,9 @@ import PlayerDashboard from './pages/player/PlayerDashboard.jsx'
 import PlayerMyTournament from './pages/player/PlayerMyTournament.jsx'
 import TournaHeader from './pages/public/TounamentPage/TournaHeader.jsx'
 
-
-
-
-// Gate keeps public pages when user is not authenticated
+// Creating a component to protect routes that require authentication
 const AuthGate = ({ children }) => {
+  // Reading the authentication state from the Redux store
   const { isAuthenticated } = useSelector((state) => state.auth || {})
   const location = useLocation()
 

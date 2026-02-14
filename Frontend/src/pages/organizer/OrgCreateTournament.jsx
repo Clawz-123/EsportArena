@@ -9,6 +9,7 @@ import { tournamentValidationSchema } from '../utils/organizerCreateFromValidati
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import { createTournament, clearError, clearSuccess } from '../../slices/tournamentSlice'
 
+// Component for the tournament creation page for organizers
 const OrgCreateTournament = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
@@ -17,6 +18,7 @@ const OrgCreateTournament = () => {
     (state) => state.tournament
   )
 
+// Setting up the initial form values for the tournament creation form
   const initialValues = {
     name: '',
     gameTitle: '',
@@ -41,6 +43,7 @@ const OrgCreateTournament = () => {
     isDraft: false,
   }
 
+  // Created a helper function to calculate the total prize 
   const calculateTotalPrize = (values) => {
     return (
       (parseInt(values.prizeFirst) || 0) +
@@ -49,11 +52,12 @@ const OrgCreateTournament = () => {
     )
   }
 
+  // Handling the form submission by dispatching the createTournament thunk with the form values and showing success or error messages accordingly
   const handleSubmit = async (values, actions) => {
     const payload = {
       name: values.name,
       game_title: values.gameTitle,
-      match_format: values.matchFormat,
+      match_format: values.matchFormat, 
       description: values.description,
       registration_start: values.registrationStart,
       registration_end: values.registrationEnd,
@@ -74,8 +78,9 @@ const OrgCreateTournament = () => {
       is_draft: values.isDraft,
     }
 
+    // Dispatching the createTournament thunk and handling the result 
     try {
-      const result = await dispatch(createTournament(payload))
+      const result = dispatch(createTournament(payload))
       if (createTournament.fulfilled.match(result)) {
         toast.success('Tournament created successfully!')
         actions.resetForm()
@@ -86,6 +91,7 @@ const OrgCreateTournament = () => {
     }
   }
 
+  // Using useEffect to clear any existing errors or success messages
   useEffect(() => {
     return () => {
       dispatch(clearError())
@@ -93,6 +99,7 @@ const OrgCreateTournament = () => {
     }
   }, [dispatch])
 
+  // Using useEffect to show error messages if tournament creation fails
   useEffect(() => {
     if (createError) {
       const errorMessage =

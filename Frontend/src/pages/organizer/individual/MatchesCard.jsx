@@ -19,6 +19,7 @@ import MatchForm from '../matches/MatchForm';
 import { fetchTournamentBracket } from '../../../slices/BracketSlice';
 import { fetchMatchesByTournament, createMatch, deleteMatch, updateMatch } from '../../../slices/MatchSlice';
 
+// Creating a component to display and manage matches for a tournament
 const MatchesCard = ({ tournamentId }) => {
   const dispatch = useDispatch();
   const { bracket } = useSelector((state) => state.bracket);
@@ -98,6 +99,18 @@ const MatchesCard = ({ tournamentId }) => {
   ];
 
   const handleCreateMatch = async (values, actions) => {
+    const duplicate = (matches || []).find(
+      (match) =>
+        match.group === values.group &&
+        match.match_number === Number(values.matchNumber)
+    );
+
+    if (duplicate) {
+      actions.setFieldError('matchNumber', 'Match number already exists for this group.');
+      actions.setSubmitting(false);
+      return;
+    }
+
     const payload = {
       tournament: tournamentId,
       group: values.group,
@@ -114,6 +127,7 @@ const MatchesCard = ({ tournamentId }) => {
         toast.success('Match created successfully');
         actions.resetForm();
         setShowMatchForm(false);
+        dispatch(fetchMatchesByTournament(tournamentId));
       } else {
         const errorMessage =
           result.payload?.Error_Message ||
@@ -133,7 +147,7 @@ const MatchesCard = ({ tournamentId }) => {
 
   const handleDeleteMatch = async (matchId) => {
     try {
-      const result = await dispatch(deleteMatch(matchId));
+      const result = dispatch(deleteMatch(matchId));
       if (deleteMatch.fulfilled.match(result)) {
         toast.success('Match deleted');
         dispatch(fetchMatchesByTournament(tournamentId));
@@ -147,7 +161,7 @@ const MatchesCard = ({ tournamentId }) => {
 
   const handleCompleteMatch = async (matchId) => {
     try {
-      const result = await dispatch(updateMatch({
+      const result = dispatch(updateMatch({
         matchId,
         matchData: { status: 'Completed' },
       }));
@@ -168,10 +182,33 @@ const MatchesCard = ({ tournamentId }) => {
     setShowAnnouncementModal(true);
   };
 
-  const handleAnnouncementSubmit = (event) => {
+  const handleAnnouncementSubmit = async (event) => {
     event.preventDefault();
-    toast.success(`Announcement prepared for Match ${announcementMatch?.match_number}`);
-    setShowAnnouncementModal(false);
+    if (!announcementMatch?.id) {
+      toast.error('Match not found for announcement');
+      return;
+    }
+
+    try {
+      const result = await dispatch(updateMatch({
+        matchId: announcementMatch.id,
+        matchData: {
+          room_id: announcementForm.roomId,
+          room_pass: announcementForm.roomPass,
+          announcement: announcementForm.description,
+        },
+      }));
+
+      if (updateMatch.fulfilled.match(result)) {
+        toast.success(`Announcement sent for Match ${announcementMatch.match_number}`);
+        dispatch(fetchMatchesByTournament(tournamentId));
+        setShowAnnouncementModal(false);
+      } else {
+        toast.error('Failed to send announcement');
+      }
+    } catch (error) {
+      toast.error('Failed to send announcement');
+    }
   };
 
   return (

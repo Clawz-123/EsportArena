@@ -20,6 +20,11 @@ class Match(models.Model):
         ('Completed', 'Completed'),
         ('Cancelled', 'Cancelled'),
     ])
+
+    room_id = models.CharField(_('room id'), max_length=100, blank=True, null=True)
+    room_pass = models.CharField(_('room pass'), max_length=100, blank=True, null=True)
+    announcement = models.TextField(_('announcement'), blank=True)
+    announcement_sent_at = models.DateTimeField(_('announcement sent at'), blank=True, null=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -31,3 +36,9 @@ class Match(models.Model):
         verbose_name = _('Match')
         verbose_name_plural = _('Matches')
         ordering = ['date_time']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['tournament', 'group', 'match_number'],
+                name='unique_match_number_per_group',
+            ),
+        ]

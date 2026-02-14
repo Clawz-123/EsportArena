@@ -12,12 +12,12 @@ const OrgTournaments = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedGame, setSelectedGame] = useState('All Games')
   const [selectedStatus, setSelectedStatus] = useState('All Status')
-
   const { tournaments, loading, error } = useAppSelector((state) => state.tournament)
 
   const games = ['All Games', 'PUBG Mobile', 'Free Fire']
   const statuses = ['All Status', 'Ongoing', 'Registration', 'Draft', 'Completed']
 
+  // Fetching the organizer's tournaments when the component mounts and clearing any errors when it unmounts
   useEffect(() => {
     dispatch(fetchOrganizerTournaments())
     return () => {
@@ -25,12 +25,14 @@ const OrgTournaments = () => {
     }
   }, [dispatch])
 
+  // Logging the tournaments, loading state, and error state for debugging purposes whenever they change
   useEffect(() => {
     console.log("Tournaments in Redux:", tournaments);
     console.log("Loading:", loading);
     console.log("Error:", error);
   }, [tournaments, loading, error])
 
+  // Created helper function to determine the tournament status
   const getTournamentStatus = (tournament) => {
     if (tournament.is_draft) return 'Draft'
     const now = new Date()
@@ -39,6 +41,7 @@ const OrgTournaments = () => {
     const matchStart = new Date(tournament.match_start)
     const matchEnd = tournament.expected_end ? new Date(tournament.expected_end) : null
 
+    // Determining the tournament status based on the current date and the tournament's registration and match dates
     if (now < regStart) return 'Upcoming'
     if (now >= regStart && now <= regEnd) return 'Registration'
     if (now > regEnd && now < matchStart) return 'Registration Closed'

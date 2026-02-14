@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useEffect, useMemo, useState } from 'react'
 import { Trophy, Medal, ChevronDown, Pencil } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '../../../store/hooks'
@@ -17,12 +18,14 @@ const LeaderBoardCard = ({ tournamentId }) => {
     wwcd: '',
   })
 
+  // Fetching bracket data when tournamentId changes to populate group options
   useEffect(() => {
     if (tournamentId) {
       dispatch(fetchTournamentBracket(tournamentId))
     }
   }, [dispatch, tournamentId])
 
+  // Extracting group names from bracket data and setting the first group as selected by default
   useEffect(() => {
     if (bracket && bracket.bracket_data) {
       let extractedGroups = []
@@ -40,6 +43,7 @@ const LeaderBoardCard = ({ tournamentId }) => {
     }
   }, [bracket, groups])
 
+  // Fetching leaderboard entries whenever the selected group changes to update the displayed standings
   useEffect(() => {
     if (tournamentId && selectedGroup) {
       dispatch(
@@ -52,6 +56,7 @@ const LeaderBoardCard = ({ tournamentId }) => {
     }
   }, [dispatch, tournamentId, bracket?.id, selectedGroup])
 
+  // Memoizing the sorted leaderboard entries based on total points, kill points, and placement points for efficient re-rendering
   const leaderboard = useMemo(() => {
     const data = Array.isArray(entries) ? [...entries] : []
     data.sort((a, b) => {

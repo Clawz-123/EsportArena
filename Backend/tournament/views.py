@@ -52,7 +52,7 @@ class CreateTournamentView(generics.CreateAPIView):
             )
             if serializer.is_valid():
                 tournament = self.perform_create(serializer)
-                result_serializer = TournamentDetailSerializer(tournament)
+                result_serializer = TournamentDetailSerializer(tournament, context={"request": request})
                 return api_response(
                     is_success=True,
                     status_code=status.HTTP_201_CREATED,
@@ -104,7 +104,7 @@ class GetOrganizerTournamentsView(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
         try:
             tournaments = self.get_queryset()
-            serializer = self.serializer_class(tournaments, many=True)
+            serializer = self.serializer_class(tournaments, many=True, context={"request": request})
             return api_response(
                 is_success=True,
                 status_code=status.HTTP_200_OK,
@@ -145,7 +145,7 @@ class GetTournamentDetailView(generics.RetrieveAPIView):
     def get(self, request, tournament_id):
         try:
             tournament = self.get_queryset().get(id=tournament_id)
-            serializer = self.serializer_class(tournament)
+            serializer = self.serializer_class(tournament, context={"request": request})
             return api_response(
                 is_success=True,
                 status_code=status.HTTP_200_OK,
@@ -205,7 +205,7 @@ class UpdateTournamentView(generics.UpdateAPIView):
             )
             if serializer.is_valid():
                 updated_tournament = serializer.save()
-                result_serializer = TournamentDetailSerializer(updated_tournament)
+                result_serializer = TournamentDetailSerializer(updated_tournament, context={"request": request})
                 return api_response(
                     is_success=True,
                     status_code=status.HTTP_200_OK,
@@ -248,7 +248,7 @@ class UpdateTournamentView(generics.UpdateAPIView):
             )
             if serializer.is_valid():
                 updated_tournament = serializer.save()
-                result_serializer = TournamentDetailSerializer(updated_tournament)
+                result_serializer = TournamentDetailSerializer(updated_tournament, context={"request": request})
                 return api_response(
                     is_success=True,
                     status_code=status.HTTP_200_OK,

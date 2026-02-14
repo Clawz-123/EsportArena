@@ -6,7 +6,7 @@ import { fetchTournamentBracket, saveTournamentBracket } from '../../../slices/B
 import { toast } from 'react-toastify'
 
 function shuffleArray(array) {
-  // Fisher-Yates shuffle
+  // Creates a shuffled copy of the input array using the Fisher-Yates algorithm to ensure randomness
   const arr = [...array]
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))

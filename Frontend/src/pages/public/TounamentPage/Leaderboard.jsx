@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Trophy, ChevronDown } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '../../../store/hooks'
 import { fetchTournamentBracket } from '../../../slices/BracketSlice'
 import { fetchLeaderboardEntries } from '../../../slices/leaderBoardSlice'
