@@ -1,7 +1,12 @@
 import React, { useState } from 'react'
 import { Upload } from 'lucide-react'
+import { toast } from 'react-toastify'
+import { useAppDispatch, useAppSelector } from '../../../store/hooks'
+import { createResult } from '../../../slices/resultSlice'
 
-const ResultCard = () => {
+const ResultCard = ({ tournament }) => {
+  const dispatch = useAppDispatch()
+  const { createLoading } = useAppSelector((state) => state.result || {})
   const [matchId, setMatchId] = useState('')
   const [groupName, setGroupName] = useState('')
   const [file, setFile] = useState(null)
@@ -21,6 +26,53 @@ const ResultCard = () => {
 
   const handleDragOver = (e) => {
     e.preventDefault()
+  }
+
+  const handleSubmit = async () => {
+    if (!tournament?.id) {
+      toast.error('Tournament not found')
+      return
+    }
+
+    if (!matchId || Number.isNaN(Number(matchId))) {
+      toast.error('Please enter a valid match id')
+      return
+    }
+
+    if (!groupName.trim()) {
+      toast.error('Please enter a group name')
+      return
+    }
+
+    if (!file) {
+      toast.error('Please upload a screenshot proof')
+      return
+    }
+
+    const result = await dispatch(
+      createResult({
+        tournament: tournament.id,
+        match: Number(matchId),
+        group_name: groupName.trim(),
+        proof_image: file,
+      })
+    )
+
+    if (createResult.fulfilled.match(result)) {
+      toast.success('Result submitted successfully')
+      setMatchId('')
+      setGroupName('')
+      setFile(null)
+    } else {
+      const errorMessage =
+        result.payload?.Error_Message ||
+        result.payload?.error_message ||
+        result.payload?.message ||
+        'Failed to submit result'
+      toast.error(
+        typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage)
+      )
+    }
   }
 
   return (
@@ -86,8 +138,13 @@ const ResultCard = () => {
         </div>
 
         {/* Submit Button */}
-        <button className="w-full bg-[#374151] hover:bg-[#4B5563] text-gray-200 font-medium py-3 rounded-lg transition-colors mt-2">
-          Submit Result
+        <button
+          type="button"
+          disabled={createLoading}
+          onClick={handleSubmit}
+          className="w-full bg-[#374151] hover:bg-[#4B5563] text-gray-200 font-medium py-3 rounded-lg transition-colors mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {createLoading ? 'Submitting...' : 'Submit Result'}
         </button>
       </div>
     </div>

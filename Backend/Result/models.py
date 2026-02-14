@@ -13,7 +13,6 @@ class Result(models.Model):
     submitted_by = models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.CASCADE,related_name='match_results')
     team = models.ForeignKey('tournament.TournamentTeam', on_delete=models.SET_NULL, null=True, blank=True, related_name='results')
     group_name = models.CharField(max_length=100)
-    total_kills = models.PositiveIntegerField(default=0)
     proof_image = models.ImageField(upload_to='match_results/', null=True, blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     organizer_note = models.TextField(blank=True)

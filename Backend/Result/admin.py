@@ -10,7 +10,6 @@ class ResultAdmin(admin.ModelAdmin):
 		'tournament',
 		'match',
 		'group_name',
-		'total_kills',
 		'status',
 		'submitted_by',
 		'submitted_at',

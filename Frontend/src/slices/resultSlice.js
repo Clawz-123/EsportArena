@@ -11,9 +11,6 @@ export const createResult = createAsyncThunk(
 			if (resultData.tournament) formData.append('tournament', resultData.tournament)
 			if (resultData.match) formData.append('match', resultData.match)
 			if (resultData.group_name) formData.append('group_name', resultData.group_name)
-			if (resultData.total_kills !== undefined) {
-				formData.append('total_kills', resultData.total_kills)
-			}
 			if (resultData.proof_image && resultData.proof_image instanceof File) {
 				formData.append('proof_image', resultData.proof_image)
 			}

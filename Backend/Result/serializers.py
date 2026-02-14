@@ -29,7 +29,6 @@ class ResultDetailSerializer(serializers.ModelSerializer):
 			'team',
 			'team_name',
 			'group_name',
-			'total_kills',
 			'proof_image',
 			'status',
 			'organizer_note',
@@ -63,7 +62,6 @@ class ResultCreateSerializer(serializers.ModelSerializer):
 			'tournament',
 			'match',
 			'group_name',
-			'total_kills',
 			'proof_image',
 		]
 
