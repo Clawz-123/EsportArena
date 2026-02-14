@@ -93,6 +93,9 @@ class ResultCreateSerializer(serializers.ModelSerializer):
 		if match and group_name and match.group != group_name:
 			raise serializers.ValidationError({'group_name': 'Group name does not match the selected match.'})
 
+		if match and match.status == "Completed":
+			raise serializers.ValidationError('Results cannot be submitted for a completed match.')
+
 		participant = None
 		if tournament:
 			participant = TournamentParticipant.objects.filter(
@@ -102,6 +105,9 @@ class ResultCreateSerializer(serializers.ModelSerializer):
 
 		if tournament and not participant:
 			raise serializers.ValidationError('You are not registered in this tournament.')
+
+		if match and Result.objects.filter(match=match, submitted_by=user).exists():
+			raise serializers.ValidationError('You have already submitted a result for this match.')
 
 		return attrs
 

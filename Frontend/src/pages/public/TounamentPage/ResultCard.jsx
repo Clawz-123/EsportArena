@@ -55,6 +55,29 @@ const ResultCard = ({ tournament }) => {
     e.preventDefault()
   }
 
+  const formatErrorMessage = (error, fallback = 'Failed to submit result') => {
+    if (!error) return fallback
+    if (typeof error === 'string') return error
+
+    if (error.non_field_errors && Array.isArray(error.non_field_errors)) {
+      return error.non_field_errors.join(' ')
+    }
+
+    if (error.Error_Message) {
+      if (typeof error.Error_Message === 'string') return error.Error_Message
+      if (error.Error_Message.non_field_errors) {
+        return error.Error_Message.non_field_errors.join(' ')
+      }
+      const values = Object.values(error.Error_Message)
+      if (Array.isArray(values)) return values.flat().join(' ')
+    }
+
+    if (error.error_message) return error.error_message
+    if (error.message) return error.message
+
+    return fallback
+  }
+
   const handleSubmit = async () => {
     if (!tournament?.id) {
       toast.error('Tournament not found')
@@ -68,6 +91,11 @@ const ResultCard = ({ tournament }) => {
 
     if (!groupName.trim()) {
       toast.error('Please select a group')
+      return
+    }
+
+    if (selectedMatch?.status === 'Completed') {
+      toast.error('This match is completed. Result submission is closed.')
       return
     }
 
@@ -91,14 +119,7 @@ const ResultCard = ({ tournament }) => {
       setGroupName('')
       setFile(null)
     } else {
-      const errorMessage =
-        result.payload?.Error_Message ||
-        result.payload?.error_message ||
-        result.payload?.message ||
-        'Failed to submit result'
-      toast.error(
-        typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage)
-      )
+      toast.error(formatErrorMessage(result.payload))
     }
   }
 
@@ -130,6 +151,9 @@ const ResultCard = ({ tournament }) => {
             </div>
             {matchesLoading && (
               <p className="text-xs text-gray-500">Loading matches...</p>
+            )}
+            {selectedMatch?.status === 'Completed' && (
+              <p className="text-xs text-rose-400">This match is completed. Submission closed.</p>
             )}
           </div>
           <div className="flex-1 space-y-2">
@@ -187,7 +211,7 @@ const ResultCard = ({ tournament }) => {
         {/* Submit Button */}
         <button
           type="button"
-          disabled={createLoading}
+          disabled={createLoading || selectedMatch?.status === 'Completed'}
           onClick={handleSubmit}
           className="w-full bg-[#374151] hover:bg-[#4B5563] text-gray-200 font-medium py-3 rounded-lg transition-colors mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
         >

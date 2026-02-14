@@ -29,6 +29,17 @@ class MatchCreateSerializer(serializers.ModelSerializer):
         if user and tournament.organizer != user:
              raise serializers.ValidationError("Only the organizer of this tournament can create matches.")
 
+        if tournament:
+            today = timezone.now().date()
+            if getattr(tournament, 'is_draft', False):
+                raise serializers.ValidationError("Cannot create matches for draft tournaments.")
+            if tournament.registration_end and tournament.registration_end >= today:
+                raise serializers.ValidationError("Matches can only be created after registration closes.")
+            if tournament.match_start and today < tournament.match_start:
+                raise serializers.ValidationError("Matches can only be created after the tournament starts.")
+            if tournament.expected_end and today > tournament.expected_end:
+                raise serializers.ValidationError("Matches cannot be created after the tournament ends.")
+
         if tournament and group and match_number is not None:
             exists = Match.objects.filter(
                 tournament=tournament,

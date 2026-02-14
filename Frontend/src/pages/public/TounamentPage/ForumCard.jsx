@@ -248,7 +248,7 @@ const ForumCard = ({ tournament }) => {
                 placeholder="Type a message..."
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handlePostMessage()}
+                onKeyDown={(e) => e.key === 'Enter' && handlePostMessage()}
                 className="flex-1 bg-transparent text-sm text-white placeholder-[#6B7280] focus:outline-none py-3"
               />
               <button

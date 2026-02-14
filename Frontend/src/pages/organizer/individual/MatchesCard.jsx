@@ -17,12 +17,14 @@ import {
 } from 'lucide-react';
 import MatchForm from '../matches/MatchForm';
 import { fetchTournamentBracket } from '../../../slices/BracketSlice';
+import { fetchTournamentDetail } from '../../../slices/tournamentSlice';
 import { fetchMatchesByTournament, createMatch, deleteMatch, updateMatch } from '../../../slices/MatchSlice';
 
 // Creating a component to display and manage matches for a tournament
 const MatchesCard = ({ tournamentId }) => {
   const dispatch = useDispatch();
   const { bracket } = useSelector((state) => state.bracket);
+  const { currentTournament } = useSelector((state) => state.tournament || {});
   const { createLoading, loading: matchesLoading, error: matchesError, matches } = useSelector(
     (state) => state.match || {}
   );
@@ -42,6 +44,7 @@ const MatchesCard = ({ tournamentId }) => {
     if (tournamentId) {
       dispatch(fetchTournamentBracket(tournamentId));
       dispatch(fetchMatchesByTournament(tournamentId));
+      dispatch(fetchTournamentDetail(tournamentId));
     }
   }, [dispatch, tournamentId]);
 
@@ -99,6 +102,34 @@ const MatchesCard = ({ tournamentId }) => {
   ];
 
   const handleCreateMatch = async (values, actions) => {
+    const today = new Date();
+    const regEnd = currentTournament?.registration_end ? new Date(currentTournament.registration_end) : null;
+    const matchStart = currentTournament?.match_start ? new Date(currentTournament.match_start) : null;
+    const expectedEnd = currentTournament?.expected_end ? new Date(currentTournament.expected_end) : null;
+
+    if (currentTournament?.is_draft) {
+      toast.error('Cannot create matches for draft tournaments');
+      actions.setSubmitting(false);
+      return;
+    }
+
+    if (regEnd && today <= regEnd) {
+      toast.error('Matches can only be created after registration closes');
+      actions.setSubmitting(false);
+      return;
+    }
+
+    if (matchStart && today < matchStart) {
+      toast.error('Matches can only be created after the tournament starts');
+      actions.setSubmitting(false);
+      return;
+    }
+
+    if (expectedEnd && today > expectedEnd) {
+      toast.error('Matches cannot be created after the tournament ends');
+      actions.setSubmitting(false);
+      return;
+    }
     const duplicate = (matches || []).find(
       (match) =>
         match.group === values.group &&
