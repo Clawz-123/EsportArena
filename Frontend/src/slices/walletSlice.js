@@ -29,9 +29,7 @@ export const initiateTopUp = createAsyncThunk(
 	"wallet/initiateTopUp",
 	async ({ amount }, { rejectWithValue }) => {
 		try {
-			const response = await axiosInstance.post("/payment/topup/initiate/", {
-				amount,
-			});
+			const response = await axiosInstance.post("/payment/topup/initiate/", { amount });
 			return response.data;
 		} catch (error) {
 			return rejectWithValue(error.response?.data || error.message);
@@ -115,7 +113,7 @@ const walletSlice = createSlice({
 		builder.addCase(initiateTopUp.fulfilled, (state, action) => {
 			state.topUpLoading = false;
 			const result = action.payload?.Result || action.payload?.result || action.payload;
-			state.lastPaymentUrl = result?.payment_url || null;
+			state.lastPaymentUrl = result?.payment_url || result?.order?.payment_url || null;
 		});
 		builder.addCase(initiateTopUp.rejected, (state, action) => {
 			state.topUpLoading = false;

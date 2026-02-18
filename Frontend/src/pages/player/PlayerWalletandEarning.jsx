@@ -1,120 +1,135 @@
-import React from 'react'
-import {
-    Wallet,
-    Plus,
-    Minus,
-    Trophy,
-    ArrowUp
-} from 'lucide-react'
+import React, { useEffect, useMemo, useState } from 'react'
+import { Wallet, Plus, Minus, Trophy, ArrowUp } from 'lucide-react'
 import PlayerSidebar from './PlayerSidebar'
 import ProfileMenu from '../../components/common/ProfileMenu'
+import { useAppDispatch, useAppSelector } from '../../store/hooks'
+import {
+    fetchWalletBalance,
+    fetchWalletTransactions,
+    initiateTopUp,
+    clearPaymentUrl,
+    clearWalletError,
+} from '../../slices/walletSlice'
+import WalletAmount from './walletcard/WalletAmount'
+import ChoosePaymentMethod from './walletcard/ChoosePaymentMethod'
+import { toast } from 'react-toastify'
 
 const PlayerWalletandEarning = () => {
-    // Mock data for transactions
-    const transactions = [
-        {
-            id: 1,
-            type: 'withdrawal',
-            title: 'Withdrawal Request',
-            date: 'Jan 15, 2026 - 10:17 AM',
-            amount: -1000,
-            method: 'eSewa',
-            status: 'Pending',
-            icon: ArrowUp,
-            iconColor: 'bg-red-500/30',
-        },
-        {
-            id: 2,
-            type: 'deposit',
-            title: 'Wallet Top-up',
-            date: 'Jan 15, 2026 - 10:16 AM',
-            amount: +100,
-            method: 'Khalti',
-            status: 'Completed',
-            icon: Plus,
-            iconColor: 'bg-green-500/30',
-        },
-        {
-            id: 3,
-            type: 'deposit',
-            title: 'Wallet Top-up via eSewa',
-            date: 'Jan 15, 2026 - 2:29 PM',
-            amount: +500,
-            method: 'eSewa',
-            status: 'Completed',
-            icon: Plus,
-            iconColor: 'bg-green-500/30',
-        },
-        {
-            id: 4,
-            type: 'fee',
-            title: 'Entry Fee: PUBG Mobile Championship',
-            date: 'Jan 14, 2026 - 10:15 AM',
-            amount: -100,
-            method: null,
-            status: 'Completed',
-            icon: Minus,
-            iconColor: 'bg-red-500/30',
-        },
-        {
-            id: 5,
-            type: 'prize',
-            title: 'Prize: Free Fire League - 2nd Place',
-            date: 'Jan 12, 2026 - 6:00 PM',
-            amount: +750,
-            method: null,
-            status: 'Completed',
-            icon: Trophy,
-            iconColor: 'bg-green-500/30',
-        },
-        {
-            id: 6,
-            type: 'fee',
-            title: 'Entry Fee: Free Fire League',
-            date: 'Jan 10, 2026 - 11:10 AM',
-            amount: -50,
-            method: null,
-            status: 'Completed',
-            icon: Minus,
-            iconColor: 'bg-red-500/30',
-        },
-        {
-            id: 7,
-            type: 'deposit',
-            title: 'Wallet Top-up via Khalti',
-            date: 'Jan 8, 2026 - 3:45 PM',
-            amount: +1000,
-            method: 'Khalti',
-            status: 'Completed',
-            icon: Plus,
-            iconColor: 'bg-green-500/30',
-        },
-        {
-            id: 8,
-            type: 'withdrawal',
-            title: 'Withdrawal to eSewa',
-            date: 'Jan 5, 2026 - 9:20 AM',
-            amount: -500,
-            method: 'eSewa',
-            status: 'Completed',
-            icon: ArrowUp,
-            iconColor: 'bg-red-500/30',
-        },
-        {
-            id: 9,
-            type: 'prize',
-            title: 'Prize: PUBG Mobile Weekly - 1st Place',
-            date: 'Jan 3, 2026 - 8:45 PM',
-            amount: +500,
-            method: null,
-            status: 'Completed',
-            icon: Trophy,
-            iconColor: 'bg-green-500/30',
-        },
-    ]
+    const dispatch = useAppDispatch()
+    const {
+        balance,
+        transactions,
+        loading,
+        error,
+        topUpLoading,
+        topUpError,
+        lastPaymentUrl,
+    } = useAppSelector((state) => state.wallet)
+    const [showAmountModal, setShowAmountModal] = useState(false)
+    const [showPaymentModal, setShowPaymentModal] = useState(false)
+    const [selectedAmount, setSelectedAmount] = useState(0)
+
+    useEffect(() => {
+        dispatch(fetchWalletBalance())
+        dispatch(fetchWalletTransactions())
+    }, [dispatch])
+
+    useEffect(() => {
+        if (lastPaymentUrl) {
+            window.location.href = lastPaymentUrl
+            dispatch(clearPaymentUrl())
+        }
+    }, [dispatch, lastPaymentUrl])
+
+    useEffect(() => {
+        if (error) {
+            toast.error('Failed to load wallet data.')
+            dispatch(clearWalletError())
+        }
+    }, [dispatch, error])
+
+    useEffect(() => {
+        if (topUpError) {
+            toast.error('Failed to initiate payment.')
+            dispatch(clearWalletError())
+        }
+    }, [dispatch, topUpError])
+
+    const mappedTransactions = useMemo(() => {
+        return (transactions || []).map((tx) => {
+            const amountValue = Number(tx.amount || 0)
+            const isCredit = tx.direction === 'credit' || amountValue > 0
+            const title = tx.note || tx.transaction_type || 'Transaction'
+            const dateLabel = tx.created_at
+                ? new Date(tx.created_at).toLocaleString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                })
+                : ''
+
+            let icon = Minus
+            let iconColor = 'bg-red-500/30'
+            if (tx.transaction_type === 'deposit' || tx.transaction_type === 'prize' || isCredit) {
+                icon = tx.transaction_type === 'prize' ? Trophy : Plus
+                iconColor = 'bg-green-500/30'
+            }
+            if (tx.transaction_type === 'withdrawal') {
+                icon = ArrowUp
+                iconColor = 'bg-red-500/30'
+            }
+
+            return {
+                id: tx.id,
+                title,
+                date: dateLabel,
+                amount: isCredit ? amountValue : -Math.abs(amountValue),
+                method: tx.method || null,
+                status: tx.status ? tx.status.charAt(0).toUpperCase() + tx.status.slice(1) : 'Pending',
+                icon,
+                iconColor,
+            }
+        })
+    }, [transactions])
+
+    const totals = useMemo(() => {
+        let deposits = 0
+        let withdrawals = 0
+        mappedTransactions.forEach((tx) => {
+            if (tx.amount > 0) deposits += tx.amount
+            if (tx.amount < 0) withdrawals += Math.abs(tx.amount)
+        })
+        return { deposits, withdrawals }
+    }, [mappedTransactions])
 
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('en-US').format(Math.abs(amount))
+    }
+
+    const handleAddFunds = () => {
+        setShowAmountModal(true)
+    }
+
+    const handleAmountContinue = (amount) => {
+        setSelectedAmount(amount)
+        setShowAmountModal(false)
+        setShowPaymentModal(true)
+    }
+
+    const handlePayment = (method) => {
+        if (method !== 'khalti') {
+            toast.info('Only Khalti is available right now.')
+            return
+        }
+        dispatch(initiateTopUp({
+            amount: selectedAmount,
+            payment_method: method,
+            return_url: `${window.location.origin}/player/wallet`,
+            website_url: window.location.origin
+        }))
+        setShowPaymentModal(false)
     }
 
     return (
@@ -153,11 +168,16 @@ const PlayerWalletandEarning = () => {
                                 <div className="relative z-10">
                                     <div className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Current Balance</div>
                                     <div className="flex items-baseline gap-2 mb-4">
-                                        <span className="text-2xl font-bold text-white">350</span>
+                                        <span className="text-2xl font-bold text-white">
+                                            {balance?.balance ? formatCurrency(balance.balance) : '0'}
+                                        </span>
                                         <span className="text-xs text-slate-500">Coins</span>
                                     </div>
                                     <div className="flex gap-3">
-                                        <button className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors">
+                                        <button
+                                            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors"
+                                            onClick={handleAddFunds}
+                                        >
                                             Add Funds
                                         </button>
                                         <button className="px-4 py-2 bg-transparent border border-white/10 hover:bg-white/5 text-white text-sm font-medium rounded-lg transition-colors">
@@ -171,7 +191,7 @@ const PlayerWalletandEarning = () => {
                             <div className="bg-[#1e293b] rounded-lg p-4 border border-slate-700/50">
                                 <div className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Total Deposits</div>
                                 <div className="flex items-baseline gap-2">
-                                    <span className="text-2xl font-bold text-white">1,600</span>
+                                    <span className="text-2xl font-bold text-white">{formatCurrency(totals.deposits)}</span>
                                     <span className="text-xs text-slate-500">Coins</span>
                                 </div>
                             </div>
@@ -180,7 +200,7 @@ const PlayerWalletandEarning = () => {
                             <div className="bg-[#1e293b] rounded-lg p-4 border border-slate-700/50">
                                 <div className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Total Withdrawals</div>
                                 <div className="flex items-baseline gap-2">
-                                    <span className="text-2xl font-bold text-white">500</span>
+                                    <span className="text-2xl font-bold text-white">{formatCurrency(totals.withdrawals)}</span>
                                     <span className="text-xs text-slate-500">Coins</span>
                                 </div>
                             </div>
@@ -203,7 +223,7 @@ const PlayerWalletandEarning = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[#1F2937]">
-                                        {transactions.map((transaction) => (
+                                        {mappedTransactions.map((transaction) => (
                                             <tr key={transaction.id} className="hover:bg-[#0F172A] transition-colors">
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-3 min-w-0">
@@ -253,6 +273,21 @@ const PlayerWalletandEarning = () => {
                     </div>
                 </div>
             </div>
+
+            {showAmountModal && (
+                <WalletAmount
+                    onClose={() => setShowAmountModal(false)}
+                    onContinue={handleAmountContinue}
+                />
+            )}
+
+            {showPaymentModal && (
+                <ChoosePaymentMethod
+                    amount={selectedAmount}
+                    onBack={() => setShowPaymentModal(false)}
+                    onPay={handlePayment}
+                />
+            )}
         </div>
     )
 }

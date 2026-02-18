@@ -64,13 +64,17 @@ class WalletTopUpInitiateView(APIView):
 		base_url = getattr(settings, 'KHALTI_BASE_URL', 'https://khalti.com/api/v2')
 
 		if not return_url or not website_url:
-			order.status = PaymentOrder.Status.FAILED
-			order.save(update_fields=['status', 'updated_at'])
-			return api_response(
-				is_success=False,
-				error_message='Missing Khalti return or website URL configuration.',
-				status_code=status.HTTP_400_BAD_REQUEST,
-			)
+			if getattr(settings, 'DEBUG', False):
+				return_url = 'http://localhost:5173/wallet/khalti-return'
+				website_url = 'http://localhost:5173'
+			else:
+				order.status = PaymentOrder.Status.FAILED
+				order.save(update_fields=['status', 'updated_at'])
+				return api_response(
+					is_success=False,
+					error_message='Missing Khalti return or website URL configuration.',
+					status_code=status.HTTP_400_BAD_REQUEST,
+				)
 
 		payload = {
 			'return_url': return_url,
