@@ -56,6 +56,8 @@ INSTALLED_APPS = [
     'Match',
     'LeaderBoard',
     'Result',
+    'Wallet',
+    'Payment',
 ]
 
 MIDDLEWARE = [
@@ -199,6 +201,12 @@ SWAGGER_SETTINGS = {
     },
     "USE_SESSION_AUTH": False,
 }
+
+# Khalti settings
+KHALTI_SECRET_KEY = config('KHALTI_SECRET_KEY', default='')
+KHALTI_BASE_URL = config('KHALTI_BASE_URL', default='https://khalti.com/api/v2')
+KHALTI_RETURN_URL = config('KHALTI_RETURN_URL', default='')
+KHALTI_WEBSITE_URL = config('KHALTI_WEBSITE_URL', default='')
 
 
 
