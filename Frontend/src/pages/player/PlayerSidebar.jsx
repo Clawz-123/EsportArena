@@ -14,9 +14,10 @@ import { logoutUser } from '../../slices/auth'
 const items = [
     { label: 'Dashboard', to: '/PlayerDashboard', icon: LayoutDashboard },
     { label: 'My Tournaments', to: '/PlayerMyTournament', icon: Trophy },
-    { label: 'Wallet & Transactions', to: '/player/wallet', icon: Wallet },
+    { label: 'Wallet & Transactions', to: '/PlayerWalletandEarning', icon: Wallet },
     { label: 'Notifications', to: '/player/notifications', icon: Bell },
 ]
+
 
 const SidebarItem = ({ to, label, Icon }) => (
     <NavLink

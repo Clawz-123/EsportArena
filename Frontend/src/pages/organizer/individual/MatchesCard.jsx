@@ -16,26 +16,20 @@ import {
 
 } from 'lucide-react';
 import MatchForm from '../matches/MatchForm';
+import MatchAnnouncement from './MatchAnnouncement';
 import { fetchTournamentBracket } from '../../../slices/BracketSlice';
-import { fetchTournamentDetail } from '../../../slices/tournamentSlice';
 import { fetchMatchesByTournament, createMatch, deleteMatch, updateMatch } from '../../../slices/MatchSlice';
 
 // Creating a component to display and manage matches for a tournament
 const MatchesCard = ({ tournamentId }) => {
   const dispatch = useDispatch();
   const { bracket } = useSelector((state) => state.bracket);
-  const { currentTournament } = useSelector((state) => state.tournament || {});
   const { createLoading, loading: matchesLoading, error: matchesError, matches } = useSelector(
     (state) => state.match || {}
   );
   const [showMatchForm, setShowMatchForm] = useState(false);
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [announcementMatch, setAnnouncementMatch] = useState(null);
-  const [announcementForm, setAnnouncementForm] = useState({
-    roomId: '',
-    roomPass: '',
-    description: '',
-  });
   const [groups, setGroups] = useState([]);
 
   const [selectedGroup, setSelectedGroup] = useState('');
@@ -44,7 +38,6 @@ const MatchesCard = ({ tournamentId }) => {
     if (tournamentId) {
       dispatch(fetchTournamentBracket(tournamentId));
       dispatch(fetchMatchesByTournament(tournamentId));
-      dispatch(fetchTournamentDetail(tournamentId));
     }
   }, [dispatch, tournamentId]);
 
@@ -102,34 +95,6 @@ const MatchesCard = ({ tournamentId }) => {
   ];
 
   const handleCreateMatch = async (values, actions) => {
-    const today = new Date();
-    const regEnd = currentTournament?.registration_end ? new Date(currentTournament.registration_end) : null;
-    const matchStart = currentTournament?.match_start ? new Date(currentTournament.match_start) : null;
-    const expectedEnd = currentTournament?.expected_end ? new Date(currentTournament.expected_end) : null;
-
-    if (currentTournament?.is_draft) {
-      toast.error('Cannot create matches for draft tournaments');
-      actions.setSubmitting(false);
-      return;
-    }
-
-    if (regEnd && today <= regEnd) {
-      toast.error('Matches can only be created after registration closes');
-      actions.setSubmitting(false);
-      return;
-    }
-
-    if (matchStart && today < matchStart) {
-      toast.error('Matches can only be created after the tournament starts');
-      actions.setSubmitting(false);
-      return;
-    }
-
-    if (expectedEnd && today > expectedEnd) {
-      toast.error('Matches cannot be created after the tournament ends');
-      actions.setSubmitting(false);
-      return;
-    }
     const duplicate = (matches || []).find(
       (match) =>
         match.group === values.group &&
@@ -209,24 +174,23 @@ const MatchesCard = ({ tournamentId }) => {
 
   const handleAnnounceMatch = (match) => {
     setAnnouncementMatch(match);
-    setAnnouncementForm({ roomId: '', roomPass: '', description: '' });
     setShowAnnouncementModal(true);
   };
 
-  const handleAnnouncementSubmit = async (event) => {
-    event.preventDefault();
+  const handleAnnouncementSubmit = async (values, actions) => {
     if (!announcementMatch?.id) {
       toast.error('Match not found for announcement');
+      actions.setSubmitting(false);
       return;
     }
 
     try {
-      const result = dispatch(updateMatch({
+      const result = await dispatch(updateMatch({
         matchId: announcementMatch.id,
         matchData: {
-          room_id: announcementForm.roomId,
-          room_pass: announcementForm.roomPass,
-          announcement: announcementForm.description,
+          room_id: values.roomId,
+          room_pass: values.roomPass,
+          announcement: values.description,
         },
       }));
 
@@ -234,11 +198,14 @@ const MatchesCard = ({ tournamentId }) => {
         toast.success(`Announcement sent for Match ${announcementMatch.match_number}`);
         dispatch(fetchMatchesByTournament(tournamentId));
         setShowAnnouncementModal(false);
+        actions.resetForm();
       } else {
         toast.error('Failed to send announcement');
       }
     } catch (error) {
       toast.error('Failed to send announcement');
+    } finally {
+      actions.setSubmitting(false);
     }
   };
 
@@ -426,102 +393,12 @@ const MatchesCard = ({ tournamentId }) => {
           loading={createLoading}
         />
       )}
-      {showAnnouncementModal && announcementMatch && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[#0f172a] rounded-xl shadow-2xl w-full max-w-md border border-[#1e293b] overflow-hidden">
-            <div className="p-6 pb-2">
-              <div className="flex justify-between items-start mb-2">
-                <div className="flex items-center gap-2 text-white">
-                  <Megaphone className="w-5 h-5 text-[#3b82f6]" />
-                  <h2 className="text-xl font-bold">Match Announcement</h2>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowAnnouncementModal(false)}
-                  className="text-[#94a3b8] hover:text-white transition-colors"
-                >
-                  <span className="sr-only">Close</span>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              <p className="text-[#94a3b8] text-sm">
-                Share room details with players for this match.
-              </p>
-            </div>
-
-            <form onSubmit={handleAnnouncementSubmit} className="p-6 pt-2 space-y-4">
-              <div className="bg-[#1e293b] border border-[#334155] rounded-lg p-3 text-sm text-[#e2e8f0]">
-                <div className="flex justify-between">
-                  <span className="text-[#94a3b8]">Match</span>
-                  <span>#{announcementMatch.match_number}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#94a3b8]">Group</span>
-                  <span>{announcementMatch.group}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#94a3b8]">Match ID</span>
-                  <span>{announcementMatch.id}</span>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-white text-sm font-medium">Room ID *</label>
-                <input
-                  type="text"
-                  value={announcementForm.roomId}
-                  onChange={(e) => setAnnouncementForm((prev) => ({ ...prev, roomId: e.target.value }))}
-                  className="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]"
-                  placeholder="Enter game room ID"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-white text-sm font-medium">Room Pass *</label>
-                <input
-                  type="text"
-                  value={announcementForm.roomPass}
-                  onChange={(e) => setAnnouncementForm((prev) => ({ ...prev, roomPass: e.target.value }))}
-                  className="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]"
-                  placeholder="Enter room pass"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-white text-sm font-medium">Description *</label>
-                <textarea
-                  rows="3"
-                  value={announcementForm.description}
-                  onChange={(e) => setAnnouncementForm((prev) => ({ ...prev, description: e.target.value }))}
-                  className="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]"
-                  placeholder="Add instructions for players"
-                  required
-                />
-              </div>
-
-              <div className="pt-2 flex justify-end gap-3">
-                <button
-                  type="button"
-                  className="px-4 py-2 rounded-lg text-white hover:bg-[#1e293b] transition-colors text-sm font-medium"
-                  onClick={() => setShowAnnouncementModal(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-lg bg-[#3b82f6] text-white text-sm font-medium hover:bg-[#2563eb] transition-colors"
-                >
-                  Send Announcement
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <MatchAnnouncement
+        open={showAnnouncementModal}
+        announcementMatch={announcementMatch}
+        onClose={() => setShowAnnouncementModal(false)}
+        onSubmit={handleAnnouncementSubmit}
+      />
     </div>
   );
 };

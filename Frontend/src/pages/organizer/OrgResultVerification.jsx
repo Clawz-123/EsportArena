@@ -214,7 +214,7 @@ const OrgResultVerification = () => {
                   <th className="px-6 py-3 text-left text-[13px] font-medium text-[#9CA3AF] hidden md:table-cell">Group</th>
                   <th className="px-6 py-3 text-left text-[13px] font-medium text-[#9CA3AF]">Date</th>
                   <th className="px-6 py-3 text-left text-[13px] font-medium text-[#9CA3AF]">Status</th>
-                  <th className="px-6 py-3 text-left text-[13px] font-medium text-[#9CA3AF] text-right">Actions</th>
+                  <th className="px-6 py-3 text-left text-[13px] font-medium text-[#9CA3AF]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#1F2937]">
@@ -340,7 +340,7 @@ const OrgResultVerification = () => {
 
             <div>
               <p className="text-sm font-medium text-white mb-3">Proof Screenshot</p>
-              <div className="bg-[#111827] border border-[#1F2937] rounded-xl min-h-[280px] max-h-[60vh] flex items-center justify-center overflow-hidden">
+              <div className="bg-[#111827] border border-[#1F2937] rounded-xl min-h-70 max-h-[60vh] flex items-center justify-center overflow-hidden">
                 {selectedResult.proof_image ? (
                   <img
                     src={selectedResult.proof_image}

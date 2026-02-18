@@ -196,7 +196,7 @@ const ForumCard = ({ tournament }) => {
                 matchAnnouncements.map((announcement) => (
                   <div
                     key={announcement.id}
-                    className="rounded-2xl border border-[#2B3A6A] bg-[#0B1220] p-5 ]"
+                    className="rounded-2xl border border-[#2B3A6A] bg-[#0B1220] p-5 shadow-[0_0_20px_rgba(59,130,246,0.15)]"
                   >
                     <div className="flex items-center justify-between">
                       <span className="px-4 py-1 rounded-full text-[11px] font-semibold uppercase tracking-widest text-[#93C5FD] border border-[#2B3A6A]">
@@ -221,14 +221,24 @@ const ForumCard = ({ tournament }) => {
                     )}
 
                     <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                      <div className="rounded-lg  px-3 py-2">
+                      <div className="rounded-lg border border-[#1F2937] bg-[#0F172A] px-3 py-2">
                         <p className="text-[11px] uppercase text-[#6B7280]">Room ID</p>
                         <p className="text-white font-medium">{announcement.message.roomId}</p>
                       </div>
-                      <div className="rounded-lg  px-3 py-2">
+                      <div className="rounded-lg border border-[#1F2937] bg-[#0F172A] px-3 py-2">
                         <p className="text-[11px] uppercase text-[#6B7280]">Room Pass</p>
                         <p className="text-white font-medium">{announcement.message.roomPass}</p>
                       </div>
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs text-[#9CA3AF]">
+                        <Megaphone className="w-4 h-4 text-[#60A5FA]" />
+                        <span>{announcement.role}</span>
+                      </div>
+                      <span className="text-xs text-[#93C5FD] border border-[#2B3A6A] px-3 py-1 rounded-full">
+                        Group {announcement.message.group}
+                      </span>
                     </div>
                   </div>
                 ))

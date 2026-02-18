@@ -18,6 +18,7 @@ import ContactUs from './pages/public/ContactUs.jsx'
 import Tournament from './pages/public/Tournament.jsx'
 import PlayerDashboard from './pages/player/PlayerDashboard.jsx'
 import PlayerMyTournament from './pages/player/PlayerMyTournament.jsx'
+import PlayerWalletandEarning from './pages/player/PlayerWalletandEarning.jsx'
 import TournaHeader from './pages/public/TounamentPage/TournaHeader.jsx'
 import OrgResultVerification from './pages/organizer/OrgResultVerification.jsx'
 
@@ -59,6 +60,7 @@ function App() {
           <Route path='/tournaments/:id' element={<AuthGate> <TournaHeader /></AuthGate>} />
           <Route path='/PlayerDashboard' element={<AuthGate> <PlayerDashboard /></AuthGate>} />
           <Route path='/PlayerMyTournament' element={<AuthGate> <PlayerMyTournament /></AuthGate>} />
+          <Route path='/PlayerWalletandEarning' element={<AuthGate> <PlayerWalletandEarning /></AuthGate>} />
           <Route path='/Tournaheader' element={<AuthGate> <TournaHeader /></AuthGate>} />
           <Route path='/OrgResultVerification' element={<AuthGate> <OrgResultVerification /></AuthGate>} />
 
