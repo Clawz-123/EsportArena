@@ -12,6 +12,7 @@ import {
   fetchUsers,
   fetchTournamentParticipants,
 } from '../../../slices/tournamentSlice'
+import { fetchWalletBalance } from '../../../slices/walletSlice'
 
 const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
   const navigate = useNavigate()
@@ -29,6 +30,7 @@ const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
     participantsLoading,
     participantsError,
   } = useAppSelector((state) => state.tournament)
+  const { balance } = useAppSelector((state) => state.wallet)
 
   const [searchTerm, setSearchTerm] = useState('')
   const [logoPreview, setLogoPreview] = useState(null)
@@ -38,6 +40,7 @@ const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
     if (isOpen && tournament?.id) {
       dispatch(fetchUsers())
       dispatch(fetchTournamentParticipants(tournament.id))
+      dispatch(fetchWalletBalance())
       dispatch(clearSuccess())
       dispatch(clearError())
     }
@@ -91,7 +94,7 @@ const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
 
   // For squad: captain + 3 members = 4, For duo: captain + 1 member = 2
   const requiredMembers = tournament.match_format?.toLowerCase().includes('squad') ? 3 : 1
-  const userBalance = 500 // This should come from user profile/wallet
+  const userBalance = Number(balance?.balance || 0)
   const entryFee = Number(tournament.entry_fee) || 0
 
   const captainName = profile?.username || user?.name || user?.email || 'Player'

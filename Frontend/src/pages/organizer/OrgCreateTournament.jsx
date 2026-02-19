@@ -80,14 +80,24 @@ const OrgCreateTournament = () => {
 
     // Dispatching the createTournament thunk and handling the result 
     try {
-      const result = dispatch(createTournament(payload))
+      const result = await dispatch(createTournament(payload))
       if (createTournament.fulfilled.match(result)) {
         toast.success('Tournament created successfully!')
         actions.resetForm()
-        navigate('/OrgTournaments')
+        navigate('/Orgtournaments')
+      } else {
+        const errorMessage =
+          result.payload?.error_message ||
+          result.payload?.Error_Message ||
+          result.payload?.message ||
+          'Failed to create tournament'
+        toast.error(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage))
       }
     } catch (error) {
       console.error('Tournament creation error:', error)
+      toast.error('Failed to create tournament')
+    } finally {
+      actions.setSubmitting(false)
     }
   }
 
@@ -114,18 +124,18 @@ const OrgCreateTournament = () => {
   }, [createError])
 
   return (
-    <div className="flex h-screen bg-[#0F172A]">
+    <div className="flex min-h-screen bg-[#0B1020] text-[#E5E7EB]">
       {/* Sidebar */}
       <OrgSidebar />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-[#0F172A] border-b border-[#1F2937] px-8 py-6 flex items-center justify-between">
+        <header className="bg-[#0B1020]/80 border-b border-white/10 px-8 py-6 flex items-center justify-between backdrop-blur">
           <div>
-            <h1 className="text-2xl font-bold text-[#E5E7EB]">Create Tournament</h1>
-            <p className="text-sm text-[#9CA3AF] mt-1">
-              Set up a new tournament by filling out the information below.
+            <h1 className="text-2xl md:text-3xl font-semibold text-[#F8FAFC]">Create Tournament</h1>
+            <p className="text-sm text-[#94A3B8] mt-2">
+              Build a new bracket in a few steps. You can save as a draft anytime.
             </p>
           </div>
           <ProfileMenu />
@@ -140,10 +150,15 @@ const OrgCreateTournament = () => {
             enableReinitialize
           >
             {({ values, errors, touched, isSubmitting }) => (
-              <Form className="max-w-2xl mx-auto p-6 space-y-6">
+              <Form className="w-full px-8 py-8">
+                <div className="space-y-8">
               {/* SECTION 1: Basic Information */}
-              <div className="bg-[#111827] border border-[#1F2937] rounded-lg p-6 space-y-5">
-                <h2 className="text-base font-semibold text-[#E5E7EB]">Basic Information</h2>
+              <div className="bg-linear-to-br from-[#0E1628] via-[#0E1628] to-[#0B1222] border border-white/10 rounded-2xl p-6 md:p-8 space-y-5 shadow-[0_12px_30px_rgba(15,23,42,0.35)]">
+                <div className="flex items-center gap-3">
+                  <span className="h-2 w-2 rounded-full bg-[#38BDF8] shadow-[0_0_10px_rgba(56,189,248,0.8)]" />
+                  <h2 className="text-base font-semibold text-[#F8FAFC]">Basic Information</h2>
+                </div>
+                <p className="text-xs text-[#94A3B8]">Name, game, and overview.</p>
 
                 {/* Tournament Name */}
                 <div>
@@ -154,8 +169,8 @@ const OrgCreateTournament = () => {
                     type="text"
                     name="name"
                     placeholder="Enter tournament name"
-                    className={`w-full bg-[#0F172A] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] placeholder-[#6B7280] focus:outline-none focus:border-[#3B82F6] transition-colors ${
-                      touched.name && errors.name ? 'border-red-400' : 'border-[#1F2937]'
+                    className={`w-full bg-[#0B1120] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] placeholder-[#6B7280] focus:outline-none focus:border-[#3B82F6] transition-colors ${
+                      touched.name && errors.name ? 'border-red-400' : 'border-white/10'
                     }`}
                   />
                   <ErrorMessage name="name" component="p" className="text-red-400 text-xs mt-1" />
@@ -171,8 +186,8 @@ const OrgCreateTournament = () => {
                       <Field
                         as="select"
                         name="gameTitle"
-                        className={`appearance-none w-full bg-[#0F172A] border rounded-md px-4 py-2.5 pr-10 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer ${
-                          touched.gameTitle && errors.gameTitle ? 'border-red-400' : 'border-[#1F2937]'
+                        className={`appearance-none w-full bg-[#0B1120] border rounded-md px-4 py-2.5 pr-10 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer ${
+                          touched.gameTitle && errors.gameTitle ? 'border-red-400' : 'border-white/10'
                         }`}
                       >
                         <option value="">Select game</option>
@@ -192,8 +207,8 @@ const OrgCreateTournament = () => {
                       <Field
                         as="select"
                         name="matchFormat"
-                        className={`appearance-none w-full bg-[#0F172A] border rounded-md px-4 py-2.5 pr-10 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer ${
-                          touched.matchFormat && errors.matchFormat ? 'border-red-400' : 'border-[#1F2937]'
+                        className={`appearance-none w-full bg-[#0B1120] border rounded-md px-4 py-2.5 pr-10 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer ${
+                          touched.matchFormat && errors.matchFormat ? 'border-red-400' : 'border-white/10'
                         }`}
                       >
                         <option value="">Select format</option>
@@ -217,8 +232,8 @@ const OrgCreateTournament = () => {
                     name="description"
                     placeholder="Enter tournament description, rules overview, etc."
                     rows="4"
-                    className={`w-full bg-[#0F172A] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] placeholder-[#6B7280] focus:outline-none focus:border-[#3B82F6] transition-colors resize-none ${
-                      touched.description && errors.description ? 'border-red-400' : 'border-[#1F2937]'
+                    className={`w-full bg-[#0B1120] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] placeholder-[#6B7280] focus:outline-none focus:border-[#3B82F6] transition-colors resize-none ${
+                      touched.description && errors.description ? 'border-red-400' : 'border-white/10'
                     }`}
                   />
                   <ErrorMessage name="description" component="p" className="text-red-400 text-xs mt-1" />
@@ -226,8 +241,12 @@ const OrgCreateTournament = () => {
               </div>
 
               {/* SECTION 2: Schedule & Registration */}
-              <div className="bg-[#111827] border border-[#1F2937] rounded-lg p-6 space-y-5">
-                <h2 className="text-base font-semibold text-[#E5E7EB]">Schedule & Registration</h2>
+              <div className="bg-linear-to-br from-[#0E1628] via-[#0E1628] to-[#0B1222] border border-white/10 rounded-2xl p-6 md:p-8 space-y-5 shadow-[0_12px_30px_rgba(15,23,42,0.35)]">
+                <div className="flex items-center gap-3">
+                  <span className="h-2 w-2 rounded-full bg-[#F59E0B] shadow-[0_0_10px_rgba(245,158,11,0.7)]" />
+                  <h2 className="text-base font-semibold text-[#F8FAFC]">Schedule & Registration</h2>
+                </div>
+                <p className="text-xs text-[#94A3B8]">Set key dates and registration windows.</p>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -238,8 +257,8 @@ const OrgCreateTournament = () => {
                       <Field
                         type="date"
                         name="registrationStart"
-                        className={`w-full bg-[#0F172A] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors ${
-                          touched.registrationStart && errors.registrationStart ? 'border-red-400' : 'border-[#1F2937]'
+                        className={`w-full bg-[#0B1120] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors ${
+                          touched.registrationStart && errors.registrationStart ? 'border-red-400' : 'border-white/10'
                         }`}
                       />
                       <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280] pointer-events-none" />
@@ -255,8 +274,8 @@ const OrgCreateTournament = () => {
                       <Field
                         type="date"
                         name="registrationEnd"
-                        className={`w-full bg-[#0F172A] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors ${
-                          touched.registrationEnd && errors.registrationEnd ? 'border-red-400' : 'border-[#1F2937]'
+                        className={`w-full bg-[#0B1120] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors ${
+                          touched.registrationEnd && errors.registrationEnd ? 'border-red-400' : 'border-white/10'
                         }`}
                       />
                       <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280] pointer-events-none" />
@@ -274,8 +293,8 @@ const OrgCreateTournament = () => {
                       <Field
                         type="date"
                         name="matchStart"
-                        className={`w-full bg-[#0F172A] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors ${
-                          touched.matchStart && errors.matchStart ? 'border-red-400' : 'border-[#1F2937]'
+                        className={`w-full bg-[#0B1120] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors ${
+                          touched.matchStart && errors.matchStart ? 'border-red-400' : 'border-white/10'
                         }`}
                       />
                       <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280] pointer-events-none" />
@@ -291,8 +310,8 @@ const OrgCreateTournament = () => {
                       <Field
                         type="date"
                         name="expectedEnd"
-                        className={`w-full bg-[#0F172A] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors ${
-                          touched.expectedEnd && errors.expectedEnd ? 'border-red-400' : 'border-[#1F2937]'
+                        className={`w-full bg-[#0B1120] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors ${
+                          touched.expectedEnd && errors.expectedEnd ? 'border-red-400' : 'border-white/10'
                         }`}
                       />
                       <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280] pointer-events-none" />
@@ -303,8 +322,12 @@ const OrgCreateTournament = () => {
               </div>
 
               {/* SECTION 3: Tournament Structure */}
-              <div className="bg-[#111827] border border-[#1F2937] rounded-lg p-6 space-y-5">
-                <h2 className="text-base font-semibold text-[#E5E7EB]">Tournament Structure</h2>
+              <div className="bg-linear-to-br from-[#0E1628] via-[#0E1628] to-[#0B1222] border border-white/10 rounded-2xl p-6 md:p-8 space-y-5 shadow-[0_12px_30px_rgba(15,23,42,0.35)]">
+                <div className="flex items-center gap-3">
+                  <span className="h-2 w-2 rounded-full bg-[#A78BFA] shadow-[0_0_10px_rgba(167,139,250,0.7)]" />
+                  <h2 className="text-base font-semibold text-[#F8FAFC]">Tournament Structure</h2>
+                </div>
+                <p className="text-xs text-[#94A3B8]">Capacity limits and bracket setup.</p>
 
                 <div>
                   <label className="block text-sm font-medium text-[#E5E7EB] mb-2">
@@ -314,8 +337,8 @@ const OrgCreateTournament = () => {
                     <Field
                       as="select"
                       name="maxParticipants"
-                      className={`appearance-none w-full bg-[#0F172A] border rounded-md px-4 py-2.5 pr-10 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer ${
-                        touched.maxParticipants && errors.maxParticipants ? 'border-red-400' : 'border-[#1F2937]'
+                      className={`appearance-none w-full bg-[#0B1120] border rounded-md px-4 py-2.5 pr-10 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer ${
+                        touched.maxParticipants && errors.maxParticipants ? 'border-red-400' : 'border-white/10'
                       }`}
                     >
                       <option value="">Select capacity</option>
@@ -335,7 +358,7 @@ const OrgCreateTournament = () => {
                     type="checkbox"
                     id="autoGenerateBracket"
                     name="autoGenerateBracket"
-                    className="w-4 h-4 rounded bg-[#0F172A] border border-[#1F2937] cursor-pointer accent-[#3B82F6]"
+                    className="w-4 h-4 rounded bg-[#0B1120] border border-white/10 cursor-pointer accent-[#3B82F6]"
                   />
                   <label htmlFor="autoGenerateBracket" className="text-sm text-[#E5E7EB] cursor-pointer">
                     Auto-generate bracket after registration closes
@@ -347,8 +370,12 @@ const OrgCreateTournament = () => {
               </div>
 
               {/* SECTION 4: Entry Fee & Prize Pool */}
-              <div className="bg-[#111827] border border-[#1F2937] rounded-lg p-6 space-y-5">
-                <h2 className="text-base font-semibold text-[#E5E7EB]">Entry Fee & Prize Pool</h2>
+              <div className="bg-linear-to-br from-[#0E1628] via-[#0E1628] to-[#0B1222] border border-white/10 rounded-2xl p-6 md:p-8 space-y-5 shadow-[0_12px_30px_rgba(15,23,42,0.35)]">
+                <div className="flex items-center gap-3">
+                  <span className="h-2 w-2 rounded-full bg-[#34D399] shadow-[0_0_10px_rgba(52,211,153,0.7)]" />
+                  <h2 className="text-base font-semibold text-[#F8FAFC]">Entry Fee & Prize Pool</h2>
+                </div>
+                <p className="text-xs text-[#94A3B8]">Define fees and prize distribution.</p>
 
                 <div>
                   <label className="block text-sm font-medium text-[#E5E7EB] mb-2">
@@ -358,8 +385,8 @@ const OrgCreateTournament = () => {
                     type="number"
                     name="entryFee"
                     min="0"
-                    className={`w-full bg-[#0F172A] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors ${
-                      touched.entryFee && errors.entryFee ? 'border-red-400' : 'border-[#1F2937]'
+                    className={`w-full bg-[#0B1120] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors ${
+                      touched.entryFee && errors.entryFee ? 'border-red-400' : 'border-white/10'
                     }`}
                   />
                   <ErrorMessage name="entryFee" component="p" className="text-red-400 text-xs mt-1" />
@@ -377,8 +404,8 @@ const OrgCreateTournament = () => {
                         type="number"
                         name="prizeFirst"
                         min="0"
-                        className={`w-full bg-[#0F172A] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors ${
-                          touched.prizeFirst && errors.prizeFirst ? 'border-red-400' : 'border-[#1F2937]'
+                        className={`w-full bg-[#0B1120] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors ${
+                          touched.prizeFirst && errors.prizeFirst ? 'border-red-400' : 'border-white/10'
                         }`}
                       />
                       <ErrorMessage name="prizeFirst" component="p" className="text-red-400 text-xs mt-1" />
@@ -389,8 +416,8 @@ const OrgCreateTournament = () => {
                         type="number"
                         name="prizeSecond"
                         min="0"
-                        className={`w-full bg-[#0F172A] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors ${
-                          touched.prizeSecond && errors.prizeSecond ? 'border-red-400' : 'border-[#1F2937]'
+                        className={`w-full bg-[#0B1120] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors ${
+                          touched.prizeSecond && errors.prizeSecond ? 'border-red-400' : 'border-white/10'
                         }`}
                       />
                       <ErrorMessage name="prizeSecond" component="p" className="text-red-400 text-xs mt-1" />
@@ -401,8 +428,8 @@ const OrgCreateTournament = () => {
                         type="number"
                         name="prizeThird"
                         min="0"
-                        className={`w-full bg-[#0F172A] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors ${
-                          touched.prizeThird && errors.prizeThird ? 'border-red-400' : 'border-[#1F2937]'
+                        className={`w-full bg-[#0B1120] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors ${
+                          touched.prizeThird && errors.prizeThird ? 'border-red-400' : 'border-white/10'
                         }`}
                       />
                       <ErrorMessage name="prizeThird" component="p" className="text-red-400 text-xs mt-1" />
@@ -410,15 +437,19 @@ const OrgCreateTournament = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-[#1F2937]">
+                <div className="flex items-center justify-between pt-4 border-t border-white/10">
                   <span className="text-sm font-medium text-[#E5E7EB]">Total Prize Pool</span>
                   <span className="text-sm font-semibold text-[#3B82F6]">{calculateTotalPrize(values)} Coins</span>
                 </div>
               </div>
 
               {/* SECTION 5: Match Rules & Result Settings */}
-              <div className="bg-[#111827] border border-[#1F2937] rounded-lg p-6 space-y-5">
-                <h2 className="text-base font-semibold text-[#E5E7EB]">Match Rules & Result Settings</h2>
+              <div className="bg-linear-to-br from-[#0E1628] via-[#0E1628] to-[#0B1222] border border-white/10 rounded-2xl p-6 md:p-8 space-y-5 shadow-[0_12px_30px_rgba(15,23,42,0.35)]">
+                <div className="flex items-center gap-3">
+                  <span className="h-2 w-2 rounded-full bg-[#F472B6] shadow-[0_0_10px_rgba(244,114,182,0.7)]" />
+                  <h2 className="text-base font-semibold text-[#F8FAFC]">Match Rules & Result Settings</h2>
+                </div>
+                <p className="text-xs text-[#94A3B8]">Proof types and submission timing.</p>
 
                 <div>
                   <label className="block text-sm font-medium text-[#E5E7EB] mb-2">
@@ -429,8 +460,8 @@ const OrgCreateTournament = () => {
                     name="matchRules"
                     placeholder="Enter rules, restrictions, or guidelines"
                     rows="4"
-                    className={`w-full bg-[#0F172A] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] placeholder-[#6B7280] focus:outline-none focus:border-[#3B82F6] transition-colors resize-none ${
-                      touched.matchRules && errors.matchRules ? 'border-red-400' : 'border-[#1F2937]'
+                    className={`w-full bg-[#0B1120] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] placeholder-[#6B7280] focus:outline-none focus:border-[#3B82F6] transition-colors resize-none ${
+                      touched.matchRules && errors.matchRules ? 'border-red-400' : 'border-white/10'
                     }`}
                   />
                   <ErrorMessage name="matchRules" component="p" className="text-red-400 text-xs mt-1" />
@@ -441,7 +472,7 @@ const OrgCreateTournament = () => {
                     type="checkbox"
                     id="requireResultProof"
                     name="requireResultProof"
-                    className="w-4 h-4 rounded bg-[#0F172A] border border-[#1F2937] cursor-pointer accent-[#3B82F6]"
+                    className="w-4 h-4 rounded bg-[#0B1120] border border-white/10 cursor-pointer accent-[#3B82F6]"
                   />
                   <label htmlFor="requireResultProof" className="text-sm text-[#E5E7EB] cursor-pointer">
                     Require result proof for verification
@@ -456,8 +487,8 @@ const OrgCreateTournament = () => {
                     <Field
                       as="select"
                       name="proofType"
-                      className={`appearance-none w-full bg-[#0F172A] border rounded-md px-4 py-2.5 pr-10 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer ${
-                        touched.proofType && errors.proofType ? 'border-red-400' : 'border-[#1F2937]'
+                      className={`appearance-none w-full bg-[#0B1120] border rounded-md px-4 py-2.5 pr-10 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer ${
+                        touched.proofType && errors.proofType ? 'border-red-400' : 'border-white/10'
                       }`}
                     >
                       <option value="Screenshot Only">Screenshot Only</option>
@@ -475,8 +506,8 @@ const OrgCreateTournament = () => {
                     type="number"
                     name="resultTimeLimit"
                     min="1"
-                    className={`w-full bg-[#0F172A] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors ${
-                      touched.resultTimeLimit && errors.resultTimeLimit ? 'border-red-400' : 'border-[#1F2937]'
+                    className={`w-full bg-[#0B1120] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors ${
+                      touched.resultTimeLimit && errors.resultTimeLimit ? 'border-red-400' : 'border-white/10'
                     }`}
                   />
                   <ErrorMessage name="resultTimeLimit" component="p" className="text-red-400 text-xs mt-1" />
@@ -487,8 +518,12 @@ const OrgCreateTournament = () => {
               </div>
 
               {/* SECTION 6: Visibility & Control */}
-              <div className="bg-[#111827] border border-[#1F2937] rounded-lg p-6 space-y-5">
-                <h2 className="text-base font-semibold text-[#E5E7EB]">Visibility & Control</h2>
+              <div className="bg-gradient-to-br from-[#0E1628] via-[#0E1628] to-[#0B1222] border border-white/10 rounded-2xl p-6 md:p-8 space-y-5 shadow-[0_12px_30px_rgba(15,23,42,0.35)]">
+                <div className="flex items-center gap-3">
+                  <span className="h-2 w-2 rounded-full bg-[#60A5FA] shadow-[0_0_10px_rgba(96,165,250,0.7)]" />
+                  <h2 className="text-base font-semibold text-[#F8FAFC]">Visibility & Control</h2>
+                </div>
+                <p className="text-xs text-[#94A3B8]">Choose who can find the tournament.</p>
 
                 <div>
                   <label className="block text-sm font-medium text-[#E5E7EB] mb-3">
@@ -528,7 +563,7 @@ const OrgCreateTournament = () => {
                     type="checkbox"
                     id="autoStartTournament"
                     name="autoStartTournament"
-                    className="w-4 h-4 rounded bg-[#0F172A] border border-[#1F2937] cursor-pointer accent-[#3B82F6]"
+                    className="w-4 h-4 rounded bg-[#0B1120] border border-white/10 cursor-pointer accent-[#3B82F6]"
                   />
                   <label htmlFor="autoStartTournament" className="text-sm text-[#E5E7EB] cursor-pointer">
                     Auto-start tournament when slots are full
@@ -540,33 +575,24 @@ const OrgCreateTournament = () => {
               </div>
 
               {/* Form Action Buttons */}
-              <div className="flex gap-4 justify-center pb-8">
+              <div className="flex flex-wrap gap-4 justify-start pb-6">
                 <button
                   type="submit"
                   disabled={createLoading || isSubmitting}
-                  className="bg-[#3B82F6] hover:bg-[#2563EB] text-white font-semibold px-8 py-2.5 rounded-md transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="bg-[#38BDF8] hover:bg-[#0EA5E9] text-[#0B1020] font-semibold px-8 py-2.5 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {createLoading ? 'Creating...' : 'Create Tournament'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    // Set isDraft to true and submit the form
-                  }}
-                  disabled={createLoading || isSubmitting}
-                  className="bg-transparent border border-[#3B82F6] text-[#3B82F6] hover:bg-[#3B82F6]/10 font-semibold px-8 py-2.5 rounded-md transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  Save as Draft
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/organizer/tournaments')}
-                  className="text-[#9CA3AF] hover:text-[#E5E7EB] font-medium px-8 py-2.5 transition-colors"
+                  onClick={() => navigate('/Orgtournaments')}
+                  className="text-[#94A3B8] hover:text-[#E2E8F0] font-medium px-6 py-2.5 transition-colors"
                 >
                   Cancel
                 </button>
               </div>
-            </Form>
+                </div>
+              </Form>
             )}
           </Formik>
         </div>

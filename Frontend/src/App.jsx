@@ -22,6 +22,7 @@ import PlayerWalletandEarning from './pages/player/PlayerWalletandEarning.jsx'
 import WalletKhaltiReturn from './pages/player/WalletKhaltiReturn.jsx'
 import TournaHeader from './pages/public/TounamentPage/TournaHeader.jsx'
 import OrgResultVerification from './pages/organizer/OrgResultVerification.jsx'
+import OrgWallet from './pages/organizer/OrgWallet.jsx'
 
 // Creating a component to protect routes that require authentication
 const AuthGate = ({ children }) => {
@@ -65,6 +66,7 @@ function App() {
           <Route path='/wallet/khalti-return' element={<AuthGate> <WalletKhaltiReturn /></AuthGate>} />
           <Route path='/Tournaheader' element={<AuthGate> <TournaHeader /></AuthGate>} />
           <Route path='/OrgResultVerification' element={<AuthGate> <OrgResultVerification /></AuthGate>} />
+          <Route path='/OrgWallet' element={<AuthGate> <OrgWallet /></AuthGate>} />
 
 
 

@@ -7,19 +7,22 @@ const WalletKhaltiReturn = () => {
   const [searchParams] = useSearchParams()
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
-  const [message, setMessage] = useState('Verifying payment...')
+  
+  const pidx = searchParams.get('pidx')
+  const status = searchParams.get('status')
+  
+  const [message, setMessage] = useState(() => {
+    if (!pidx) {
+      return 'Missing payment reference. Please try again.'
+    }
+    if (status && status !== 'Completed') {
+      return 'Payment not completed. Please try again.'
+    }
+    return 'Verifying payment...'
+  })
 
   useEffect(() => {
-    const pidx = searchParams.get('pidx')
-    const status = searchParams.get('status')
-
-    if (!pidx) {
-      setMessage('Missing payment reference. Please try again.')
-      return
-    }
-
-    if (status && status !== 'Completed') {
-      setMessage('Payment not completed. Please try again.')
+    if (!pidx || (status && status !== 'Completed')) {
       return
     }
 
@@ -34,7 +37,7 @@ const WalletKhaltiReturn = () => {
       .catch(() => {
         setMessage('Payment verification failed. Please contact support.')
       })
-  }, [dispatch, navigate, searchParams])
+  }, [dispatch, navigate, pidx, status])
 
   return (
     <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-6">

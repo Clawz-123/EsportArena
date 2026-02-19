@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, generics
@@ -8,6 +10,7 @@ from django.db import transaction
 from django.core.exceptions import ValidationError
 
 from esport.response import api_response
+from Wallet.models import Wallet, WalletTransaction
 from .models import Tournament, TournamentTeam, TournamentParticipant
 from .serializers import (
     TournamentCreateSerializer,
@@ -31,6 +34,29 @@ class CreateTournamentView(generics.CreateAPIView):
     @transaction.atomic
     def perform_create(self, serializer):
         tournament = serializer.save()
+        prize_total = (tournament.prize_first or 0) + (tournament.prize_second or 0) + (tournament.prize_third or 0)
+
+        if not tournament.is_draft and prize_total > 0:
+            organizer_wallet, _ = Wallet.objects.get_or_create(user=tournament.organizer)
+            required_amount = Decimal(prize_total)
+
+            if organizer_wallet.balance < required_amount:
+                raise ValidationError("Insufficient wallet balance to lock prize pool.")
+
+            organizer_wallet.balance = organizer_wallet.balance - required_amount
+            organizer_wallet.save(update_fields=["balance", "updated_at"])
+
+            WalletTransaction.objects.create(
+                wallet=organizer_wallet,
+                transaction_type=WalletTransaction.TransactionType.PRIZE_LOCK,
+                direction=WalletTransaction.Direction.DEBIT,
+                amount=required_amount,
+                status=WalletTransaction.Status.COMPLETED,
+                method=WalletTransaction.Method.INTERNAL,
+                reference=str(tournament.id),
+                note=f"Prize pool locked for tournament {tournament.name}",
+            )
+
         return tournament
 
     @swagger_auto_schema(
@@ -373,6 +399,42 @@ class JoinTournamentView(generics.CreateAPIView):
         in_game_names = validated_data["in_game_names"]
 
         is_team_based = tournament.match_format in [Tournament.MatchFormats.DUO, Tournament.MatchFormats.SQUAD]
+
+        entry_fee = Decimal(tournament.entry_fee or 0)
+        if entry_fee > 0:
+            player_wallet, _ = Wallet.objects.get_or_create(user=user)
+            organizer_wallet, _ = Wallet.objects.get_or_create(user=tournament.organizer)
+
+            if player_wallet.balance < entry_fee:
+                raise ValidationError("Insufficient wallet balance to join this tournament.")
+
+            player_wallet.balance = player_wallet.balance - entry_fee
+            player_wallet.save(update_fields=["balance", "updated_at"])
+
+            organizer_wallet.balance = organizer_wallet.balance + entry_fee
+            organizer_wallet.save(update_fields=["balance", "updated_at"])
+
+            WalletTransaction.objects.create(
+                wallet=player_wallet,
+                transaction_type=WalletTransaction.TransactionType.ENTRY_FEE,
+                direction=WalletTransaction.Direction.DEBIT,
+                amount=entry_fee,
+                status=WalletTransaction.Status.COMPLETED,
+                method=WalletTransaction.Method.INTERNAL,
+                reference=str(tournament.id),
+                note=f"Entry fee for tournament {tournament.name}",
+            )
+
+            WalletTransaction.objects.create(
+                wallet=organizer_wallet,
+                transaction_type=WalletTransaction.TransactionType.ENTRY_FEE,
+                direction=WalletTransaction.Direction.CREDIT,
+                amount=entry_fee,
+                status=WalletTransaction.Status.COMPLETED,
+                method=WalletTransaction.Method.INTERNAL,
+                reference=str(tournament.id),
+                note=f"Entry fee received for tournament {tournament.name}",
+            )
 
         # For checking the validity of team members and team name only if it's a team-based tournament
         if TournamentParticipant.objects.filter(tournament=tournament, player=user).exists():

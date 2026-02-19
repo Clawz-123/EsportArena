@@ -22,6 +22,7 @@ class WalletTransaction(models.Model):
         WITHDRAWAL = 'withdrawal', 'Withdrawal'
         ENTRY_FEE = 'entry_fee', 'Entry Fee'
         PRIZE = 'prize', 'Prize'
+        PRIZE_LOCK = 'prize_lock', 'Prize Lock'
         REFUND = 'refund', 'Refund'
         ADJUSTMENT = 'adjustment', 'Adjustment'
 

@@ -19,9 +19,7 @@ const PlayerWalletandEarning = () => {
     const {
         balance,
         transactions,
-        loading,
         error,
-        topUpLoading,
         topUpError,
         lastPaymentUrl,
     } = useAppSelector((state) => state.wallet)
@@ -58,7 +56,7 @@ const PlayerWalletandEarning = () => {
     const mappedTransactions = useMemo(() => {
         return (transactions || []).map((tx) => {
             const amountValue = Number(tx.amount || 0)
-            const isCredit = tx.direction === 'credit' || amountValue > 0
+            const isCredit = tx.direction === 'credit'
             const title = tx.note || tx.transaction_type || 'Transaction'
             const dateLabel = tx.created_at
                 ? new Date(tx.created_at).toLocaleString('en-US', {
@@ -81,13 +79,22 @@ const PlayerWalletandEarning = () => {
                 iconColor = 'bg-red-500/30'
             }
 
+            let statusLabel = tx.status ? tx.status.charAt(0).toUpperCase() + tx.status.slice(1) : 'Pending'
+            let statusTone = statusLabel === 'Completed' ? 'success' : 'warning'
+
+            if (tx.transaction_type === 'prize_lock') {
+                statusLabel = 'Hold'
+                statusTone = 'info'
+            }
+
             return {
                 id: tx.id,
                 title,
                 date: dateLabel,
                 amount: isCredit ? amountValue : -Math.abs(amountValue),
                 method: tx.method || null,
-                status: tx.status ? tx.status.charAt(0).toUpperCase() + tx.status.slice(1) : 'Pending',
+                status: statusLabel,
+                statusTone,
                 icon,
                 iconColor,
             }
@@ -251,9 +258,11 @@ const PlayerWalletandEarning = () => {
                                                 </td>
                                                 <td className="px-6 py-4 hidden md:table-cell">
                                                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
-                    ${transaction.status === 'Completed'
+                    ${transaction.statusTone === 'success'
                                                             ? 'border-[#10B981]/40 text-[#10B981]'
-                                                            : 'border-[#F59E0B]/40 text-[#F59E0B]'
+                                                            : transaction.statusTone === 'info'
+                                                                ? 'border-blue-500/40 text-blue-400'
+                                                                : 'border-[#F59E0B]/40 text-[#F59E0B]'
                                                         }`}>
                                                         {transaction.status}
                                                     </span>
