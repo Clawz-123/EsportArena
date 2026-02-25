@@ -9,8 +9,8 @@ const Footer = () => {
 
                     <div className="md:col-span-1">
                         <Link to="/" className="flex items-center gap-2">
-                            <Gamepad2 className="h-6 w-6 text-blue-500" />
-                            <span className="text-xl font-bold bg-clip-text text-transparent bg-linear-to-r from-blue-500 to-pink-500">
+                            <Gamepad2 className="h-6 w-6 text-[#EC4899]" />
+                            <span className="text-xl font-bold text-[#EC4899]">
                                 Esports Arena
                             </span>
                         </Link>

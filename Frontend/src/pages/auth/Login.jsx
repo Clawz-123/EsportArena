@@ -55,10 +55,9 @@ const Login = () => {
         <div className="bg-[#151b2b]/80 rounded-2xl border border-[#1e293b] p-8 shadow-lg relative">
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-2 mb-4">
-              <Gamepad2 className="w-8 h-8 text-blue-500" />
-              <h1 className="text-2xl font-bold">
-                <span className="text-blue-500">Esports</span>{' '}
-                <span className="bg-linear-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Arena</span>
+              <Gamepad2 className="w-8 h-8 text-[#EC4899]" />
+              <h1 className="text-2xl font-bold text-[#EC4899]">
+                Esports Arena
               </h1>
             </div>
             <h2 className="text-3xl font-bold text-white mb-2">Welcome Back</h2>

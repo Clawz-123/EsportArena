@@ -101,8 +101,8 @@ const Register = () => {
         <div className="bg-[#151b2b]/80 backdrop-blur-xl rounded-3xl border border-white/10 p-8 shadow-xl">
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-3 mb-2">
-              <Gamepad2 className="w-8 h-8 text-[#3A86FF]" />
-              <h1 className="text-2xl font-bold bg-linear-to-r from-[#3A86FF] to-[#ff0080] bg-clip-text text-transparent">
+              <Gamepad2 className="w-8 h-8 text-[#EC4899]" />
+              <h1 className="text-2xl font-bold text-[#EC4899]">
                 Esports Arena
               </h1>
             </div>

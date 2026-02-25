@@ -54,8 +54,8 @@ const OrgSidebar = () => {
     return (
         <aside className="w-64 min-h-screen bg-[#1E293B] border-r border-white/5 px-4 py-5">
             <Link to="/" className="flex items-center gap-2">
-                <Gamepad2 className="h-6 w-6 text-blue-500" />
-                <span className="text-xl font-bold bg-clip-text text-transparent bg-linear-to-r from-blue-500 to-pink-500">
+                <Gamepad2 className="h-6 w-6 text-[#EC4899]" />
+                <span className="text-xl font-bold text-[#EC4899]">
                     Esports Arena
                 </span>
             </Link>
