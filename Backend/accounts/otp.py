@@ -100,14 +100,14 @@ def verify_otp(email, otp_code):
 
 
 # Created a function to resend OTP to the user's email address with rate limiting to prevent abuse
-def resend_otp(email):
+def resend_otp(email, allow_verified=False):
     try:
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
             return False, "User with this email does not exist"
         
-        if user.is_verified:
+        if user.is_verified and not allow_verified:
             return False, "User is already verified"
         
         recent_otp = OTP.objects.filter(

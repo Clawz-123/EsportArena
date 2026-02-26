@@ -252,6 +252,55 @@ class ResendOTPView(APIView):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+
+# View for Sending OTP for Password Reset
+class ForgotPasswordOTPView(APIView):
+    permission_classes = [AllowAny]
+
+    @swagger_auto_schema(
+        operation_description="Send OTP to user email for password reset",
+        request_body=ResendOTPSerializer,
+        responses={
+            200: openapi.Response(description="OTP sent successfully"),
+            400: openapi.Response(description="Bad Request"),
+            500: openapi.Response(description="Internal Server Error"),
+        },
+        tags=["OTP"],
+    )
+    def post(self, request):
+        try:
+            serializer = ResendOTPSerializer(data=request.data)
+            if not serializer.is_valid():
+                return api_response(
+                    is_success=False,
+                    error_message=serializer.errors,
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+
+            email = serializer.validated_data['email']
+            result, message = resend_otp(email, allow_verified=True)
+
+            if result:
+                request.session['otp_email'] = email
+                request.session.set_expiry(1800)
+                return api_response(
+                    is_success=True,
+                    status_code=status.HTTP_200_OK,
+                    result={"message": "OTP has been sent to your email."},
+                )
+            else:
+                return api_response(
+                    is_success=False,
+                    error_message={"error": message},
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+        except Exception as e:
+            return api_response(
+                is_success=False,
+                error_message=str(e),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
 # View for User Login
 class LoginUserView(TokenObtainPairView):
     permission_classes = [AllowAny]

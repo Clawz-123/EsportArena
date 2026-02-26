@@ -4,7 +4,7 @@ import { useFormik } from "formik";
 import { useDispatch, useSelector } from "react-redux";
 import { Gamepad2 } from "lucide-react";
 import { toast } from "react-toastify";
-import { resendOtp, clearOtpState } from "../../slices/auth";
+import { sendResetOtp, clearOtpState } from "../../slices/auth";
 import { forgotPasswordValidationSchema } from "../utils/resetvalidation";
 
 const ForgotPassword = () => {
@@ -53,7 +53,7 @@ const ForgotPassword = () => {
                 JSON.stringify({ email: values.email })
             );
 
-            dispatch(resendOtp({ email: values.email }));
+            dispatch(sendResetOtp({ email: values.email }));
         },
     });
 

@@ -95,6 +95,22 @@ export const resendOtp = createAsyncThunk(
   }
 );
 
+// Creating a thunk for sending OTP for password reset
+export const sendResetOtp = createAsyncThunk(
+  "auth/sendResetOtp",
+  async (emailData, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.post(
+        "/accounts/forgot-password-otp/",
+        emailData
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
 // Creating a thunk for logging out the user by sending a request to the backend to invalidate the refresh token and clearing the local storage upon successful logout or if an error occurs during logout
 export const logoutUser = createAsyncThunk(
   "auth/logout",
@@ -247,6 +263,22 @@ const authSlice = createSlice({
     });
 
     builder.addCase(resendOtp.rejected, (state, action) => {
+      state.resendLoading = false;
+      state.resendError = action.payload;
+    });
+
+    builder.addCase(sendResetOtp.pending, (state) => {
+      state.resendLoading = true;
+      state.resendError = null;
+      state.resendSuccess = false;
+    });
+
+    builder.addCase(sendResetOtp.fulfilled, (state) => {
+      state.resendLoading = false;
+      state.resendSuccess = true;
+    });
+
+    builder.addCase(sendResetOtp.rejected, (state, action) => {
       state.resendLoading = false;
       state.resendError = action.payload;
     });

@@ -3,7 +3,7 @@ import { Gamepad2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { verifyOtp, resendOtp, clearOtpState } from "../../slices/auth";
+import { verifyOtp, resendOtp, sendResetOtp, clearOtpState } from "../../slices/auth";
 
 const VerifyOtp = () => {
   const [otp, setOtp] = useState("");
@@ -110,8 +110,10 @@ const VerifyOtp = () => {
       return;
     }
 
+    const action = isForgotPasswordFlow ? sendResetOtp : resendOtp;
+
     dispatch(
-      resendOtp({
+      action({
         email: registeredData.email,
       })
     );
@@ -123,10 +125,10 @@ const VerifyOtp = () => {
         <div className="bg-[#151b2b]/80 rounded-2xl border border-[#1e293b] p-8 shadow-lg relative">
           <div className="text-center mb-8 relative">
             <div className="flex items-center justify-center gap-2 mb-3">
-              <Gamepad2 className="w-8 h-8 text-blue-500" />
+              <Gamepad2 className="w-8 h-8 text-[#EC4899]" />
               <h1 className="text-2xl font-bold">
-                <span className="text-blue-500">Esports</span>{" "}
-                <span className="bg-linear-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
+                <span className="text-[#EC4899]">Esports</span>{" "}
+                <span className="bg-[#EC4899] bg-clip-text text-transparent">
                   Arena
                 </span>
               </h1>
@@ -166,7 +168,7 @@ const VerifyOtp = () => {
             <button
               type="submit"
               disabled={otpLoading || otp.length !== 6}
-              className="w-full bg-blue-500 text-white font-bold py-3 rounded-xl hover:bg-blue-600 transition shadow-[0_0_12px_#3b82f6] disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full bg-blue-500 text-white font-bold py-3 rounded-xl hover:bg-blue-600  disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {otpLoading ? "Verifying..." : "Verify OTP"}
             </button>
