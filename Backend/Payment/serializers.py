@@ -31,3 +31,13 @@ class WalletTopUpInitiateSerializer(serializers.Serializer):
 
 class WalletTopUpVerifySerializer(serializers.Serializer):
     pidx = serializers.CharField(max_length=100)
+
+
+class WalletEsewaVerifySerializer(serializers.Serializer):
+    transaction_uuid = serializers.CharField(max_length=100)
+    total_amount = serializers.CharField(max_length=20)
+    product_code = serializers.CharField(max_length=50)
+    status = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    transaction_code = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    signed_field_names = serializers.CharField(max_length=200)
+    signature = serializers.CharField(max_length=200)

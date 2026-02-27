@@ -474,7 +474,7 @@ class UserDetailView(generics.RetrieveAPIView):
     )
 
 # Created get method for getting user details by ID by authenticated superuser
-    def get(self, request, *args, **kwargs):
+    def get(self):
         try:
             user = self.get_object()
             serializer = self.serializer_class(user)
@@ -518,7 +518,7 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
         tags=["Profile"],
     )
     # Getting the data for authenticated user for profile
-    def get(self, request, *args, **kwargs):
+    def get(self, request):
         try:
             user = self.get_object()
             serializer = self.serializer_class(user, context={'request': request})

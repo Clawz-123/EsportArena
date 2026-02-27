@@ -208,6 +208,14 @@ KHALTI_BASE_URL = config('KHALTI_BASE_URL', default='https://khalti.com/api/v2')
 KHALTI_RETURN_URL = config('KHALTI_RETURN_URL', default='')
 KHALTI_WEBSITE_URL = config('KHALTI_WEBSITE_URL', default='')
 
+# eSewa settings
+ESEWA_PRODUCT_CODE = config('ESEWA_PRODUCT_CODE', default='')
+ESEWA_SECRET_KEY = config('ESEWA_SECRET_KEY', default='')
+ESEWA_FORM_URL = config('ESEWA_FORM_URL', default='https://rc-epay.esewa.com.np/api/epay/main/v2/form')
+ESEWA_STATUS_URL = config('ESEWA_STATUS_URL', default='https://rc.esewa.com.np/api/epay/transaction/status/')
+ESEWA_SUCCESS_URL = config('ESEWA_SUCCESS_URL', default='')
+ESEWA_FAILURE_URL = config('ESEWA_FAILURE_URL', default='')
+
 
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

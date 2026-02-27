@@ -6,6 +6,7 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import {
   fetchWalletBalance,
   fetchWalletTransactions,
+  initiateEsewaTopUp,
   initiateTopUp,
   clearPaymentUrl,
   clearWalletError,
@@ -22,6 +23,7 @@ const OrgWallet = () => {
     error,
     topUpError,
     lastPaymentUrl,
+    lastEsewaPayload,
   } = useAppSelector((state) => state.wallet)
   const [showAmountModal, setShowAmountModal] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
@@ -38,6 +40,28 @@ const OrgWallet = () => {
       dispatch(clearPaymentUrl())
     }
   }, [dispatch, lastPaymentUrl])
+
+  useEffect(() => {
+    if (!lastEsewaPayload?.payment_url || !lastEsewaPayload?.fields) {
+      return
+    }
+
+    const form = document.createElement('form')
+    form.method = 'POST'
+    form.action = lastEsewaPayload.payment_url
+
+    Object.entries(lastEsewaPayload.fields).forEach(([key, value]) => {
+      const input = document.createElement('input')
+      input.type = 'hidden'
+      input.name = key
+      input.value = value
+      form.appendChild(input)
+    })
+
+    document.body.appendChild(form)
+    form.submit()
+    dispatch(clearPaymentUrl())
+  }, [dispatch, lastEsewaPayload])
 
   useEffect(() => {
     if (error) {
@@ -126,11 +150,13 @@ const OrgWallet = () => {
   }
 
   const handlePayment = (method) => {
-    if (method !== 'khalti') {
-      toast.info('Only Khalti is available right now.')
-      return
+    if (method === 'khalti') {
+      dispatch(initiateTopUp({ amount: selectedAmount }))
+    } else if (method === 'esewa') {
+      dispatch(initiateEsewaTopUp({ amount: selectedAmount }))
+    } else {
+      toast.info('Unsupported payment method.')
     }
-    dispatch(initiateTopUp({ amount: selectedAmount }))
     setShowPaymentModal(false)
   }
 

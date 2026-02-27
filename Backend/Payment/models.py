@@ -7,6 +7,7 @@ from django.core.validators import MinValueValidator
 class PaymentOrder(models.Model):
 	class Provider(models.TextChoices):
 		KHALTI = 'khalti', 'Khalti'
+		ESEWA = 'esewa', 'eSewa'
 
 	class Status(models.TextChoices):
 		INITIATED = 'initiated', 'Initiated'
