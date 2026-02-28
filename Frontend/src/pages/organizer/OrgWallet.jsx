@@ -111,12 +111,21 @@ const OrgWallet = () => {
         statusTone = 'info'
       }
 
+      const methodRaw = typeof tx.method === 'string' ? tx.method.trim() : ''
+      const methodKey = methodRaw ? methodRaw.toLowerCase() : null
+      const methodLabel = methodKey === 'esewa'
+        ? 'eSewa'
+        : methodKey === 'khalti'
+          ? 'Khalti'
+          : methodRaw || null
+
       return {
         id: tx.id,
         title,
         date: dateLabel,
         amount: isCredit ? amountValue : -Math.abs(amountValue),
-        method: tx.method || null,
+        method: methodLabel,
+        methodKey,
         status: statusLabel,
         statusTone,
         icon,
@@ -250,7 +259,7 @@ const OrgWallet = () => {
                         <td className="px-6 py-4 hidden md:table-cell">
                           {transaction.method ? (
                             <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              transaction.method === 'eSewa'
+                              transaction.methodKey === 'esewa'
                                 ? 'bg-emerald-500/10 text-emerald-300'
                                 : 'bg-purple-500/10 text-purple-300'
                             }`}>
