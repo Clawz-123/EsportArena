@@ -216,6 +216,17 @@ ESEWA_STATUS_URL = config('ESEWA_STATUS_URL', default='https://rc.esewa.com.np/a
 ESEWA_SUCCESS_URL = config('ESEWA_SUCCESS_URL', default='')
 ESEWA_FAILURE_URL = config('ESEWA_FAILURE_URL', default='')
 
+# Stripe settings
+STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY', default='')
+STRIPE_PUBLISHABLE_KEY = config('STRIPE_PUBLISHABLE_KEY', default='')
+STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET', default='')
+STRIPE_CURRENCY = config('STRIPE_CURRENCY', default='usd')
+STRIPE_COIN_RATE = config('STRIPE_COIN_RATE', default=130, cast=int)
+STRIPE_SUCCESS_URL = config('STRIPE_SUCCESS_URL', default='')
+STRIPE_CANCEL_URL = config('STRIPE_CANCEL_URL', default='')
+STRIPE_CONNECT_RETURN_URL = config('STRIPE_CONNECT_RETURN_URL', default='')
+STRIPE_CONNECT_REFRESH_URL = config('STRIPE_CONNECT_REFRESH_URL', default='')
+
 
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

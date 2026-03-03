@@ -7,6 +7,7 @@ import {
     fetchWalletBalance,
     fetchWalletTransactions,
     initiateEsewaTopUp,
+    initiateStripeTopUp,
     initiateTopUp,
     clearPaymentUrl,
     clearWalletError,
@@ -117,7 +118,9 @@ const PlayerWalletandEarning = () => {
                 ? 'eSewa'
                 : methodKey === 'khalti'
                     ? 'Khalti'
-                    : methodRaw || null
+                    : methodKey === 'stripe'
+                        ? 'Stripe'
+                        : methodRaw || null
 
             return {
                 id: tx.id,
@@ -163,6 +166,8 @@ const PlayerWalletandEarning = () => {
             dispatch(initiateTopUp({ amount: selectedAmount }))
         } else if (method === 'esewa') {
             dispatch(initiateEsewaTopUp({ amount: selectedAmount }))
+        } else if (method === 'stripe') {
+            dispatch(initiateStripeTopUp({ coins: selectedAmount }))
         } else {
             toast.info('Unsupported payment method.')
         }
@@ -189,7 +194,7 @@ const PlayerWalletandEarning = () => {
                         <div>
                             <h1 className="text-2xl font-bold text-white">Wallet & Transactions</h1>
                             <p className="text-sm text-slate-400 mt-1">
-                                Add funds via eSewa or Khalti and manage your balance
+                                Add funds via eSewa, Khalti, or Stripe and manage your balance
                             </p>
                         </div>
                     </div>
@@ -278,7 +283,9 @@ const PlayerWalletandEarning = () => {
                                                         <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium
                   ${transaction.methodKey === 'esewa'
                                                                 ? 'bg-emerald-500/10 text-emerald-300'
-                                                                : 'bg-purple-500/10 text-purple-300'
+                                                                : transaction.methodKey === 'stripe'
+                                                                    ? 'bg-indigo-500/10 text-indigo-300'
+                                                                    : 'bg-purple-500/10 text-purple-300'
                                                             }`}>
                                                             {transaction.method}
                                                         </span>

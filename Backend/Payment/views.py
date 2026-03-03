@@ -1,20 +1,26 @@
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 import requests
 from django.conf import settings
 from django.db import transaction as db_transaction
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
+import stripe
 
 from esport.response import api_response
 from Wallet.models import Wallet, WalletTransaction
 from Wallet.serializers import WalletSerializer
-from .models import PaymentOrder
+from .models import PaymentOrder, WithdrawalRequest
 from .serializers import (
 	PaymentOrderSerializer,
+	StripeTopUpInitiateSerializer,
+	StripeWithdrawSerializer,
+	WithdrawalRequestSerializer,
 	WalletEsewaVerifySerializer,
 	WalletTopUpInitiateSerializer,
 	WalletTopUpVerifySerializer,
@@ -28,6 +34,44 @@ def _get_or_create_wallet(user):
 
 def _to_paisa(amount):
 	return int(Decimal(amount) * 100)
+
+
+def _stripe_coin_rate():
+	rate = getattr(settings, 'STRIPE_COIN_RATE', 130)
+	try:
+		return int(rate)
+	except (TypeError, ValueError):
+		return 130
+
+
+def _coins_to_usd(coins):
+	rate = Decimal(_stripe_coin_rate())
+	usd_amount = (Decimal(coins) / rate).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+	return usd_amount
+
+
+def _usd_to_cents(amount):
+	return int((Decimal(amount) * 100).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
+
+
+def _stripe_urls():
+	success_url = getattr(settings, 'STRIPE_SUCCESS_URL', '')
+	cancel_url = getattr(settings, 'STRIPE_CANCEL_URL', '')
+	if not success_url or not cancel_url:
+		if getattr(settings, 'DEBUG', False):
+			success_url = success_url or 'http://localhost:5173/wallet/stripe-return'
+			cancel_url = cancel_url or 'http://localhost:5173/wallet/stripe-return'
+	return success_url, cancel_url
+
+
+def _stripe_connect_urls():
+	return_url = getattr(settings, 'STRIPE_CONNECT_RETURN_URL', '')
+	refresh_url = getattr(settings, 'STRIPE_CONNECT_REFRESH_URL', '')
+	if not return_url or not refresh_url:
+		if getattr(settings, 'DEBUG', False):
+			return_url = return_url or 'http://localhost:5173/PlayerWalletandEarning'
+			refresh_url = refresh_url or 'http://localhost:5173/PlayerWalletandEarning'
+	return return_url, refresh_url
 
 
 # Creating a separate function for Khalti headers to avoid repetition and centralize the logic
@@ -489,5 +533,420 @@ class WalletEsewaVerifyView(APIView):
 				'wallet': WalletSerializer(wallet).data,
 				'order': PaymentOrderSerializer(order).data,
 			},
+			status_code=status.HTTP_200_OK,
+		)
+
+
+class StripeCheckoutInitiateView(APIView):
+	authentication_classes = [JWTAuthentication]
+	permission_classes = [IsAuthenticated]
+
+	def post(self, request):
+		try:
+			serializer = StripeTopUpInitiateSerializer(data=request.data)
+			if not serializer.is_valid():
+				return api_response(
+					is_success=False,
+					error_message=serializer.errors,
+					status_code=status.HTTP_400_BAD_REQUEST,
+				)
+
+			coins = serializer.validated_data['coins']
+			usd_amount = _coins_to_usd(coins)
+			if usd_amount < Decimal('0.50'):
+				return api_response(
+					is_success=False,
+					error_message='Amount is below Stripe minimum in USD.',
+					status_code=status.HTTP_400_BAD_REQUEST,
+				)
+
+			currency = getattr(settings, 'STRIPE_CURRENCY', 'usd')
+			stripe.api_key = getattr(settings, 'STRIPE_SECRET_KEY', '')
+			if not stripe.api_key:
+				return api_response(
+					is_success=False,
+					error_message='Stripe is not configured.',
+					status_code=status.HTTP_400_BAD_REQUEST,
+				)
+
+			success_url, cancel_url = _stripe_urls()
+			if not success_url or not cancel_url:
+				return api_response(
+					is_success=False,
+					error_message='Missing Stripe return URLs.',
+					status_code=status.HTTP_400_BAD_REQUEST,
+				)
+
+			order = PaymentOrder.objects.create(
+				user=request.user,
+				amount=usd_amount,
+				coins=coins,
+				provider=PaymentOrder.Provider.STRIPE,
+			)
+
+			amount_cents = _usd_to_cents(usd_amount)
+			try:
+				session = stripe.checkout.Session.create(
+					mode='payment',
+					client_reference_id=str(order.id),
+					metadata={
+						'order_id': str(order.id),
+						'user_id': str(request.user.id),
+						'coins': str(coins),
+					},
+					line_items=[
+						{
+							'price_data': {
+								'currency': currency,
+								'unit_amount': amount_cents,
+								'product_data': {
+									'name': f'Wallet top-up ({coins} coins)',
+								},
+							},
+							'quantity': 1,
+						}
+					],
+					success_url=f"{success_url}?session_id={{CHECKOUT_SESSION_ID}}",
+					cancel_url=cancel_url,
+				)
+			except stripe.error.StripeError as exc:
+				order.status = PaymentOrder.Status.FAILED
+				order.updated_at = timezone.now()
+				order.save(update_fields=['status', 'updated_at'])
+				return api_response(
+					is_success=False,
+					error_message=str(exc),
+					status_code=status.HTTP_502_BAD_GATEWAY,
+				)
+
+			order.pidx = session.id
+			order.payment_url = session.url
+			order.stripe_session_id = session.id
+			order.updated_at = timezone.now()
+			order.save(update_fields=['pidx', 'payment_url', 'stripe_session_id', 'updated_at'])
+
+			wallet = _get_or_create_wallet(request.user)
+			WalletTransaction.objects.create(
+				wallet=wallet,
+				transaction_type=WalletTransaction.TransactionType.DEPOSIT,
+				direction=WalletTransaction.Direction.CREDIT,
+				amount=Decimal(coins),
+				status=WalletTransaction.Status.PENDING,
+				method=WalletTransaction.Method.STRIPE,
+				reference=str(order.id),
+				note='Top-up initiated',
+			)
+
+			return api_response(
+				result={
+					'order': PaymentOrderSerializer(order).data,
+					'checkout_url': session.url,
+				},
+				status_code=status.HTTP_200_OK,
+			)
+		except Exception as exc:
+			return api_response(
+				is_success=False,
+				error_message=str(exc),
+				status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class StripeWebhookView(APIView):
+	authentication_classes = []
+	permission_classes = []
+
+	def post(self, request):
+		stripe.api_key = getattr(settings, 'STRIPE_SECRET_KEY', '')
+		webhook_secret = getattr(settings, 'STRIPE_WEBHOOK_SECRET', '')
+		payload = request.body
+		signature = request.META.get('HTTP_STRIPE_SIGNATURE', '')
+
+		try:
+			event = stripe.Webhook.construct_event(payload, signature, webhook_secret)
+		except (ValueError, stripe.error.SignatureVerificationError) as exc:
+			return api_response(
+				is_success=False,
+				error_message=str(exc),
+				status_code=status.HTTP_400_BAD_REQUEST,
+			)
+
+		event_type = event.get('type')
+		data_object = event.get('data', {}).get('object', {})
+
+		if event_type == 'checkout.session.completed':
+			order_id = data_object.get('metadata', {}).get('order_id')
+			if not order_id:
+				return api_response(status_code=status.HTTP_200_OK)
+			try:
+				order = PaymentOrder.objects.get(id=order_id, provider=PaymentOrder.Provider.STRIPE)
+			except PaymentOrder.DoesNotExist:
+				return api_response(status_code=status.HTTP_200_OK)
+			if order.status == PaymentOrder.Status.PAID:
+				return api_response(status_code=status.HTTP_200_OK)
+
+			wallet = _get_or_create_wallet(order.user)
+			with db_transaction.atomic():
+				order.status = PaymentOrder.Status.PAID
+				order.updated_at = timezone.now()
+				order.save(update_fields=['status', 'updated_at'])
+
+				wallet.balance = wallet.balance + Decimal(order.coins)
+				wallet.save(update_fields=['balance', 'updated_at'])
+
+				WalletTransaction.objects.filter(
+					wallet=wallet,
+					reference=str(order.id),
+					status=WalletTransaction.Status.PENDING,
+				).update(
+					status=WalletTransaction.Status.COMPLETED,
+					note='Top-up completed',
+				)
+
+			return api_response(status_code=status.HTTP_200_OK)
+
+		if event_type in ['payout.paid', 'payout.failed']:
+			withdrawal_id = data_object.get('metadata', {}).get('withdrawal_id')
+			if not withdrawal_id:
+				return api_response(status_code=status.HTTP_200_OK)
+			try:
+				withdrawal = WithdrawalRequest.objects.get(id=withdrawal_id)
+			except WithdrawalRequest.DoesNotExist:
+				return api_response(status_code=status.HTTP_200_OK)
+
+			wallet = _get_or_create_wallet(withdrawal.user)
+			if event_type == 'payout.paid':
+				if withdrawal.status != WithdrawalRequest.Status.COMPLETED:
+					withdrawal.status = WithdrawalRequest.Status.COMPLETED
+					withdrawal.updated_at = timezone.now()
+					withdrawal.save(update_fields=['status', 'updated_at'])
+
+					WalletTransaction.objects.filter(
+						wallet=wallet,
+						reference=str(withdrawal.id),
+						transaction_type=WalletTransaction.TransactionType.WITHDRAWAL,
+						status=WalletTransaction.Status.PENDING,
+					).update(
+						status=WalletTransaction.Status.COMPLETED,
+						note='Withdrawal completed',
+					)
+				return api_response(status_code=status.HTTP_200_OK)
+
+			if event_type == 'payout.failed':
+				if withdrawal.status != WithdrawalRequest.Status.FAILED:
+					with db_transaction.atomic():
+						withdrawal.status = WithdrawalRequest.Status.FAILED
+						withdrawal.updated_at = timezone.now()
+						withdrawal.save(update_fields=['status', 'updated_at'])
+
+						wallet.balance = wallet.balance + Decimal(withdrawal.coins)
+						wallet.save(update_fields=['balance', 'updated_at'])
+
+						WalletTransaction.objects.filter(
+							wallet=wallet,
+							reference=str(withdrawal.id),
+							transaction_type=WalletTransaction.TransactionType.WITHDRAWAL,
+							status=WalletTransaction.Status.PENDING,
+						).update(
+							status=WalletTransaction.Status.FAILED,
+							note='Withdrawal failed',
+						)
+				return api_response(status_code=status.HTTP_200_OK)
+
+		return api_response(status_code=status.HTTP_200_OK)
+
+
+class StripeConnectOnboardView(APIView):
+	authentication_classes = [JWTAuthentication]
+	permission_classes = [IsAuthenticated]
+
+	def post(self, request):
+		stripe.api_key = getattr(settings, 'STRIPE_SECRET_KEY', '')
+		if not stripe.api_key:
+			return api_response(
+				is_success=False,
+				error_message='Stripe is not configured.',
+				status_code=status.HTTP_400_BAD_REQUEST,
+			)
+
+		return_url, refresh_url = _stripe_connect_urls()
+		if not return_url or not refresh_url:
+			return api_response(
+				is_success=False,
+				error_message='Missing Stripe Connect URLs.',
+				status_code=status.HTTP_400_BAD_REQUEST,
+			)
+
+		user = request.user
+		account_id = user.stripe_account_id
+		try:
+			if not account_id:
+				account = stripe.Account.create(
+					type='express',
+					email=user.email,
+				)
+				account_id = account.id
+				user.stripe_account_id = account_id
+				user.stripe_account_completed = False
+				user.save(update_fields=['stripe_account_id', 'stripe_account_completed'])
+			else:
+				account = stripe.Account.retrieve(account_id)
+				user.stripe_account_completed = bool(account.get('details_submitted'))
+				user.save(update_fields=['stripe_account_completed'])
+
+			account_link = stripe.AccountLink.create(
+				account=account_id,
+				type='account_onboarding',
+				refresh_url=refresh_url,
+				return_url=return_url,
+			)
+		except stripe.error.StripeError as exc:
+			return api_response(
+				is_success=False,
+				error_message=str(exc),
+				status_code=status.HTTP_502_BAD_GATEWAY,
+			)
+
+		return api_response(
+			result={
+				'url': account_link.url,
+				'account_id': account_id,
+			},
+			status_code=status.HTTP_200_OK,
+		)
+
+
+class StripeWithdrawView(APIView):
+	authentication_classes = [JWTAuthentication]
+	permission_classes = [IsAuthenticated]
+
+	def post(self, request):
+		serializer = StripeWithdrawSerializer(data=request.data)
+		if not serializer.is_valid():
+			return api_response(
+				is_success=False,
+				error_message=serializer.errors,
+				status_code=status.HTTP_400_BAD_REQUEST,
+			)
+
+		coins = serializer.validated_data['coins']
+		usd_amount = _coins_to_usd(coins)
+		if usd_amount < Decimal('0.50'):
+			return api_response(
+				is_success=False,
+				error_message='Amount is below Stripe minimum in USD.',
+				status_code=status.HTTP_400_BAD_REQUEST,
+			)
+
+		user = request.user
+		if not user.stripe_account_id:
+			return api_response(
+				is_success=False,
+				error_message='Stripe account not connected.',
+				status_code=status.HTTP_400_BAD_REQUEST,
+			)
+
+		stripe.api_key = getattr(settings, 'STRIPE_SECRET_KEY', '')
+		if not stripe.api_key:
+			return api_response(
+				is_success=False,
+				error_message='Stripe is not configured.',
+				status_code=status.HTTP_400_BAD_REQUEST,
+			)
+
+		try:
+			account = stripe.Account.retrieve(user.stripe_account_id)
+		except stripe.error.StripeError as exc:
+			return api_response(
+				is_success=False,
+				error_message=str(exc),
+				status_code=status.HTTP_502_BAD_GATEWAY,
+			)
+
+		if not account.get('payouts_enabled'):
+			return api_response(
+				is_success=False,
+				error_message='Stripe payouts are not enabled for this account.',
+				status_code=status.HTTP_400_BAD_REQUEST,
+			)
+
+		wallet = _get_or_create_wallet(user)
+		if wallet.balance < Decimal(coins):
+			return api_response(
+				is_success=False,
+				error_message='Insufficient wallet balance.',
+				status_code=status.HTTP_400_BAD_REQUEST,
+			)
+
+		amount_cents = _usd_to_cents(usd_amount)
+		currency = getattr(settings, 'STRIPE_CURRENCY', 'usd')
+		with db_transaction.atomic():
+			wallet.balance = wallet.balance - Decimal(coins)
+			wallet.save(update_fields=['balance', 'updated_at'])
+
+			withdrawal = WithdrawalRequest.objects.create(
+				user=user,
+				amount=usd_amount,
+				coins=coins,
+				stripe_account_id=user.stripe_account_id,
+			)
+
+			WalletTransaction.objects.create(
+				wallet=wallet,
+				transaction_type=WalletTransaction.TransactionType.WITHDRAWAL,
+				direction=WalletTransaction.Direction.DEBIT,
+				amount=Decimal(coins),
+				status=WalletTransaction.Status.PENDING,
+				method=WalletTransaction.Method.STRIPE,
+				reference=str(withdrawal.id),
+				note='Withdrawal requested',
+			)
+
+		try:
+			transfer = stripe.Transfer.create(
+				amount=amount_cents,
+				currency=currency,
+				destination=user.stripe_account_id,
+				metadata={'withdrawal_id': str(withdrawal.id)},
+			)
+			payout = stripe.Payout.create(
+				amount=amount_cents,
+				currency=currency,
+				metadata={'withdrawal_id': str(withdrawal.id)},
+				stripe_account=user.stripe_account_id,
+			)
+		except stripe.error.StripeError as exc:
+			with db_transaction.atomic():
+				withdrawal.status = WithdrawalRequest.Status.FAILED
+				withdrawal.updated_at = timezone.now()
+				withdrawal.save(update_fields=['status', 'updated_at'])
+
+				wallet.balance = wallet.balance + Decimal(coins)
+				wallet.save(update_fields=['balance', 'updated_at'])
+
+				WalletTransaction.objects.filter(
+					wallet=wallet,
+					reference=str(withdrawal.id),
+					transaction_type=WalletTransaction.TransactionType.WITHDRAWAL,
+					status=WalletTransaction.Status.PENDING,
+				).update(
+					status=WalletTransaction.Status.FAILED,
+					note='Withdrawal failed',
+				)
+
+			return api_response(
+				is_success=False,
+				error_message=str(exc),
+				status_code=status.HTTP_502_BAD_GATEWAY,
+			)
+
+		withdrawal.stripe_transfer_id = transfer.id
+		withdrawal.stripe_payout_id = payout.id
+		withdrawal.updated_at = timezone.now()
+		withdrawal.save(update_fields=['stripe_transfer_id', 'stripe_payout_id', 'updated_at'])
+
+		return api_response(
+			result={'withdrawal': WithdrawalRequestSerializer(withdrawal).data},
 			status_code=status.HTTP_200_OK,
 		)

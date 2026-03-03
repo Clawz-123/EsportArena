@@ -21,6 +21,7 @@ import PlayerMyTournament from './pages/player/PlayerMyTournament.jsx'
 import PlayerWalletandEarning from './pages/player/PlayerWalletandEarning.jsx'
 import WalletKhaltiReturn from './pages/player/WalletKhaltiReturn.jsx'
 import WalletEsewaReturn from './pages/player/WalletEsewaReturn.jsx'
+import WalletStripeReturn from './pages/player/WalletStripeReturn.jsx'
 import TournaHeader from './pages/public/TounamentPage/TournaHeader.jsx'
 import OrgResultVerification from './pages/organizer/OrgResultVerification.jsx'
 import OrgWallet from './pages/organizer/OrgWallet.jsx'
@@ -66,6 +67,7 @@ function App() {
           <Route path='/PlayerWalletandEarning' element={<AuthGate> <PlayerWalletandEarning /></AuthGate>} />
           <Route path='/wallet/khalti-return' element={<AuthGate> <WalletKhaltiReturn /></AuthGate>} />
           <Route path='/wallet/esewa-return' element={<AuthGate> <WalletEsewaReturn /></AuthGate>} />
+          <Route path='/wallet/stripe-return' element={<AuthGate> <WalletStripeReturn /></AuthGate>} />
           <Route path='/Tournaheader' element={<AuthGate> <TournaHeader /></AuthGate>} />
           <Route path='/OrgResultVerification' element={<AuthGate> <OrgResultVerification /></AuthGate>} />
           <Route path='/OrgWallet' element={<AuthGate> <OrgWallet /></AuthGate>} />

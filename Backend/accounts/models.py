@@ -22,6 +22,10 @@ class User(AbstractUser):
     profile_image = models.ImageField(upload_to='profiles/', blank=True, null=True)
     is_verified = models.BooleanField(default=False)
 
+    stripe_customer_id = models.CharField(max_length=120, blank=True, null=True)
+    stripe_account_id = models.CharField(max_length=120, blank=True, null=True)
+    stripe_account_completed = models.BooleanField(default=False)
+
     is_organizer = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
     role = models.CharField(

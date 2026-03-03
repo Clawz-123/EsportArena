@@ -22,8 +22,19 @@ const ChoosePaymentMethod = ({ amount, onBack, onPay }) => {
       hoverColor: 'hover:bg-purple-600/10 hover:border-purple-600/50',
       activeColor: 'bg-purple-600/10 border-purple-600',
       iconText: 'K'
+    },
+    {
+      id: 'stripe',
+      name: 'Stripe',
+      description: 'Pay with Stripe',
+      color: 'bg-indigo-500',
+      hoverColor: 'hover:bg-indigo-500/10 hover:border-indigo-500/50',
+      activeColor: 'bg-indigo-500/10 border-indigo-500',
+      iconText: 'S'
     }
   ];
+
+  const stripeUsdAmount = (Number(amount) / 130).toFixed(2);
 
   const handlePay = () => {
     if (selectedMethod) {
@@ -53,7 +64,7 @@ const ChoosePaymentMethod = ({ amount, onBack, onPay }) => {
         {/* Content */}
         <div className="p-6 space-y-6">
           {/* Methods Grid */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {methods.map((method) => (
               <button
                 key={method.id}
@@ -113,7 +124,7 @@ const ChoosePaymentMethod = ({ amount, onBack, onPay }) => {
                 }
                             `}
             >
-              Pay NPR {amount}
+              {selectedMethod === 'stripe' ? `Pay USD ${stripeUsdAmount}` : `Pay NPR ${amount}`}
               <ArrowRight size={18} />
             </button>
           </div>

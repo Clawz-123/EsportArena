@@ -7,6 +7,7 @@ import {
   fetchWalletBalance,
   fetchWalletTransactions,
   initiateEsewaTopUp,
+  initiateStripeTopUp,
   initiateTopUp,
   clearPaymentUrl,
   clearWalletError,
@@ -117,7 +118,9 @@ const OrgWallet = () => {
         ? 'eSewa'
         : methodKey === 'khalti'
           ? 'Khalti'
-          : methodRaw || null
+          : methodKey === 'stripe'
+            ? 'Stripe'
+            : methodRaw || null
 
       return {
         id: tx.id,
@@ -163,6 +166,8 @@ const OrgWallet = () => {
       dispatch(initiateTopUp({ amount: selectedAmount }))
     } else if (method === 'esewa') {
       dispatch(initiateEsewaTopUp({ amount: selectedAmount }))
+    } else if (method === 'stripe') {
+      dispatch(initiateStripeTopUp({ coins: selectedAmount }))
     } else {
       toast.info('Unsupported payment method.')
     }
@@ -178,7 +183,7 @@ const OrgWallet = () => {
           <div>
             <h1 className="text-2xl font-bold text-[#E5E7EB]">Wallet & Earnings</h1>
             <p className="text-sm text-[#9CA3AF] mt-1">
-              Track payouts and manage your organizer balance
+              Track payouts and manage your organizer balance with Stripe
             </p>
           </div>
           <ProfileMenu />
@@ -261,7 +266,9 @@ const OrgWallet = () => {
                             <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
                               transaction.methodKey === 'esewa'
                                 ? 'bg-emerald-500/10 text-emerald-300'
-                                : 'bg-purple-500/10 text-purple-300'
+                                : transaction.methodKey === 'stripe'
+                                  ? 'bg-indigo-500/10 text-indigo-300'
+                                  : 'bg-purple-500/10 text-purple-300'
                             }`}>
                               {transaction.method}
                             </span>

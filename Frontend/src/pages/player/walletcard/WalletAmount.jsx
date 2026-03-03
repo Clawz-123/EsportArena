@@ -92,7 +92,7 @@ const WalletAmount = ({ onClose, onContinue }) => {
               </span>
             </div>
             <p className="text-xs text-slate-500">
-              Minimum: 10 coins • 1 Coin = NPR 1
+              Minimum: 10 coins
             </p>
           </div>
 

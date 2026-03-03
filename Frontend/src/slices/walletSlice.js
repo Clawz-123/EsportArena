@@ -49,6 +49,18 @@ export const initiateEsewaTopUp = createAsyncThunk(
 	}
 );
 
+export const initiateStripeTopUp = createAsyncThunk(
+	"wallet/initiateStripeTopUp",
+	async ({ coins }, { rejectWithValue }) => {
+		try {
+			const response = await axiosInstance.post("/payment/stripe/checkout/", { coins });
+			return response.data;
+		} catch (error) {
+			return rejectWithValue(error.response?.data || error.message);
+		}
+	}
+);
+
 export const verifyTopUp = createAsyncThunk(
 	"wallet/verifyTopUp",
 	async ({ pidx }, { rejectWithValue }) => {
@@ -178,6 +190,22 @@ const walletSlice = createSlice({
 			state.lastEsewaPayload = result || null;
 		});
 		builder.addCase(initiateEsewaTopUp.rejected, (state, action) => {
+			state.topUpLoading = false;
+			state.topUpError = action.payload;
+		});
+
+		builder.addCase(initiateStripeTopUp.pending, (state) => {
+			state.topUpLoading = true;
+			state.topUpError = null;
+			state.lastPaymentUrl = null;
+			state.lastEsewaPayload = null;
+		});
+		builder.addCase(initiateStripeTopUp.fulfilled, (state, action) => {
+			state.topUpLoading = false;
+			const result = action.payload?.Result || action.payload?.result || action.payload;
+			state.lastPaymentUrl = result?.checkout_url || result?.payment_url || null;
+		});
+		builder.addCase(initiateStripeTopUp.rejected, (state, action) => {
 			state.topUpLoading = false;
 			state.topUpError = action.payload;
 		});

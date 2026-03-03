@@ -38,6 +38,7 @@ class WalletTransaction(models.Model):
     class Method(models.TextChoices):
         KHALTI = 'khalti', 'Khalti'
         ESEWA = 'esewa', 'eSewa'
+        STRIPE = 'stripe', 'Stripe'
         INTERNAL = 'internal', 'Internal'
 
     wallet = models.ForeignKey(
