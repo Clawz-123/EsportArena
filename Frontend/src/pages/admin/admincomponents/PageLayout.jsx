@@ -2,6 +2,7 @@ import React from 'react'
 import AdminSidebar from '../AdminSidebar'
 import ProfileMenu from '../../../components/common/ProfileMenu'
 
+// Layout component for admin pages with sidebar, header, and content area
 const AdminPageLayout = ({ title, subtitle, headerRight, children }) => (
   <div className="flex h-screen bg-[#0F172A]">
     <AdminSidebar />

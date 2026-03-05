@@ -7,6 +7,7 @@ const Spinner = () => (
   </div>
 )
 
+// Reusable admin table component with loading, empty state, and pagination
 const AdminTable = ({ loading, headers, children, emptyIcon: EmptyIcon, emptyText = 'No data found', currentPage, totalPages, onPageChange }) => (
   <>
     <div className="bg-[#111827] border border-[#1F2937] rounded-xl overflow-hidden">

@@ -136,7 +136,7 @@ const AdminTournaments = () => {
           const status = getTournamentStatus(t)
           return (
             <>
-              <div className="bg-gradient-to-r from-amber-600/20 to-orange-600/20 px-6 py-5 flex items-center justify-between">
+              <div className="bg-linear-to-r from-amber-600/20 to-orange-600/20 px-6 py-5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-amber-500/10"><Trophy className="w-5 h-5 text-amber-400" /></div>
                   <div>

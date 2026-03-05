@@ -1,6 +1,7 @@
 import React from 'react'
 import { ArrowUpRight } from 'lucide-react'
 
+// Reusable stat card component for admin dashboard with optional click action and sublabel
 const StatCard = ({ label, value, sublabel, icon: Icon, iconColor, iconBg, action }) => (
   <div
     onClick={action}

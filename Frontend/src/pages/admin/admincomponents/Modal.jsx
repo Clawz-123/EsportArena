@@ -1,6 +1,8 @@
 import React from 'react'
 import { X } from 'lucide-react'
 
+
+// Reusable modal component for admin pages with close button and info row subcomponents
 const AdminModal = ({ open, onClose, children, maxWidth = 'max-w-md' }) => {
   if (!open) return null
   return (

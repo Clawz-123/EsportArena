@@ -1,5 +1,6 @@
-// Shared helpers for admin pages
+// Admin utility functions
 
+// Function to format dates in similar style
 export const formatDate = (d) => {
   if (!d) return '—'
   return new Date(d).toLocaleDateString('en-US', {
@@ -9,6 +10,7 @@ export const formatDate = (d) => {
   })
 }
 
+// Function to format date and time
 export const formatDateTime = (d) => {
   if (!d) return '—'
   return new Date(d).toLocaleDateString('en-US', {
@@ -19,11 +21,14 @@ export const formatDateTime = (d) => {
   })
 }
 
+// Function to format currency values
 export const formatCurrency = (val) => {
   if (!val && val !== 0) return '—'
   return `₨ ${Number(val).toLocaleString()}`
 }
 
+
+// Badge classes for user roles
 export const roleBadgeClass = (role) => {
   const map = {
     Player: 'bg-blue-500/10 border-blue-500/30 text-blue-400',
@@ -33,6 +38,8 @@ export const roleBadgeClass = (role) => {
   return map[role] || 'bg-gray-500/10 border-gray-500/30 text-gray-400'
 }
 
+
+// Function to get badge classes based on tournament status
 export const statusBadgeClass = (status) => {
   const map = {
     Ongoing: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
@@ -45,6 +52,7 @@ export const statusBadgeClass = (status) => {
   return map[status] || 'bg-gray-500/10 border-gray-500/30 text-gray-400'
 }
 
+// Function to determine tournament status based on dates
 export const getTournamentStatus = (t) => {
   if (t.is_draft) return 'Draft'
   const now = new Date()
@@ -53,6 +61,7 @@ export const getTournamentStatus = (t) => {
   const matchStart = new Date(t.match_start)
   const matchEnd = t.expected_end ? new Date(t.expected_end) : null
 
+  // Logic to determine status based on current time and tournament dates
   if (now < regStart) return 'Upcoming'
   if (now >= regStart && now <= regEnd) return 'Registration'
   if (now > regEnd && now < matchStart) return 'Reg. Closed'

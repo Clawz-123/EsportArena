@@ -1,6 +1,7 @@
 import React from 'react'
 import { Search } from 'lucide-react'
 
+// Reusable search bar component for admin pages with optional filter dropdown and result count
 const AdminSearchBar = ({ value, onChange, placeholder = 'Search...', filterValue, onFilterChange, filterOptions, resultCount }) => (
   <div className="flex items-center gap-3">
     <div className="relative max-w-sm flex-1">

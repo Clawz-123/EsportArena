@@ -1,5 +1,7 @@
 import React from 'react'
 
+
+// Reusable user avatar component that displays profile image or initials with size variants
 const UserAvatar = ({ user, size = 'md' }) => {
   const sizes = {
     sm: { container: 'w-8 h-8', text: 'text-xs', border: 'border border-[#1F2937]' },
@@ -9,6 +11,7 @@ const UserAvatar = ({ user, size = 'md' }) => {
   const s = sizes[size] || sizes.md
   const initial = (user?.name || user?.email || '?')[0].toUpperCase()
 
+  //  Logic to display profile image if available, otherwise show initials with background
   if (user?.profile_image) {
     return (
       <img
