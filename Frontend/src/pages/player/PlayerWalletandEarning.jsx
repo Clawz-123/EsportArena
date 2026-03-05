@@ -14,6 +14,7 @@ import {
 } from '../../slices/walletSlice'
 import WalletAmount from './walletcard/WalletAmount'
 import ChoosePaymentMethod from './walletcard/ChoosePaymentMethod'
+import Pagination from '../../components/Pagination/Pagination'
 import { toast } from 'react-toastify'
 
 const PlayerWalletandEarning = () => {
@@ -29,6 +30,8 @@ const PlayerWalletandEarning = () => {
     const [showAmountModal, setShowAmountModal] = useState(false)
     const [showPaymentModal, setShowPaymentModal] = useState(false)
     const [selectedAmount, setSelectedAmount] = useState(0)
+    const [currentPage, setCurrentPage] = useState(1)
+    const itemsPerPage = 10
 
     useEffect(() => {
         dispatch(fetchWalletBalance())
@@ -146,6 +149,18 @@ const PlayerWalletandEarning = () => {
         })
         return { deposits, withdrawals }
     }, [mappedTransactions])
+
+    const totalPages = Math.max(1, Math.ceil(mappedTransactions.length / itemsPerPage))
+    const paginatedTransactions = useMemo(() => {
+        const start = (currentPage - 1) * itemsPerPage
+        return mappedTransactions.slice(start, start + itemsPerPage)
+    }, [currentPage, itemsPerPage, mappedTransactions])
+
+    useEffect(() => {
+        if (currentPage > totalPages) {
+            setCurrentPage(totalPages)
+        }
+    }, [currentPage, totalPages])
 
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('en-US').format(Math.abs(amount))
@@ -265,7 +280,7 @@ const PlayerWalletandEarning = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[#1F2937]">
-                                        {mappedTransactions.map((transaction) => (
+                                        {paginatedTransactions.map((transaction) => (
                                             <tr key={transaction.id} className="hover:bg-[#0F172A] transition-colors">
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-3 min-w-0">
@@ -315,6 +330,11 @@ const PlayerWalletandEarning = () => {
                                     </tbody>
                                 </table>
                             </div>
+                            <Pagination
+                                currentPage={currentPage}
+                                totalPages={totalPages}
+                                onPageChange={setCurrentPage}
+                            />
                         </div>
                     </div>
                 </div>
