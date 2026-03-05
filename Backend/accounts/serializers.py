@@ -6,11 +6,20 @@ from .otp import create_and_send_otp
 
 # Serializer for User Response
 class UserResponseSerializers(serializers.ModelSerializer):
-    
+    profile_image = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ['id', 'email', 'name', 'is_organizer', 'phone_number', 'role', 'is_verified', 'date_joined']
+        fields = ['id', 'email', 'name', 'is_organizer', 'phone_number', 'role', 'is_verified', 'date_joined', 'profile_image']
         read_only_fields = ['id', 'date_joined', 'role', 'is_verified']
+
+    def get_profile_image(self, obj):
+        if obj.profile_image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.profile_image.url)
+            return obj.profile_image.url
+        return None
 
 
 # Serializer for User Creation

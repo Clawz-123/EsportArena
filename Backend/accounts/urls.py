@@ -15,4 +15,7 @@ urlpatterns = [
     path('resend-otp/', views.ResendOTPView.as_view(), name='resend-otp'),
     path('forgot-password-otp/', views.ForgotPasswordOTPView.as_view(), name='forgot-password-otp'),
     path('reset-password/', views.ResetPasswordView.as_view(), name='reset-password'),
+    path('admin/dashboard-stats/', views.AdminDashboardStatsView.as_view(), name='admin-dashboard-stats'),
+    path('admin/users/', views.AdminUserListView.as_view(), name='admin-user-list'),
+    path('admin/users/<int:pk>/delete/', views.AdminDeleteUserView.as_view(), name='admin-user-delete'),
 ]

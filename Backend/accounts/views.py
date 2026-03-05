@@ -11,6 +11,9 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from django.contrib.auth import authenticate
 from django.db import transaction
+from django.db.models import Sum, Count, Q
+from django.utils import timezone
+from datetime import timedelta
 
 from .permission import IsSuperUser
 from esport.response import api_response
@@ -452,6 +455,68 @@ class GetUserView(generics.ListAPIView):
                 error_message=str(e),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+# Admin view to list ALL users (players + organizers), excluding superusers
+class AdminUserListView(generics.ListAPIView):
+    serializer_class = UserResponseSerializers
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, IsSuperUser]
+
+    def get_queryset(self):
+        return User.objects.filter(
+            is_superuser=False,
+            is_verified=True
+        ).order_by('-date_joined')
+
+    def get(self, request, *args, **kwargs):
+        try:
+            users = self.get_queryset()
+            serializer = self.serializer_class(users, many=True, context={'request': request})
+            return api_response(
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+                result={
+                    "count": users.count(),
+                    "users": serializer.data
+                }
+            )
+        except Exception as e:
+            return api_response(
+                is_success=False,
+                error_message=str(e),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+# Admin view to delete a user
+class AdminDeleteUserView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated, IsSuperUser]
+
+    def delete(self, request, pk):
+        try:
+            user = User.objects.get(pk=pk, is_superuser=False)
+            user_email = user.email
+            user.delete()
+            return api_response(
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+                result={"message": f"User {user_email} deleted successfully"}
+            )
+        except User.DoesNotExist:
+            return api_response(
+                is_success=False,
+                error_message="User not found",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        except Exception as e:
+            return api_response(
+                is_success=False,
+                error_message=str(e),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
         
 # View for Getting User Details
 class UserDetailView(generics.RetrieveAPIView):
@@ -638,3 +703,107 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
     # Allowing put method for fully updating the profile of authenticated user
     def put(self, request, *args, **kwargs):
         return self.patch(request, *args, **kwargs)
+
+
+# ───────── Admin Dashboard Stats ─────────
+class AdminDashboardStatsView(APIView):
+    """Return aggregate stats for the admin dashboard."""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsSuperUser]
+
+    def get(self, request):
+        try:
+            from tournament.models import Tournament
+            from Wallet.models import Wallet, WalletTransaction
+            from Payment.models import PaymentOrder, WithdrawalRequest
+
+            now = timezone.now()
+            thirty_days_ago = now - timedelta(days=30)
+
+            # ── User counts ──
+            total_users = User.objects.filter(is_superuser=False).count()
+            total_players = User.objects.filter(role='Player', is_superuser=False).count()
+            total_organizers = User.objects.filter(role='Organizer', is_superuser=False).count()
+            new_users_30d = User.objects.filter(date_joined__gte=thirty_days_ago, is_superuser=False).count()
+
+            # ── Tournament counts ──
+            total_tournaments = Tournament.objects.count()
+            active_tournaments = Tournament.objects.filter(
+                match_start__lte=now.date(),
+            ).exclude(
+                expected_end__lt=now.date(),
+            ).count()
+            completed_tournaments = Tournament.objects.filter(
+                expected_end__lt=now.date(),
+            ).count()
+
+            # ── Revenue (paid orders) ──
+            total_revenue = PaymentOrder.objects.filter(
+                status='paid'
+            ).aggregate(total=Sum('amount'))['total'] or 0
+
+            revenue_30d = PaymentOrder.objects.filter(
+                status='paid',
+                created_at__gte=thirty_days_ago,
+            ).aggregate(total=Sum('amount'))['total'] or 0
+
+            # ── Withdrawal requests ──
+            pending_withdrawals = WithdrawalRequest.objects.filter(status='pending').count()
+            completed_withdrawals = WithdrawalRequest.objects.filter(status='completed').count()
+
+            # ── Recent users (last 5) ──
+            recent_users = list(
+                User.objects.filter(is_superuser=False)
+                .order_by('-date_joined')[:5]
+                .values('id', 'email', 'name', 'role', 'is_verified', 'date_joined')
+            )
+
+            # ── Recent tournaments (last 5) ──
+            recent_tournaments = list(
+                Tournament.objects.order_by('-id')[:5]
+                .values('id', 'name', 'game_title', 'match_format', 'max_participants',
+                        'registration_start', 'registration_end', 'match_start', 'expected_end')
+            )
+
+            # ── Recent transactions (last 5) ──
+            recent_transactions = list(
+                WalletTransaction.objects.select_related('wallet__user')
+                .order_by('-created_at')[:5]
+                .values('id', 'wallet__user__email', 'transaction_type', 'direction',
+                        'amount', 'status', 'method', 'created_at')
+            )
+
+            return api_response(
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+                result={
+                    "users": {
+                        "total": total_users,
+                        "players": total_players,
+                        "organizers": total_organizers,
+                        "new_last_30_days": new_users_30d,
+                    },
+                    "tournaments": {
+                        "total": total_tournaments,
+                        "active": active_tournaments,
+                        "completed": completed_tournaments,
+                    },
+                    "revenue": {
+                        "total": float(total_revenue),
+                        "last_30_days": float(revenue_30d),
+                    },
+                    "withdrawals": {
+                        "pending": pending_withdrawals,
+                        "completed": completed_withdrawals,
+                    },
+                    "recent_users": recent_users,
+                    "recent_tournaments": recent_tournaments,
+                    "recent_transactions": recent_transactions,
+                },
+            )
+        except Exception as e:
+            return api_response(
+                is_success=False,
+                error_message=str(e),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )

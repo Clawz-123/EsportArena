@@ -25,17 +25,56 @@ import WalletStripeReturn from './pages/player/WalletStripeReturn.jsx'
 import TournaHeader from './pages/public/TounamentPage/TournaHeader.jsx'
 import OrgResultVerification from './pages/organizer/OrgResultVerification.jsx'
 import OrgWallet from './pages/organizer/OrgWallet.jsx'
+import AdminDashboard from './pages/admin/AdminDashboard.jsx'
+import AdminPayment from './pages/admin/AdminPayment.jsx'
+import AdminUsers from './pages/admin/AdminUsers.jsx'
+import AdminTournaments from './pages/admin/AdminTournaments.jsx'
+
+// Redirect SuperAdmin away from public pages to admin dashboard
+const HomeRedirect = ({ children }) => {
+  const { isAuthenticated, user } = useSelector((state) => state.auth || {})
+  if (isAuthenticated && user?.role === 'SuperAdmin') {
+    return <Navigate to="/admin/dashboard" replace />
+  }
+  return children
+}
+
+// Pages that admins are allowed to access (besides /admin/* routes)
+const ADMIN_ALLOWED_PATHS = ['/view-profile', '/update-profile']
 
 // Creating a component to protect routes that require authentication
 const AuthGate = ({ children }) => {
-  // Reading the authentication state from the Redux store
-  const { isAuthenticated } = useSelector((state) => state.auth || {})
+  const { isAuthenticated, user } = useSelector((state) => state.auth || {})
   const location = useLocation()
 
   if (!isAuthenticated) {
     toast.info('You need to login first before watching other pages', {
       toastId: `auth-required-${location.pathname}`,
     })
+    return <Navigate to="/" replace />
+  }
+
+  // Block SuperAdmin from accessing player/organizer pages
+  if (user?.role === 'SuperAdmin' && !ADMIN_ALLOWED_PATHS.includes(location.pathname)) {
+    toast.error('You do not have access to this page', { toastId: 'admin-no-access' })
+    return <Navigate to="/admin/dashboard" replace />
+  }
+
+  return children
+}
+
+// Protect admin-only routes (superuser check)
+const AdminGate = ({ children }) => {
+  const { isAuthenticated, user } = useSelector((state) => state.auth || {})
+  const location = useLocation()
+
+  if (!isAuthenticated) {
+    toast.info('You need to login first', { toastId: `auth-required-${location.pathname}` })
+    return <Navigate to="/" replace />
+  }
+
+  if (user?.role !== 'SuperAdmin') {
+    toast.error('Access denied. Admin only.', { toastId: 'admin-denied' })
     return <Navigate to="/" replace />
   }
 
@@ -47,7 +86,7 @@ function App() {
     <Provider store={store}>
       <Router>
         <Routes>
-          <Route path='/' element={<Home />} />
+          <Route path='/' element={<HomeRedirect><Home /></HomeRedirect>} />
           <Route path='/login' element={<Login />} />
           <Route path='/register' element={<Register />} />
           <Route path='/verify-otp' element={<VerifyOtp />} />
@@ -72,7 +111,11 @@ function App() {
           <Route path='/OrgResultVerification' element={<AuthGate> <OrgResultVerification /></AuthGate>} />
           <Route path='/OrgWallet' element={<AuthGate> <OrgWallet /></AuthGate>} />
 
-
+          {/* Admin Routes */}
+          <Route path='/admin/dashboard' element={<AdminGate> <AdminDashboard /></AdminGate>} />
+          <Route path='/admin/withdrawals' element={<AdminGate> <AdminPayment /></AdminGate>} />
+          <Route path='/admin/users' element={<AdminGate> <AdminUsers /></AdminGate>} />
+          <Route path='/admin/tournaments' element={<AdminGate> <AdminTournaments /></AdminGate>} />
 
         </Routes>
       </Router>

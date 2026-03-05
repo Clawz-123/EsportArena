@@ -9,6 +9,9 @@ from .views import (
     StripeWithdrawView,
     WalletTopUpInitiateView,
     WalletTopUpVerifyView,
+    AdminWithdrawalListView,
+    AdminWithdrawalApproveView,
+    AdminWithdrawalRejectView,
 )
 
 
@@ -21,4 +24,8 @@ urlpatterns = [
     path('stripe/webhook/', StripeWebhookView.as_view(), name='stripe-webhook'),
     path('stripe/connect/', StripeConnectOnboardView.as_view(), name='stripe-connect'),
     path('stripe/withdraw/', StripeWithdrawView.as_view(), name='stripe-withdraw'),
+    # Admin withdrawal management
+    path('admin/withdrawals/', AdminWithdrawalListView.as_view(), name='admin-withdrawal-list'),
+    path('admin/withdrawals/<int:pk>/approve/', AdminWithdrawalApproveView.as_view(), name='admin-withdrawal-approve'),
+    path('admin/withdrawals/<int:pk>/reject/', AdminWithdrawalRejectView.as_view(), name='admin-withdrawal-reject'),
 ]

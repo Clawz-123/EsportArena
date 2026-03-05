@@ -25,7 +25,14 @@ const Login = () => {
         const resultAction = await dispatch(loginUser(values))
         if (loginUser.fulfilled.match(resultAction)) {
           toast.success('Signed in successfully')
-          navigate('/')
+          const loggedUser = resultAction.payload?.user || resultAction.payload
+          if (loggedUser?.role === 'SuperAdmin') {
+            navigate('/admin/dashboard')
+          } else if (loggedUser?.is_organizer) {
+            navigate('/OrgDashboard')
+          } else {
+            navigate('/PlayerDashboard')
+          }
         } else {
           const errorPayload = resultAction.payload;
           let errorMessage = 'Login failed';

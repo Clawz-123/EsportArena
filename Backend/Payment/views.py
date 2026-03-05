@@ -12,6 +12,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 import stripe
 
+from accounts.permission import IsSuperUser
 from esport.response import api_response
 from Wallet.models import Wallet, WalletTransaction
 from Wallet.serializers import WalletSerializer
@@ -949,4 +950,133 @@ class StripeWithdrawView(APIView):
 		return api_response(
 			result={'withdrawal': WithdrawalRequestSerializer(withdrawal).data},
 			status_code=status.HTTP_200_OK,
+		)
+
+
+# ───────── Admin Withdrawal Management ─────────
+
+class AdminWithdrawalListView(APIView):
+	"""List all withdrawal requests (admin only)."""
+	authentication_classes = [JWTAuthentication]
+	permission_classes = [IsSuperUser]
+
+	def get(self, request):
+		try:
+			withdrawals = WithdrawalRequest.objects.select_related('user').order_by('-created_at')
+			data = []
+			for w in withdrawals:
+				data.append({
+					'id': w.id,
+					'user': w.user.id,
+					'user_email': w.user.email,
+					'user_name': w.user.name or '',
+					'coins': w.coins,
+					'amount': str(w.amount),
+					'status': w.status,
+					'stripe_account_id': w.stripe_account_id or '',
+					'created_at': w.created_at.isoformat(),
+					'updated_at': w.updated_at.isoformat(),
+				})
+			return api_response(
+				is_success=True,
+				status_code=status.HTTP_200_OK,
+				result={'withdrawals': data},
+			)
+		except Exception as e:
+			return api_response(
+				is_success=False,
+				error_message=str(e),
+				status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			)
+
+
+class AdminWithdrawalApproveView(APIView):
+	"""Approve a pending withdrawal request (admin only)."""
+	authentication_classes = [JWTAuthentication]
+	permission_classes = [IsSuperUser]
+
+	def post(self, request, pk):
+		try:
+			withdrawal = WithdrawalRequest.objects.select_related('user').get(pk=pk)
+		except WithdrawalRequest.DoesNotExist:
+			return api_response(
+				is_success=False,
+				error_message='Withdrawal request not found.',
+				status_code=status.HTTP_404_NOT_FOUND,
+			)
+
+		if withdrawal.status != WithdrawalRequest.Status.PENDING:
+			return api_response(
+				is_success=False,
+				error_message=f'Cannot approve a {withdrawal.status} withdrawal.',
+				status_code=status.HTTP_400_BAD_REQUEST,
+			)
+
+		with db_transaction.atomic():
+			withdrawal.status = WithdrawalRequest.Status.COMPLETED
+			withdrawal.updated_at = timezone.now()
+			withdrawal.save(update_fields=['status', 'updated_at'])
+
+			# Mark the related wallet transaction as completed
+			WalletTransaction.objects.filter(
+				wallet__user=withdrawal.user,
+				reference=str(withdrawal.id),
+				transaction_type=WalletTransaction.TransactionType.WITHDRAWAL,
+				status=WalletTransaction.Status.PENDING,
+			).update(status=WalletTransaction.Status.COMPLETED)
+
+		return api_response(
+			is_success=True,
+			status_code=status.HTTP_200_OK,
+			result={'message': 'Withdrawal approved successfully.'},
+		)
+
+
+class AdminWithdrawalRejectView(APIView):
+	"""Reject a pending withdrawal request and refund coins (admin only)."""
+	authentication_classes = [JWTAuthentication]
+	permission_classes = [IsSuperUser]
+
+	def post(self, request, pk):
+		try:
+			withdrawal = WithdrawalRequest.objects.select_related('user').get(pk=pk)
+		except WithdrawalRequest.DoesNotExist:
+			return api_response(
+				is_success=False,
+				error_message='Withdrawal request not found.',
+				status_code=status.HTTP_404_NOT_FOUND,
+			)
+
+		if withdrawal.status != WithdrawalRequest.Status.PENDING:
+			return api_response(
+				is_success=False,
+				error_message=f'Cannot reject a {withdrawal.status} withdrawal.',
+				status_code=status.HTTP_400_BAD_REQUEST,
+			)
+
+		with db_transaction.atomic():
+			withdrawal.status = WithdrawalRequest.Status.FAILED
+			withdrawal.updated_at = timezone.now()
+			withdrawal.save(update_fields=['status', 'updated_at'])
+
+			# Refund coins back to wallet
+			wallet = _get_or_create_wallet(withdrawal.user)
+			wallet.balance = wallet.balance + Decimal(withdrawal.coins)
+			wallet.save(update_fields=['balance', 'updated_at'])
+
+			# Mark transaction as failed
+			WalletTransaction.objects.filter(
+				wallet=wallet,
+				reference=str(withdrawal.id),
+				transaction_type=WalletTransaction.TransactionType.WITHDRAWAL,
+				status=WalletTransaction.Status.PENDING,
+			).update(
+				status=WalletTransaction.Status.FAILED,
+				note='Rejected by admin',
+			)
+
+		return api_response(
+			is_success=True,
+			status_code=status.HTTP_200_OK,
+			result={'message': 'Withdrawal rejected. Coins refunded to user wallet.'},
 		)
