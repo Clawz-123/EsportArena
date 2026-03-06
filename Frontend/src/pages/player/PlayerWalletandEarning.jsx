@@ -9,11 +9,15 @@ import {
     initiateEsewaTopUp,
     initiateStripeTopUp,
     initiateTopUp,
+    requestWithdrawal,
+    stripeConnectOnboard,
+    stripeWithdraw,
     clearPaymentUrl,
     clearWalletError,
 } from '../../slices/walletSlice'
 import WalletAmount from './walletcard/WalletAmount'
 import ChoosePaymentMethod from './walletcard/ChoosePaymentMethod'
+import WithdrawModal from './walletcard/WithdrawModal'
 import Pagination from '../../components/Pagination/Pagination'
 import { toast } from 'react-toastify'
 
@@ -26,9 +30,13 @@ const PlayerWalletandEarning = () => {
         topUpError,
         lastPaymentUrl,
         lastEsewaPayload,
+        withdrawLoading,
+        withdrawError,
+        stripeConnectLoading,
     } = useAppSelector((state) => state.wallet)
     const [showAmountModal, setShowAmountModal] = useState(false)
     const [showPaymentModal, setShowPaymentModal] = useState(false)
+    const [showWithdrawModal, setShowWithdrawModal] = useState(false)
     const [selectedAmount, setSelectedAmount] = useState(0)
     const [currentPage, setCurrentPage] = useState(1)
     const itemsPerPage = 10
@@ -79,7 +87,12 @@ const PlayerWalletandEarning = () => {
             toast.error('Failed to initiate payment.')
             dispatch(clearWalletError())
         }
-    }, [dispatch, topUpError])
+        if (withdrawError) {
+            const msg = withdrawError?.Error_Message || 'Withdrawal request failed.'
+            toast.error(msg)
+            dispatch(clearWalletError())
+        }
+    }, [dispatch, topUpError, withdrawError])
 
     const mappedTransactions = useMemo(() => {
         return (transactions || []).map((tx) => {
@@ -189,6 +202,34 @@ const PlayerWalletandEarning = () => {
         setShowPaymentModal(false)
     }
 
+    const handleWithdraw = async (data) => {
+        const result = await dispatch(requestWithdrawal(data))
+        if (!result.error) {
+            toast.success('Withdrawal request submitted! It will be reviewed by admin.')
+            setShowWithdrawModal(false)
+            dispatch(fetchWalletBalance())
+            dispatch(fetchWalletTransactions())
+        }
+    }
+
+    const handleStripeConnect = async () => {
+        const result = await dispatch(stripeConnectOnboard())
+        if (!result.error) {
+            const url = result.payload?.Result?.url || result.payload?.result?.url
+            if (url) window.location.href = url
+        }
+    }
+
+    const handleStripeWithdraw = async (data) => {
+        const result = await dispatch(stripeWithdraw(data))
+        if (!result.error) {
+            toast.success('Stripe withdrawal processed!')
+            setShowWithdrawModal(false)
+            dispatch(fetchWalletBalance())
+            dispatch(fetchWalletTransactions())
+        }
+    }
+
     return (
         <div className="flex min-h-screen bg-[#0F172A]">
             {/* Sidebar */}
@@ -237,7 +278,9 @@ const PlayerWalletandEarning = () => {
                                         >
                                             Add Funds
                                         </button>
-                                        <button className="px-4 py-2 bg-transparent border border-white/10 hover:bg-white/5 text-white text-sm font-medium rounded-lg transition-colors">
+                                        <button className="px-4 py-2 bg-transparent border border-white/10 hover:bg-white/5 text-white text-sm font-medium rounded-lg transition-colors"
+                                            onClick={() => setShowWithdrawModal(true)}
+                                        >
                                             Withdraw
                                         </button>
                                     </div>
@@ -352,6 +395,19 @@ const PlayerWalletandEarning = () => {
                     amount={selectedAmount}
                     onBack={() => setShowPaymentModal(false)}
                     onPay={handlePayment}
+                />
+            )}
+
+            {showWithdrawModal && (
+                <WithdrawModal
+                    balance={balance?.balance}
+                    onClose={() => setShowWithdrawModal(false)}
+                    onSubmit={handleWithdraw}
+                    onStripeConnect={handleStripeConnect}
+                    onStripeWithdraw={handleStripeWithdraw}
+                    loading={withdrawLoading}
+                    connectLoading={stripeConnectLoading}
+                    stripeConnected={!!balance?.stripe_connected}
                 />
             )}
         </div>

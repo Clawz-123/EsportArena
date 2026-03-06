@@ -20,7 +20,9 @@ class WalletDetailView(APIView):
 	def get(self, request):
 		wallet = _get_or_create_wallet(request.user)
 		serializer = WalletSerializer(wallet)
-		return api_response(result=serializer.data, status_code=status.HTTP_200_OK)
+		data = serializer.data
+		data['stripe_connected'] = bool(getattr(request.user, 'stripe_account_completed', False))
+		return api_response(result=data, status_code=status.HTTP_200_OK)
 
 
 class WalletTransactionListView(APIView):

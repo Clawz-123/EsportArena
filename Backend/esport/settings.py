@@ -227,6 +227,9 @@ STRIPE_CANCEL_URL = config('STRIPE_CANCEL_URL', default='')
 STRIPE_CONNECT_RETURN_URL = config('STRIPE_CONNECT_RETURN_URL', default='')
 STRIPE_CONNECT_REFRESH_URL = config('STRIPE_CONNECT_REFRESH_URL', default='')
 
+# Platform withdrawal fee (percentage)
+WITHDRAWAL_FEE_PERCENT = config('WITHDRAWAL_FEE_PERCENT', default=5, cast=int)
+
 
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

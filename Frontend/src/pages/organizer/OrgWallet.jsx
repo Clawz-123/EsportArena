@@ -11,10 +11,14 @@ import {
   initiateTopUp,
   clearPaymentUrl,
   clearWalletError,
+  requestWithdrawal,
+  stripeConnectOnboard,
+  stripeWithdraw,
 } from '../../slices/walletSlice'
 import WalletAmount from '../player/walletcard/WalletAmount'
 import ChoosePaymentMethod from '../player/walletcard/ChoosePaymentMethod'
 import Pagination from '../../components/Pagination/Pagination'
+import WithdrawModal from '../player/walletcard/WithdrawModal'
 import { toast } from 'react-toastify'
 
 const OrgWallet = () => {
@@ -24,12 +28,16 @@ const OrgWallet = () => {
     transactions,
     error,
     topUpError,
+    withdrawLoading,
+    withdrawError,
+    stripeConnectLoading,
     lastPaymentUrl,
     lastEsewaPayload,
   } = useAppSelector((state) => state.wallet)
   const [showAmountModal, setShowAmountModal] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [selectedAmount, setSelectedAmount] = useState(0)
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
 
@@ -80,6 +88,41 @@ const OrgWallet = () => {
       dispatch(clearWalletError())
     }
   }, [dispatch, topUpError])
+
+  useEffect(() => {
+    if (withdrawError) {
+      toast.error(withdrawError)
+      dispatch(clearWalletError())
+    }
+  }, [dispatch, withdrawError])
+
+  const handleWithdraw = async (data) => {
+    const result = await dispatch(requestWithdrawal(data))
+    if (requestWithdrawal.fulfilled.match(result)) {
+      toast.success('Withdrawal request submitted successfully!')
+      setShowWithdrawModal(false)
+      dispatch(fetchWalletBalance())
+      dispatch(fetchWalletTransactions())
+    }
+  }
+
+  const handleStripeConnect = async () => {
+    const result = await dispatch(stripeConnectOnboard())
+    if (!result.error) {
+      const url = result.payload?.Result?.url || result.payload?.result?.url
+      if (url) window.location.href = url
+    }
+  }
+
+  const handleStripeWithdraw = async (data) => {
+    const result = await dispatch(stripeWithdraw(data))
+    if (!result.error) {
+      toast.success('Stripe withdrawal processed!')
+      setShowWithdrawModal(false)
+      dispatch(fetchWalletBalance())
+      dispatch(fetchWalletTransactions())
+    }
+  }
 
   const mappedTransactions = useMemo(() => {
     return (transactions || []).map((tx) => {
@@ -224,7 +267,10 @@ const OrgWallet = () => {
                   >
                     Add Funds
                   </button>
-                  <button className="px-4 py-2 bg-transparent border border-white/10 hover:bg-white/5 text-white text-sm font-medium rounded-lg transition-colors">
+                  <button
+                    className="px-4 py-2 bg-transparent border border-white/10 hover:bg-white/5 text-white text-sm font-medium rounded-lg transition-colors"
+                    onClick={() => setShowWithdrawModal(true)}
+                  >
                     Withdraw
                   </button>
                 </div>
@@ -335,6 +381,19 @@ const OrgWallet = () => {
           amount={selectedAmount}
           onBack={() => setShowPaymentModal(false)}
           onPay={handlePayment}
+        />
+      )}
+
+      {showWithdrawModal && (
+        <WithdrawModal
+          balance={balance?.balance || 0}
+          onClose={() => setShowWithdrawModal(false)}
+          onSubmit={handleWithdraw}
+          onStripeConnect={handleStripeConnect}
+          onStripeWithdraw={handleStripeWithdraw}
+          loading={withdrawLoading}
+          connectLoading={stripeConnectLoading}
+          stripeConnected={!!balance?.stripe_connected}
         />
       )}
     </div>

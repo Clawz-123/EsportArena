@@ -68,7 +68,10 @@ class WithdrawalRequestSerializer(serializers.ModelSerializer):
         model = WithdrawalRequest
         fields = [
             'id',
+            'provider',
+            'account_identifier',
             'amount',
+            'platform_fee',
             'coins',
             'status',
             'stripe_account_id',
@@ -78,3 +81,20 @@ class WithdrawalRequestSerializer(serializers.ModelSerializer):
             'updated_at',
         ]
         read_only_fields = fields
+
+
+class ManualWithdrawSerializer(serializers.Serializer):
+    coins = serializers.IntegerField(min_value=1)
+    provider = serializers.ChoiceField(choices=['esewa', 'khalti'])
+    account_identifier = serializers.CharField(max_length=120)
+
+    def validate_coins(self, value):
+        if value <= 0:
+            raise serializers.ValidationError('Coins must be greater than zero.')
+        return value
+
+    def validate_account_identifier(self, value):
+        cleaned = value.strip()
+        if not cleaned:
+            raise serializers.ValidationError('Account identifier is required.')
+        return cleaned

@@ -37,12 +37,20 @@ class WithdrawalRequest(models.Model):
 		COMPLETED = 'completed', 'Completed'
 		FAILED = 'failed', 'Failed'
 
+	class Provider(models.TextChoices):
+		KHALTI = 'khalti', 'Khalti'
+		ESEWA = 'esewa', 'eSewa'
+		STRIPE = 'stripe', 'Stripe'
+
 	user = models.ForeignKey(
 		settings.AUTH_USER_MODEL,
 		on_delete=models.CASCADE,
 		related_name='withdrawal_requests',
 	)
+	provider = models.CharField(max_length=20, choices=Provider.choices, default=Provider.STRIPE)
+	account_identifier = models.CharField(max_length=120, blank=True, null=True, help_text='eSewa ID or Khalti phone number')
 	amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0.01)])
+	platform_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 	coins = models.PositiveIntegerField(validators=[MinValueValidator(1)])
 	status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
 	stripe_account_id = models.CharField(max_length=120, blank=True, null=True)

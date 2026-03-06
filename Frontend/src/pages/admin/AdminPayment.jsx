@@ -16,8 +16,11 @@ const FILTERS = ['all', 'pending', 'completed', 'failed']
 
 const TABLE_HEADERS = [
   { label: 'User' },
+  { label: 'Provider' },
+  { label: 'Account' },
   { label: 'Coins', align: 'right' },
-  { label: 'Amount', align: 'right' },
+  { label: 'Fee', align: 'right' },
+  { label: 'Payout', align: 'right' },
   { label: 'Status' },
   { label: 'Requested' },
   { label: 'Actions', align: 'center' },
@@ -127,8 +130,21 @@ const AdminPayment = () => {
                 <p className="text-sm text-[#E5E7EB] font-medium">{w.user_email || w.user}</p>
                 <p className="text-[11px] text-[#6B7280]">{w.user_name || ''}</p>
               </td>
+              <td className="px-5 py-3">
+                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize ${
+                  w.provider === 'esewa'
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                    : w.provider === 'khalti'
+                      ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                      : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
+                }`}>
+                  {w.provider === 'esewa' ? 'eSewa' : w.provider === 'khalti' ? 'Khalti' : 'Stripe'}
+                </span>
+              </td>
+              <td className="px-5 py-3 text-sm text-[#E5E7EB]">{w.account_identifier || '—'}</td>
               <td className="px-5 py-3 text-sm text-[#E5E7EB] text-right font-medium">{Number(w.coins).toLocaleString()}</td>
-              <td className="px-5 py-3 text-sm text-[#E5E7EB] text-right">₨ {Number(w.amount).toLocaleString()}</td>
+              <td className="px-5 py-3 text-sm text-amber-400 text-right">₨ {Number(w.platform_fee || 0).toLocaleString()}</td>
+              <td className="px-5 py-3 text-sm text-emerald-400 text-right font-medium">₨ {Number(w.amount).toLocaleString()}</td>
               <td className="px-5 py-3">
                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-semibold capitalize ${STATUS_CLASSES[w.status] || 'bg-gray-500/10 text-gray-400 border-gray-500/20'}`}>
                   {Icon && <Icon className="w-3 h-3" />}

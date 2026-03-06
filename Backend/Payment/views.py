@@ -22,6 +22,7 @@ from .serializers import (
 	StripeTopUpInitiateSerializer,
 	StripeWithdrawSerializer,
 	WithdrawalRequestSerializer,
+	ManualWithdrawSerializer,
 	WalletEsewaVerifySerializer,
 	WalletTopUpInitiateSerializer,
 	WalletTopUpVerifySerializer,
@@ -882,13 +883,22 @@ class StripeWithdrawView(APIView):
 
 		amount_cents = _usd_to_cents(usd_amount)
 		currency = getattr(settings, 'STRIPE_CURRENCY', 'usd')
+
+		# Apply platform fee
+		fee_percent = Decimal(getattr(settings, 'WITHDRAWAL_FEE_PERCENT', 5))
+		platform_fee = (usd_amount * fee_percent / Decimal(100)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+		net_usd = usd_amount - platform_fee
+		net_cents = _usd_to_cents(net_usd)
+
 		with db_transaction.atomic():
 			wallet.balance = wallet.balance - Decimal(coins)
 			wallet.save(update_fields=['balance', 'updated_at'])
 
 			withdrawal = WithdrawalRequest.objects.create(
 				user=user,
-				amount=usd_amount,
+				provider=WithdrawalRequest.Provider.STRIPE,
+				amount=net_usd,
+				platform_fee=platform_fee,
 				coins=coins,
 				stripe_account_id=user.stripe_account_id,
 			)
@@ -906,16 +916,10 @@ class StripeWithdrawView(APIView):
 
 		try:
 			transfer = stripe.Transfer.create(
-				amount=amount_cents,
+				amount=net_cents,
 				currency=currency,
 				destination=user.stripe_account_id,
 				metadata={'withdrawal_id': str(withdrawal.id)},
-			)
-			payout = stripe.Payout.create(
-				amount=amount_cents,
-				currency=currency,
-				metadata={'withdrawal_id': str(withdrawal.id)},
-				stripe_account=user.stripe_account_id,
 			)
 		except stripe.error.StripeError as exc:
 			with db_transaction.atomic():
@@ -943,12 +947,75 @@ class StripeWithdrawView(APIView):
 			)
 
 		withdrawal.stripe_transfer_id = transfer.id
-		withdrawal.stripe_payout_id = payout.id
+		withdrawal.status = WithdrawalRequest.Status.COMPLETED
 		withdrawal.updated_at = timezone.now()
-		withdrawal.save(update_fields=['stripe_transfer_id', 'stripe_payout_id', 'updated_at'])
+		withdrawal.save(update_fields=['stripe_transfer_id', 'status', 'updated_at'])
+
+		WalletTransaction.objects.filter(
+			wallet=wallet,
+			reference=str(withdrawal.id),
+			transaction_type=WalletTransaction.TransactionType.WITHDRAWAL,
+			status=WalletTransaction.Status.PENDING,
+		).update(status=WalletTransaction.Status.COMPLETED, note='Withdrawal completed via Stripe')
 
 		return api_response(
 			result={'withdrawal': WithdrawalRequestSerializer(withdrawal).data},
+			status_code=status.HTTP_200_OK,
+		)
+
+
+# ───────── Manual (eSewa / Khalti) Withdrawal ─────────
+
+class ManualWithdrawView(APIView):
+	"""Request a withdrawal via eSewa or Khalti (pending admin approval)."""
+	authentication_classes = [JWTAuthentication]
+	permission_classes = [IsAuthenticated]
+
+	def post(self, request):
+		serializer = ManualWithdrawSerializer(data=request.data)
+		serializer.is_valid(raise_exception=True)
+
+		coins = serializer.validated_data['coins']
+		provider = serializer.validated_data['provider']
+		account_identifier = serializer.validated_data['account_identifier']
+
+		wallet = _get_or_create_wallet(request.user)
+		if wallet.balance < Decimal(coins):
+			return api_response(
+				is_success=False,
+				error_message='Insufficient wallet balance.',
+				status_code=status.HTTP_400_BAD_REQUEST,
+			)
+
+		fee_percent = Decimal(getattr(settings, 'WITHDRAWAL_FEE_PERCENT', 5))
+		platform_fee = (Decimal(coins) * fee_percent / Decimal(100)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+		net_amount = Decimal(coins) - platform_fee  # amount user actually receives
+
+		withdrawal = WithdrawalRequest.objects.create(
+			user=request.user,
+			provider=provider,
+			account_identifier=account_identifier,
+			amount=net_amount,
+			platform_fee=platform_fee,
+			coins=coins,
+		)
+
+		return api_response(
+			result={'withdrawal': WithdrawalRequestSerializer(withdrawal).data},
+			status_code=status.HTTP_201_CREATED,
+		)
+
+
+class UserWithdrawalListView(APIView):
+	"""List the logged-in user's withdrawal requests."""
+	authentication_classes = [JWTAuthentication]
+	permission_classes = [IsAuthenticated]
+
+	def get(self, request):
+		withdrawals = WithdrawalRequest.objects.filter(user=request.user).order_by('-created_at')
+		data = WithdrawalRequestSerializer(withdrawals, many=True).data
+		return api_response(
+			result={'withdrawals': data},
 			status_code=status.HTTP_200_OK,
 		)
 
@@ -970,8 +1037,11 @@ class AdminWithdrawalListView(APIView):
 					'user': w.user.id,
 					'user_email': w.user.email,
 					'user_name': w.user.name or '',
+					'provider': w.provider or '',
+					'account_identifier': w.account_identifier or '',
 					'coins': w.coins,
 					'amount': str(w.amount),
+					'platform_fee': str(w.platform_fee),
 					'status': w.status,
 					'stripe_account_id': w.stripe_account_id or '',
 					'created_at': w.created_at.isoformat(),
@@ -1013,17 +1083,36 @@ class AdminWithdrawalApproveView(APIView):
 			)
 
 		with db_transaction.atomic():
+			# Deduct coins from wallet now that admin has approved
+			wallet = _get_or_create_wallet(withdrawal.user)
+			if wallet.balance < Decimal(withdrawal.coins):
+				return api_response(
+					is_success=False,
+					error_message='User has insufficient balance to fulfil this withdrawal.',
+					status_code=status.HTTP_400_BAD_REQUEST,
+				)
+
+			wallet.balance = wallet.balance - Decimal(withdrawal.coins)
+			wallet.save(update_fields=['balance', 'updated_at'])
+
 			withdrawal.status = WithdrawalRequest.Status.COMPLETED
 			withdrawal.updated_at = timezone.now()
 			withdrawal.save(update_fields=['status', 'updated_at'])
 
-			# Mark the related wallet transaction as completed
-			WalletTransaction.objects.filter(
-				wallet__user=withdrawal.user,
-				reference=str(withdrawal.id),
+			# Create the wallet transaction as completed
+			method_map = {'esewa': WalletTransaction.Method.ESEWA, 'khalti': WalletTransaction.Method.KHALTI}
+			method = method_map.get(withdrawal.provider, WalletTransaction.Method.STRIPE)
+
+			WalletTransaction.objects.create(
+				wallet=wallet,
 				transaction_type=WalletTransaction.TransactionType.WITHDRAWAL,
-				status=WalletTransaction.Status.PENDING,
-			).update(status=WalletTransaction.Status.COMPLETED)
+				direction=WalletTransaction.Direction.DEBIT,
+				amount=Decimal(withdrawal.coins),
+				status=WalletTransaction.Status.COMPLETED,
+				method=method,
+				reference=str(withdrawal.id),
+				note=f'Withdrawal via {withdrawal.provider} to {withdrawal.account_identifier}',
+			)
 
 		return api_response(
 			is_success=True,
@@ -1059,24 +1148,8 @@ class AdminWithdrawalRejectView(APIView):
 			withdrawal.updated_at = timezone.now()
 			withdrawal.save(update_fields=['status', 'updated_at'])
 
-			# Refund coins back to wallet
-			wallet = _get_or_create_wallet(withdrawal.user)
-			wallet.balance = wallet.balance + Decimal(withdrawal.coins)
-			wallet.save(update_fields=['balance', 'updated_at'])
-
-			# Mark transaction as failed
-			WalletTransaction.objects.filter(
-				wallet=wallet,
-				reference=str(withdrawal.id),
-				transaction_type=WalletTransaction.TransactionType.WITHDRAWAL,
-				status=WalletTransaction.Status.PENDING,
-			).update(
-				status=WalletTransaction.Status.FAILED,
-				note='Rejected by admin',
-			)
-
 		return api_response(
 			is_success=True,
 			status_code=status.HTTP_200_OK,
-			result={'message': 'Withdrawal rejected. Coins refunded to user wallet.'},
+			result={'message': 'Withdrawal rejected.'},
 		)

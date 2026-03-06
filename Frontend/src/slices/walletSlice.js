@@ -106,6 +106,46 @@ export const verifyEsewaTopUp = createAsyncThunk(
 	}
 );
 
+export const requestWithdrawal = createAsyncThunk(
+	"wallet/requestWithdrawal",
+	async ({ coins, provider, account_identifier }, { rejectWithValue }) => {
+		try {
+			const response = await axiosInstance.post("/payment/withdraw/", {
+				coins,
+				provider,
+				account_identifier,
+			});
+			return response.data;
+		} catch (error) {
+			return rejectWithValue(error.response?.data || error.message);
+		}
+	}
+);
+
+export const stripeConnectOnboard = createAsyncThunk(
+	"wallet/stripeConnectOnboard",
+	async (_, { rejectWithValue }) => {
+		try {
+			const response = await axiosInstance.post("/payment/stripe/connect/");
+			return response.data;
+		} catch (error) {
+			return rejectWithValue(error.response?.data || error.message);
+		}
+	}
+);
+
+export const stripeWithdraw = createAsyncThunk(
+	"wallet/stripeWithdraw",
+	async ({ coins }, { rejectWithValue }) => {
+		try {
+			const response = await axiosInstance.post("/payment/stripe/withdraw/", { coins });
+			return response.data;
+		} catch (error) {
+			return rejectWithValue(error.response?.data || error.message);
+		}
+	}
+);
+
 const initialState = {
 	balance: null,
 	transactions: [],
@@ -115,6 +155,9 @@ const initialState = {
 	topUpError: null,
 	verifyLoading: false,
 	verifyError: null,
+	withdrawLoading: false,
+	withdrawError: null,
+	stripeConnectLoading: false,
 	lastPaymentUrl: null,
 	lastEsewaPayload: null,
 };
@@ -127,6 +170,7 @@ const walletSlice = createSlice({
 			state.error = null;
 			state.topUpError = null;
 			state.verifyError = null;
+			state.withdrawError = null;
 		},
 		clearPaymentUrl: (state) => {
 			state.lastPaymentUrl = null;
@@ -240,6 +284,41 @@ const walletSlice = createSlice({
 		builder.addCase(verifyEsewaTopUp.rejected, (state, action) => {
 			state.verifyLoading = false;
 			state.verifyError = action.payload;
+		});
+
+		builder.addCase(requestWithdrawal.pending, (state) => {
+			state.withdrawLoading = true;
+			state.withdrawError = null;
+		});
+		builder.addCase(requestWithdrawal.fulfilled, (state) => {
+			state.withdrawLoading = false;
+		});
+		builder.addCase(requestWithdrawal.rejected, (state, action) => {
+			state.withdrawLoading = false;
+			state.withdrawError = action.payload;
+		});
+
+		builder.addCase(stripeConnectOnboard.pending, (state) => {
+			state.stripeConnectLoading = true;
+		});
+		builder.addCase(stripeConnectOnboard.fulfilled, (state) => {
+			state.stripeConnectLoading = false;
+		});
+		builder.addCase(stripeConnectOnboard.rejected, (state, action) => {
+			state.stripeConnectLoading = false;
+			state.withdrawError = action.payload;
+		});
+
+		builder.addCase(stripeWithdraw.pending, (state) => {
+			state.withdrawLoading = true;
+			state.withdrawError = null;
+		});
+		builder.addCase(stripeWithdraw.fulfilled, (state) => {
+			state.withdrawLoading = false;
+		});
+		builder.addCase(stripeWithdraw.rejected, (state, action) => {
+			state.withdrawLoading = false;
+			state.withdrawError = action.payload;
 		});
 	},
 });
