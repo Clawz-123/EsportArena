@@ -194,16 +194,13 @@ const OrgWallet = () => {
   }, [mappedTransactions])
 
   const totalPages = Math.max(1, Math.ceil(mappedTransactions.length / itemsPerPage))
-  const paginatedTransactions = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage
-    return mappedTransactions.slice(start, start + itemsPerPage)
-  }, [currentPage, itemsPerPage, mappedTransactions])
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages)
-    }
+  const safePage = useMemo(() => {
+    return currentPage > totalPages ? totalPages : currentPage
   }, [currentPage, totalPages])
+  const paginatedTransactions = useMemo(() => {
+    const start = (safePage - 1) * itemsPerPage
+    return mappedTransactions.slice(start, start + itemsPerPage)
+  }, [safePage, itemsPerPage, mappedTransactions])
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US').format(Math.abs(amount))
@@ -360,7 +357,7 @@ const OrgWallet = () => {
                 </table>
               </div>
               <Pagination
-                currentPage={currentPage}
+                currentPage={safePage}
                 totalPages={totalPages}
                 onPageChange={setCurrentPage}
               />
