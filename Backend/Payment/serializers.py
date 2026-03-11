@@ -64,6 +64,8 @@ class StripeWithdrawSerializer(serializers.Serializer):
 
 
 class WithdrawalRequestSerializer(serializers.ModelSerializer):
+    receipt_image = serializers.SerializerMethodField()
+
     class Meta:
         model = WithdrawalRequest
         fields = [
@@ -77,10 +79,19 @@ class WithdrawalRequestSerializer(serializers.ModelSerializer):
             'stripe_account_id',
             'stripe_transfer_id',
             'stripe_payout_id',
+            'receipt_image',
             'created_at',
             'updated_at',
         ]
         read_only_fields = fields
+
+    def get_receipt_image(self, obj):
+        if obj.receipt_image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.receipt_image.url)
+            return obj.receipt_image.url
+        return None
 
 
 class ManualWithdrawSerializer(serializers.Serializer):

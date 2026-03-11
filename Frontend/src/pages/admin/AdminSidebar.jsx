@@ -18,7 +18,7 @@ const items = [
   { label: 'Tournaments', to: '/admin/tournaments', icon: Trophy },
 ]
 
-const SidebarItem = ({ to, label, Icon }) => (
+const SidebarItem = ({ to, label, icon }) => (
   <NavLink
     to={to}
     end
@@ -35,9 +35,9 @@ const SidebarItem = ({ to, label, Icon }) => (
         {isActive && (
           <span className="absolute left-0 top-1/2 -translate-y-1/2 h-full w-1 rounded-r bg-blue-500" />
         )}
-        <Icon
-          className={`w-5 h-5 transition-colors ${isActive ? 'text-blue-500' : 'text-slate-500'}`}
-        />
+        {React.createElement(icon, {
+          className: `w-5 h-5 transition-colors ${isActive ? 'text-blue-500' : 'text-slate-500'}`,
+        })}
         <span>{label}</span>
       </>
     )}
@@ -61,17 +61,10 @@ const AdminSidebar = () => {
         <span className="text-xl font-bold text-[#EC4899]">Esports Arena</span>
       </Link>
 
-      {/* Admin Badge */}
-      <div className="mt-4 mb-2 px-4">
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-red-500/10 text-red-400 border border-red-500/20">
-          Admin Panel
-        </span>
-      </div>
-
       {/* Navigation */}
       <nav className="mt-4 flex-1 space-y-1">
         {items.map((item) => (
-          <SidebarItem key={item.to} to={item.to} label={item.label} Icon={item.icon} />
+          <SidebarItem key={item.to} to={item.to} label={item.label} icon={item.icon} />
         ))}
       </nav>
 

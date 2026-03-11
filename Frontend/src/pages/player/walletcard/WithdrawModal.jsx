@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { X, ArrowRight, ArrowLeft, AlertCircle, Zap, ExternalLink } from 'lucide-react'
+import { X, ArrowRight, ArrowLeft, AlertCircle, ExternalLink } from 'lucide-react'
 
 const METHODS = [
   {
@@ -208,7 +208,6 @@ const WithdrawModal = ({ balance, onClose, onSubmit, onStripeConnect, onStripeWi
                       <div className="text-left flex-1">
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-medium text-white">{m.name}</p>
-                          {isStripeMethod && <Zap className="w-3.5 h-3.5 text-amber-400" />}
                         </div>
                         <p className="text-xs text-slate-500">{m.description}</p>
                       </div>
@@ -313,7 +312,7 @@ const WithdrawModal = ({ balance, onClose, onSubmit, onStripeConnect, onStripeWi
 
               <div className={`${isStripe ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-amber-500/10 border-amber-500/20'} border rounded-lg p-3`}>
                 <p className={`text-xs ${isStripe ? 'text-indigo-300' : 'text-amber-400'} flex items-start gap-2`}>
-                  {isStripe ? <Zap className="w-4 h-4 shrink-0 mt-0.5" /> : <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />}
+                  {!isStripe && <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />}
                   {selectedMethod.note}
                 </p>
               </div>

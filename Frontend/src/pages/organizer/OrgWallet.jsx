@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { Wallet, Plus, Minus, Trophy, ArrowUp } from 'lucide-react'
+import React, { useEffect, useMemo, useState, useCallback } from 'react'
+import { Wallet, Plus, Minus, Trophy, ArrowUp, Eye, X, Receipt } from 'lucide-react'
 import OrgSidebar from './OrgSidebar'
 import ProfileMenu from '../../components/common/ProfileMenu'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
@@ -15,6 +15,7 @@ import {
   stripeConnectOnboard,
   stripeWithdraw,
 } from '../../slices/walletSlice'
+import axiosInstance from '../../axios/axiousinstance'
 import WalletAmount from '../player/walletcard/WalletAmount'
 import ChoosePaymentMethod from '../player/walletcard/ChoosePaymentMethod'
 import Pagination from '../../components/Pagination/Pagination'
@@ -40,11 +41,25 @@ const OrgWallet = () => {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
+  const [activeTab, setActiveTab] = useState('transactions')
+  const [myWithdrawals, setMyWithdrawals] = useState([])
+  const [wdLoading, setWdLoading] = useState(false)
+  const [viewReceipt, setViewReceipt] = useState(null)
+
+  const fetchMyWithdrawals = useCallback(async () => {
+    setWdLoading(true)
+    try {
+      const res = await axiosInstance.get('/payment/withdrawals/')
+      setMyWithdrawals(res.data.Result?.withdrawals || [])
+    } catch { /* silently fail */ }
+    finally { setWdLoading(false) }
+  }, [])
 
   useEffect(() => {
     dispatch(fetchWalletBalance())
     dispatch(fetchWalletTransactions())
-  }, [dispatch])
+    fetchMyWithdrawals()
+  }, [dispatch, fetchMyWithdrawals])
 
   useEffect(() => {
     if (lastPaymentUrl) {
@@ -103,6 +118,7 @@ const OrgWallet = () => {
       setShowWithdrawModal(false)
       dispatch(fetchWalletBalance())
       dispatch(fetchWalletTransactions())
+      fetchMyWithdrawals()
     }
   }
 
@@ -121,6 +137,7 @@ const OrgWallet = () => {
       setShowWithdrawModal(false)
       dispatch(fetchWalletBalance())
       dispatch(fetchWalletTransactions())
+      fetchMyWithdrawals()
     }
   }
 
@@ -290,6 +307,31 @@ const OrgWallet = () => {
               </div>
             </div>
 
+            {/* Tabs */}
+            <div className="flex gap-2 mb-0">
+              <button
+                onClick={() => setActiveTab('transactions')}
+                className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${
+                  activeTab === 'transactions'
+                    ? 'bg-[#111827] text-white border border-[#1F2937] border-b-0'
+                    : 'text-[#6B7280] hover:text-white'
+                }`}
+              >
+                Transaction History
+              </button>
+              <button
+                onClick={() => setActiveTab('withdrawals')}
+                className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                  activeTab === 'withdrawals'
+                    ? 'bg-[#111827] text-white border border-[#1F2937] border-b-0'
+                    : 'text-[#6B7280] hover:text-white'
+                }`}
+              >
+                <Receipt className="w-4 h-4" /> My Withdrawals
+              </button>
+            </div>
+
+            {activeTab === 'transactions' && (
             <div className="bg-[#111827] border border-[#1F2937] rounded-lg overflow-hidden">
               <div className="px-6 py-4 border-b border-[#1F2937]">
                 <h2 className="text-base font-semibold text-white">Transaction History</h2>
@@ -362,9 +404,104 @@ const OrgWallet = () => {
                 onPageChange={setCurrentPage}
               />
             </div>
+            )}
+
+            {activeTab === 'withdrawals' && (
+            <div className="bg-[#111827] border border-[#1F2937] rounded-lg overflow-hidden">
+              <div className="px-6 py-4 border-b border-[#1F2937]">
+                <h2 className="text-base font-semibold text-white">My Withdrawal Requests</h2>
+              </div>
+              {wdLoading ? (
+                <div className="flex justify-center py-12">
+                  <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : myWithdrawals.length === 0 ? (
+                <div className="text-center py-12 text-[#6B7280] text-sm">No withdrawal requests yet</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-[#1F2937]">
+                        <th className="px-6 py-3 text-left text-[13px] font-medium text-[#9CA3AF]">Provider</th>
+                        <th className="px-6 py-3 text-left text-[13px] font-medium text-[#9CA3AF]">Account</th>
+                        <th className="px-6 py-3 text-right text-[13px] font-medium text-[#9CA3AF]">Coins</th>
+                        <th className="px-6 py-3 text-right text-[13px] font-medium text-[#9CA3AF]">Fee</th>
+                        <th className="px-6 py-3 text-right text-[13px] font-medium text-[#9CA3AF]">Payout</th>
+                        <th className="px-6 py-3 text-left text-[13px] font-medium text-[#9CA3AF]">Status</th>
+                        <th className="px-6 py-3 text-left text-[13px] font-medium text-[#9CA3AF]">Receipt</th>
+                        <th className="px-6 py-3 text-left text-[13px] font-medium text-[#9CA3AF]">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#1F2937]">
+                      {myWithdrawals.map((wd) => (
+                        <tr key={wd.id} className="hover:bg-[#0F172A] transition-colors">
+                          <td className="px-6 py-4">
+                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${
+                              wd.provider === 'esewa' ? 'bg-emerald-500/10 text-emerald-300'
+                              : wd.provider === 'khalti' ? 'bg-purple-500/10 text-purple-300'
+                              : 'bg-indigo-500/10 text-indigo-300'
+                            }`}>
+                              {wd.provider === 'esewa' ? 'eSewa' : wd.provider === 'khalti' ? 'Khalti' : 'Stripe'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-[#E5E7EB]">{wd.account_identifier || '—'}</td>
+                          <td className="px-6 py-4 text-sm text-[#E5E7EB] text-right font-medium">{Number(wd.coins).toLocaleString()}</td>
+                          <td className="px-6 py-4 text-sm text-amber-400 text-right">₨ {Number(wd.platform_fee || 0).toLocaleString()}</td>
+                          <td className="px-6 py-4 text-sm text-emerald-400 text-right font-medium">₨ {Number(wd.amount).toLocaleString()}</td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border capitalize ${
+                              wd.status === 'completed' ? 'border-[#10B981]/40 text-[#10B981]'
+                              : wd.status === 'pending' ? 'border-[#F59E0B]/40 text-[#F59E0B]'
+                              : 'border-rose-500/40 text-rose-400'
+                            }`}>
+                              {wd.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            {wd.receipt_image ? (
+                              <button
+                                onClick={() => setViewReceipt(wd.receipt_image)}
+                                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium hover:bg-blue-500/20 transition-colors"
+                              >
+                                <Eye className="w-3 h-3" /> View
+                              </button>
+                            ) : (
+                              <span className="text-xs text-[#4B5563]">—</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-xs text-[#6B7280]">
+                            {new Date(wd.created_at).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Receipt Image Viewer */}
+      {viewReceipt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setViewReceipt(null)}>
+          <div className="relative max-w-2xl max-h-[80vh] p-2" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setViewReceipt(null)}
+              className="absolute -top-3 -right-3 z-10 p-1.5 bg-[#0F1724] border border-[#1F2937] rounded-full text-[#9CA3AF] hover:text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <img
+              src={viewReceipt}
+              alt="Payment receipt"
+              className="max-w-full max-h-[78vh] rounded-xl border border-[#1F2937] object-contain"
+            />
+          </div>
+        </div>
+      )}
 
       {showAmountModal && (
         <WalletAmount

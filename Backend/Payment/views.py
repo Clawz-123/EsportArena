@@ -1013,7 +1013,7 @@ class UserWithdrawalListView(APIView):
 
 	def get(self, request):
 		withdrawals = WithdrawalRequest.objects.filter(user=request.user).order_by('-created_at')
-		data = WithdrawalRequestSerializer(withdrawals, many=True).data
+		data = WithdrawalRequestSerializer(withdrawals, many=True, context={'request': request}).data
 		return api_response(
 			result={'withdrawals': data},
 			status_code=status.HTTP_200_OK,
@@ -1044,6 +1044,7 @@ class AdminWithdrawalListView(APIView):
 					'platform_fee': str(w.platform_fee),
 					'status': w.status,
 					'stripe_account_id': w.stripe_account_id or '',
+					'receipt_image': request.build_absolute_uri(w.receipt_image.url) if w.receipt_image else None,
 					'created_at': w.created_at.isoformat(),
 					'updated_at': w.updated_at.isoformat(),
 				})
@@ -1082,6 +1083,8 @@ class AdminWithdrawalApproveView(APIView):
 				status_code=status.HTTP_400_BAD_REQUEST,
 			)
 
+		receipt = request.FILES.get('receipt_image')
+
 		with db_transaction.atomic():
 			# Deduct coins from wallet now that admin has approved
 			wallet = _get_or_create_wallet(withdrawal.user)
@@ -1097,7 +1100,11 @@ class AdminWithdrawalApproveView(APIView):
 
 			withdrawal.status = WithdrawalRequest.Status.COMPLETED
 			withdrawal.updated_at = timezone.now()
-			withdrawal.save(update_fields=['status', 'updated_at'])
+			update_fields = ['status', 'updated_at']
+			if receipt:
+				withdrawal.receipt_image = receipt
+				update_fields.append('receipt_image')
+			withdrawal.save(update_fields=update_fields)
 
 			# Create the wallet transaction as completed
 			method_map = {'esewa': WalletTransaction.Method.ESEWA, 'khalti': WalletTransaction.Method.KHALTI}

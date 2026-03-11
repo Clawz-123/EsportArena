@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import AdminPageLayout from './admincomponents/PageLayout'
 import DataTable from './admincomponents/DataTable'
 import { formatDateTime } from './admincomponents/adminfunctions'
@@ -8,7 +8,10 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  RefreshCw,
+  Upload,
+  X,
+  Image,
+  Eye,
 } from 'lucide-react'
 import { toast } from 'react-toastify'
 
@@ -22,6 +25,7 @@ const TABLE_HEADERS = [
   { label: 'Fee', align: 'right' },
   { label: 'Payout', align: 'right' },
   { label: 'Status' },
+  { label: 'Receipt' },
   { label: 'Requested' },
   { label: 'Actions', align: 'center' },
 ]
@@ -39,6 +43,11 @@ const AdminPayment = () => {
   const [actionLoading, setActionLoading] = useState(null)
   const [filter, setFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
+  const [approveModal, setApproveModal] = useState(null) // withdrawal object being approved
+  const [receiptFile, setReceiptFile] = useState(null)
+  const [receiptPreview, setReceiptPreview] = useState(null)
+  const [viewReceipt, setViewReceipt] = useState(null) // URL to view
+  const fileInputRef = useRef(null)
   const perPage = 10
 
   const fetchWithdrawals = async () => {
@@ -52,15 +61,60 @@ const AdminPayment = () => {
 
   useEffect(() => { fetchWithdrawals() }, [])
 
-  const handleAction = async (id, action) => {
+  const handleAction = async (id, action, file) => {
     setActionLoading(id)
     try {
-      await axiosInstance.post(`/payment/admin/withdrawals/${id}/${action}/`)
+      if (action === 'approve' && file) {
+        const formData = new FormData()
+        formData.append('receipt_image', file)
+        await axiosInstance.post(`/payment/admin/withdrawals/${id}/${action}/`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        })
+      } else {
+        await axiosInstance.post(`/payment/admin/withdrawals/${id}/${action}/`)
+      }
       toast.success(`Withdrawal ${action === 'approve' ? 'approved' : 'rejected'} successfully`)
       fetchWithdrawals()
     } catch (err) {
       toast.error(err.response?.data?.Error_Message || `Failed to ${action} withdrawal`)
     } finally { setActionLoading(null) }
+  }
+
+  const openApproveModal = (w) => {
+    setApproveModal(w)
+    setReceiptFile(null)
+    setReceiptPreview(null)
+  }
+
+  const closeApproveModal = () => {
+    setApproveModal(null)
+    setReceiptFile(null)
+    setReceiptPreview(null)
+  }
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File must be under 5MB')
+      return
+    }
+    setReceiptFile(file)
+    setReceiptPreview(URL.createObjectURL(file))
+  }
+
+  const handleConfirmApprove = async () => {
+    if (!approveModal) return
+    if (approveModal.provider !== 'stripe' && !receiptFile) {
+      toast.error('Please upload a payment receipt screenshot')
+      return
+    }
+    await handleAction(approveModal.id, 'approve', receiptFile)
+    closeApproveModal()
   }
 
   const filtered = filter === 'all' ? withdrawals : withdrawals.filter((w) => w.status === filter)
@@ -79,18 +133,8 @@ const AdminPayment = () => {
     </>
   )
 
-  const headerRight = (
-    <button
-      onClick={fetchWithdrawals}
-      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#111827] border border-[#1F2937] text-[#9CA3AF] text-sm hover:border-[#374151] transition-colors"
-    >
-      <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-      Refresh
-    </button>
-  )
-
   return (
-    <AdminPageLayout title="Withdrawal Requests" subtitle={subtitle} headerRight={headerRight}>
+    <AdminPageLayout title="Withdrawal Requests" subtitle={subtitle}>
       {/* Filter tabs */}
       <div className="flex gap-2">
         {FILTERS.map((f) => (
@@ -151,12 +195,24 @@ const AdminPayment = () => {
                   {w.status}
                 </span>
               </td>
+              <td className="px-5 py-3">
+                {w.receipt_image ? (
+                  <button
+                    onClick={() => setViewReceipt(w.receipt_image)}
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[11px] font-medium hover:bg-blue-500/20 transition-colors"
+                  >
+                    <Eye className="w-3 h-3" /> View
+                  </button>
+                ) : (
+                  <span className="text-xs text-[#4B5563]">—</span>
+                )}
+              </td>
               <td className="px-5 py-3 text-xs text-[#6B7280]">{formatDateTime(w.created_at)}</td>
               <td className="px-5 py-3 text-center">
                 {w.status === 'pending' ? (
                   <div className="flex items-center justify-center gap-2">
                     <button
-                      onClick={() => handleAction(w.id, 'approve')}
+                      onClick={() => openApproveModal(w)}
                       disabled={actionLoading === w.id}
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
                     >
@@ -178,6 +234,124 @@ const AdminPayment = () => {
           )
         })}
       </DataTable>
+
+      {/* Approve Modal with Receipt Upload */}
+      {approveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#0F1724] border border-[#1F2937] rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Approve Withdrawal</h3>
+              <button onClick={closeApproveModal} className="text-[#6B7280] hover:text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 mb-5">
+              <div className="flex justify-between text-sm">
+                <span className="text-[#6B7280]">User</span>
+                <span className="text-[#E5E7EB]">{approveModal.user_email}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-[#6B7280]">Provider</span>
+                <span className="text-[#E5E7EB] capitalize">{approveModal.provider}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-[#6B7280]">Account</span>
+                <span className="text-[#E5E7EB]">{approveModal.account_identifier || '—'}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-[#6B7280]">Coins</span>
+                <span className="text-[#E5E7EB] font-medium">{Number(approveModal.coins).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-[#6B7280]">Payout Amount</span>
+                <span className="text-emerald-400 font-medium">₨ {Number(approveModal.amount).toLocaleString()}</span>
+              </div>
+            </div>
+
+            {approveModal.provider !== 'stripe' && (
+              <div className="mb-5">
+                <label className="block text-sm font-medium text-[#9CA3AF] mb-2">
+                  Payment Receipt Screenshot <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                {receiptPreview ? (
+                  <div className="relative group">
+                    <img
+                      src={receiptPreview}
+                      alt="Receipt preview"
+                      className="w-full h-48 object-cover rounded-xl border border-[#1F2937]"
+                    />
+                    <button
+                      onClick={() => { setReceiptFile(null); setReceiptPreview(null) }}
+                      className="absolute top-2 right-2 p-1 bg-black/70 rounded-full text-white hover:bg-black transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full flex flex-col items-center justify-center gap-2 py-8 rounded-xl border-2 border-dashed border-[#1F2937] hover:border-blue-500/40 text-[#6B7280] hover:text-blue-400 transition-colors"
+                  >
+                    <Upload className="w-8 h-8" />
+                    <span className="text-sm">Click to upload receipt screenshot</span>
+                    <span className="text-xs text-[#4B5563]">PNG, JPG up to 5MB</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {approveModal.provider === 'stripe' && (
+              <p className="text-sm text-[#6B7280] mb-5">
+                Stripe withdrawals are processed automatically. No receipt needed.
+              </p>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={closeApproveModal}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-[#111827] border border-[#1F2937] text-[#9CA3AF] text-sm font-medium hover:border-[#374151] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmApprove}
+                disabled={actionLoading === approveModal.id}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-500 transition-colors disabled:opacity-50"
+              >
+                <CheckCircle className="w-4 h-4" />
+                {actionLoading === approveModal.id ? 'Approving...' : 'Confirm Approve'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Receipt Image Viewer */}
+      {viewReceipt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setViewReceipt(null)}>
+          <div className="relative max-w-2xl max-h-[80vh] p-2" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setViewReceipt(null)}
+              className="absolute -top-3 -right-3 z-10 p-1.5 bg-[#0F1724] border border-[#1F2937] rounded-full text-[#9CA3AF] hover:text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <img
+              src={viewReceipt}
+              alt="Payment receipt"
+              className="max-w-full max-h-[78vh] rounded-xl border border-[#1F2937] object-contain"
+            />
+          </div>
+        </div>
+      )}
     </AdminPageLayout>
   )
 }

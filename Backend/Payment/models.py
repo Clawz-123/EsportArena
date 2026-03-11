@@ -56,6 +56,7 @@ class WithdrawalRequest(models.Model):
 	stripe_account_id = models.CharField(max_length=120, blank=True, null=True)
 	stripe_transfer_id = models.CharField(max_length=120, blank=True, null=True)
 	stripe_payout_id = models.CharField(max_length=120, blank=True, null=True)
+	receipt_image = models.ImageField(upload_to='withdrawal_receipts/', blank=True, null=True)
 	created_at = models.DateTimeField(auto_now_add=True)
 	updated_at = models.DateTimeField(default=timezone.now)
 
