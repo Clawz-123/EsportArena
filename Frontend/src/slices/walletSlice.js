@@ -61,6 +61,20 @@ export const initiateStripeTopUp = createAsyncThunk(
 	}
 );
 
+export const verifyStripeTopUp = createAsyncThunk(
+	"wallet/verifyStripeTopUp",
+	async ({ sessionId }, { rejectWithValue }) => {
+		try {
+			const response = await axiosInstance.post("/payment/stripe/verify/", {
+				session_id: sessionId,
+			});
+			return response.data;
+		} catch (error) {
+			return rejectWithValue(error.response?.data || error.message);
+		}
+	}
+);
+
 export const verifyTopUp = createAsyncThunk(
 	"wallet/verifyTopUp",
 	async ({ pidx }, { rejectWithValue }) => {
@@ -282,6 +296,22 @@ const walletSlice = createSlice({
 			}
 		});
 		builder.addCase(verifyEsewaTopUp.rejected, (state, action) => {
+			state.verifyLoading = false;
+			state.verifyError = action.payload;
+		});
+
+		builder.addCase(verifyStripeTopUp.pending, (state) => {
+			state.verifyLoading = true;
+			state.verifyError = null;
+		});
+		builder.addCase(verifyStripeTopUp.fulfilled, (state, action) => {
+			state.verifyLoading = false;
+			const result = action.payload?.Result || action.payload?.result || action.payload;
+			if (result?.wallet) {
+				state.balance = result.wallet;
+			}
+		});
+		builder.addCase(verifyStripeTopUp.rejected, (state, action) => {
 			state.verifyLoading = false;
 			state.verifyError = action.payload;
 		});

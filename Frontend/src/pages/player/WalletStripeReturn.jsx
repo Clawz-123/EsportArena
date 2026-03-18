@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useAppDispatch } from '../../store/hooks'
-import { fetchWalletBalance, fetchWalletTransactions } from '../../slices/walletSlice'
+import { fetchWalletBalance, fetchWalletTransactions, verifyStripeTopUp } from '../../slices/walletSlice'
 
 const WalletStripeReturn = () => {
   const [searchParams] = useSearchParams()
@@ -24,11 +24,13 @@ const WalletStripeReturn = () => {
 
     const refresh = async () => {
       try {
+        await dispatch(verifyStripeTopUp({ sessionId })).unwrap()
         await dispatch(fetchWalletBalance()).unwrap()
         await dispatch(fetchWalletTransactions()).unwrap()
+        setMessage('Top-up completed successfully. Redirecting to wallet...')
         setTimeout(() => navigate('/PlayerWalletandEarning'), 1500)
       } catch {
-        setMessage('Payment is being processed. Please check your wallet in a moment.')
+        setMessage('Payment is still processing on Stripe. Please wait a moment and try again.')
       }
     }
 

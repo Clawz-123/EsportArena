@@ -53,6 +53,10 @@ class StripeTopUpInitiateSerializer(serializers.Serializer):
         return attrs
 
 
+class StripeTopUpVerifySerializer(serializers.Serializer):
+    session_id = serializers.CharField(max_length=120)
+
+
 class StripeWithdrawSerializer(serializers.Serializer):
     coins = serializers.IntegerField(min_value=1)
 

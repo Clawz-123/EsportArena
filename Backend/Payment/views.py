@@ -20,6 +20,7 @@ from .models import PaymentOrder, WithdrawalRequest
 from .serializers import (
 	PaymentOrderSerializer,
 	StripeTopUpInitiateSerializer,
+	StripeTopUpVerifySerializer,
 	StripeWithdrawSerializer,
 	WithdrawalRequestSerializer,
 	ManualWithdrawSerializer,
@@ -654,6 +655,93 @@ class StripeCheckoutInitiateView(APIView):
 			)
 
 
+class StripeTopUpVerifyView(APIView):
+	authentication_classes = [JWTAuthentication]
+	permission_classes = [IsAuthenticated]
+
+	def post(self, request):
+		serializer = StripeTopUpVerifySerializer(data=request.data)
+		if not serializer.is_valid():
+			return api_response(
+				is_success=False,
+				error_message=serializer.errors,
+				status_code=status.HTTP_400_BAD_REQUEST,
+			)
+
+		session_id = serializer.validated_data['session_id']
+		stripe.api_key = getattr(settings, 'STRIPE_SECRET_KEY', '')
+		if not stripe.api_key:
+			return api_response(
+				is_success=False,
+				error_message='Stripe is not configured.',
+				status_code=status.HTTP_400_BAD_REQUEST,
+			)
+
+		try:
+			order = PaymentOrder.objects.get(
+				provider=PaymentOrder.Provider.STRIPE,
+				stripe_session_id=session_id,
+				user=request.user,
+			)
+		except PaymentOrder.DoesNotExist:
+			return api_response(
+				is_success=False,
+				error_message='Stripe top-up session not found.',
+				status_code=status.HTTP_404_NOT_FOUND,
+			)
+
+		wallet = _get_or_create_wallet(request.user)
+		if order.status == PaymentOrder.Status.PAID:
+			return api_response(
+				result={
+					'wallet': WalletSerializer(wallet).data,
+					'order': PaymentOrderSerializer(order).data,
+				},
+				status_code=status.HTTP_200_OK,
+			)
+
+		try:
+			session = stripe.checkout.Session.retrieve(session_id)
+		except stripe.error.StripeError as exc:
+			return api_response(
+				is_success=False,
+				error_message=str(exc),
+				status_code=status.HTTP_502_BAD_GATEWAY,
+			)
+
+		if session.get('payment_status') != 'paid':
+			return api_response(
+				is_success=False,
+				error_message='Stripe payment is still pending. Please wait a few seconds and try again.',
+				status_code=status.HTTP_400_BAD_REQUEST,
+			)
+
+		with db_transaction.atomic():
+			order.status = PaymentOrder.Status.PAID
+			order.updated_at = timezone.now()
+			order.save(update_fields=['status', 'updated_at'])
+
+			wallet.balance = wallet.balance + Decimal(order.coins)
+			wallet.save(update_fields=['balance', 'updated_at'])
+
+			WalletTransaction.objects.filter(
+				wallet=wallet,
+				reference=str(order.id),
+				status=WalletTransaction.Status.PENDING,
+			).update(
+				status=WalletTransaction.Status.COMPLETED,
+				note='Top-up completed',
+			)
+
+		return api_response(
+			result={
+				'wallet': WalletSerializer(wallet).data,
+				'order': PaymentOrderSerializer(order).data,
+			},
+			status_code=status.HTTP_200_OK,
+		)
+
+
 @method_decorator(csrf_exempt, name='dispatch')
 class StripeWebhookView(APIView):
 	authentication_classes = []
@@ -794,7 +882,9 @@ class StripeConnectOnboardView(APIView):
 				user.save(update_fields=['stripe_account_id', 'stripe_account_completed'])
 			else:
 				account = stripe.Account.retrieve(account_id)
-				user.stripe_account_completed = bool(account.get('details_submitted'))
+				user.stripe_account_completed = bool(
+					account.get('details_submitted') and account.get('payouts_enabled')
+				)
 				user.save(update_fields=['stripe_account_completed'])
 
 			account_link = stripe.AccountLink.create(
@@ -866,10 +956,23 @@ class StripeWithdrawView(APIView):
 				status_code=status.HTTP_502_BAD_GATEWAY,
 			)
 
+		# Keep local status in sync with actual Stripe account readiness.
+		stripe_ready = bool(account.get('details_submitted') and account.get('payouts_enabled'))
+		if user.stripe_account_completed != stripe_ready:
+			user.stripe_account_completed = stripe_ready
+			user.save(update_fields=['stripe_account_completed'])
+
+		if not account.get('details_submitted'):
+			return api_response(
+				is_success=False,
+				error_message='Stripe onboarding is incomplete. Please complete Stripe Connect onboarding.',
+				status_code=status.HTTP_400_BAD_REQUEST,
+			)
+
 		if not account.get('payouts_enabled'):
 			return api_response(
 				is_success=False,
-				error_message='Stripe payouts are not enabled for this account.',
+				error_message='Stripe payouts are not enabled for this account yet. Please resolve pending Stripe verification requirements.',
 				status_code=status.HTTP_400_BAD_REQUEST,
 			)
 
