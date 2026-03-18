@@ -85,6 +85,12 @@ class TournamentUpdateSerializer(serializers.ModelSerializer):
 			return attrs
 
 		today = timezone.now().date()
+		if instance.registration_start and today < instance.registration_start:
+			raise serializers.ValidationError("Tournament can only be edited when registration is open.")
+
+		if instance.registration_end and today > instance.registration_end:
+			raise serializers.ValidationError("Registration ended. Tournament cannot be edited.")
+
 		if instance.match_start and instance.match_start <= today:
 			raise serializers.ValidationError("Tournament cannot be updated after it has started.")
 

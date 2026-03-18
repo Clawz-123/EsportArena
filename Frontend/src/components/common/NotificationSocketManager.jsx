@@ -11,8 +11,9 @@ const NotificationSocketManager = () => {
   const dispatch = useDispatch()
   const socketRef = useRef(null)
   const reconnectRef = useRef(null)
+  const syncRef = useRef(null)
 
-  const { isAuthenticated } = useSelector((state) => state.auth || {})
+  const { isAuthenticated, token } = useSelector((state) => state.auth || {})
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -20,19 +21,28 @@ const NotificationSocketManager = () => {
       return
     }
 
-    const token = localStorage.getItem('access_token')
-    if (!token) {
-      dispatch(setSocketConnected(false))
-      return
-    }
-
     const apiBase = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api'
     const wsBase = apiBase.replace(/^http/, 'ws').replace(/\/api\/?$/, '')
-    const wsUrl = `${wsBase}/ws/notifications/?token=${encodeURIComponent(token)}`
 
     let manuallyClosed = false
 
+    const getWsUrl = () => {
+      const accessToken = localStorage.getItem('access_token')
+      if (!accessToken) {
+        return null
+      }
+
+      return `${wsBase}/ws/notifications/?token=${encodeURIComponent(accessToken)}`
+    }
+
     const connectSocket = () => {
+      const wsUrl = getWsUrl()
+      if (!wsUrl) {
+        dispatch(setSocketConnected(false))
+        reconnectRef.current = setTimeout(connectSocket, 3000)
+        return
+      }
+
       socketRef.current = new WebSocket(wsUrl)
 
       socketRef.current.onopen = () => {
@@ -43,6 +53,10 @@ const NotificationSocketManager = () => {
       socketRef.current.onmessage = (event) => {
         try {
           const payload = JSON.parse(event.data)
+
+          if (payload?.event === 'connected') {
+            dispatch(fetchNotifications())
+          }
 
           if (payload?.event === 'new_notification' && payload?.data) {
             dispatch(addRealtimeNotification(payload.data))
@@ -61,6 +75,11 @@ const NotificationSocketManager = () => {
       }
     }
 
+    // Fallback sync for scenarios where websocket is blocked by network/proxy.
+    syncRef.current = setInterval(() => {
+      dispatch(fetchNotifications())
+    }, 15000)
+
     connectSocket()
 
     return () => {
@@ -71,11 +90,15 @@ const NotificationSocketManager = () => {
         clearTimeout(reconnectRef.current)
       }
 
+      if (syncRef.current) {
+        clearInterval(syncRef.current)
+      }
+
       if (socketRef.current) {
         socketRef.current.close()
       }
     }
-  }, [dispatch, isAuthenticated])
+  }, [dispatch, isAuthenticated, token])
 
   return null
 }

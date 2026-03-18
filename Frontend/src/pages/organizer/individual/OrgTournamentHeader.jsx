@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { toast } from 'react-toastify'
 import { useAppDispatch, useAppSelector } from '../../../store/hooks'
 import {
   fetchTournamentDetail,
@@ -46,6 +47,51 @@ const OrgTournamentHeader = () => {
   }
 
   const tournament = currentTournament || {}
+
+  const isRegistrationOpen = (targetTournament) => {
+    if (!targetTournament?.registration_start || !targetTournament?.registration_end) {
+      return false
+    }
+
+    const now = new Date()
+    now.setHours(0, 0, 0, 0)
+
+    const registrationStart = new Date(targetTournament.registration_start)
+    registrationStart.setHours(0, 0, 0, 0)
+
+    const registrationEnd = new Date(targetTournament.registration_end)
+    registrationEnd.setHours(0, 0, 0, 0)
+
+    return now >= registrationStart && now <= registrationEnd
+  }
+
+  const handleEditTournament = () => {
+    if (!tournament?.id) return
+
+    if (!isRegistrationOpen(tournament)) {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      const registrationEnd = new Date(tournament.registration_end)
+      registrationEnd.setHours(0, 0, 0, 0)
+
+      const hasRegistrationEnded = tournament?.registration_end && today > registrationEnd
+
+      if (hasRegistrationEnded) {
+        toast.error('Registration ended. Tournament cannot be edited.')
+      } else {
+        toast.error('Only registration-open tournaments can be edited.')
+      }
+      return
+    }
+
+    navigate(`/OrgCreateTournament?editId=${tournament.id}`)
+  }
+
+  const handleVerifyResults = () => {
+    if (!tournament?.id) return
+    navigate(`/OrgResultVerification?tournamentId=${tournament.id}`)
+  }
 
   const getTournamentStatus = (tournament) => {
     if (!tournament) return 'upcoming'
@@ -150,10 +196,16 @@ const OrgTournamentHeader = () => {
                 </p>
               </div>
               <div className="flex gap-3">
-                <button className="px-4 py-2 rounded-md bg-[#1E293B] text-white hover:bg-[#2D3748] transition-colors">
+                <button
+                  onClick={handleEditTournament}
+                  className="px-4 py-2 rounded-md bg-[#1E293B] text-white hover:bg-[#2D3748] transition-colors"
+                >
                   Edit Tournament
                 </button>
-                <button className="px-4 py-2 rounded-md bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors font-semibold">
+                <button
+                  onClick={handleVerifyResults}
+                  className="px-4 py-2 rounded-md bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors font-semibold"
+                >
                   Verify Results
                 </button>
               </div>

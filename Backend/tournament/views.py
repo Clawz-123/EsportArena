@@ -8,9 +8,12 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from django.db import transaction
 from django.core.exceptions import ValidationError
+from django.contrib.auth import get_user_model
 
 from esport.response import api_response
 from Wallet.models import Wallet, WalletTransaction
+from Notification.models import Notification
+from Notification.services import send_notification_to_user
 from .models import Tournament, TournamentTeam, TournamentParticipant
 from .serializers import (
     TournamentCreateSerializer,
@@ -23,6 +26,44 @@ from .serializers import (
 
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+
+
+User = get_user_model()
+
+
+def _notify_tournament_user(user, title, message, metadata=None):
+    if not user:
+        return
+
+    send_notification_to_user(
+        recipient=user,
+        title=title,
+        message=message,
+        notification_type=Notification.NotificationTypes.TOURNAMENT,
+        metadata=metadata or {},
+    )
+
+
+def _notify_tournament_participants(tournament, title, message, metadata=None, exclude_user_ids=None):
+    excluded = set(exclude_user_ids or [])
+    sent_user_ids = set()
+
+    participants = TournamentParticipant.objects.filter(
+        tournament=tournament
+    ).select_related("player")
+
+    for participant in participants:
+        user_id = participant.player_id
+        if user_id in excluded or user_id in sent_user_ids:
+            continue
+        sent_user_ids.add(user_id)
+
+        _notify_tournament_user(
+            participant.player,
+            title=title,
+            message=message,
+            metadata=metadata,
+        )
 
 
 # View for Creating Tournament
@@ -56,6 +97,16 @@ class CreateTournamentView(generics.CreateAPIView):
                 reference=str(tournament.id),
                 note=f"Prize pool locked for tournament {tournament.name}",
             )
+
+        _notify_tournament_user(
+            tournament.organizer,
+            title="Tournament Created",
+            message=f"Your tournament '{tournament.name}' has been created successfully.",
+            metadata={
+                "tournament_id": tournament.id,
+                "status": "draft" if tournament.is_draft else "published",
+            },
+        )
 
         return tournament
 
@@ -231,6 +282,21 @@ class UpdateTournamentView(generics.UpdateAPIView):
             )
             if serializer.is_valid():
                 updated_tournament = serializer.save()
+
+                _notify_tournament_user(
+                    updated_tournament.organizer,
+                    title="Tournament Updated",
+                    message=f"Your tournament '{updated_tournament.name}' has been updated.",
+                    metadata={"tournament_id": updated_tournament.id},
+                )
+                _notify_tournament_participants(
+                    updated_tournament,
+                    title="Tournament Updated",
+                    message=f"Tournament '{updated_tournament.name}' has new updates. Please review latest details.",
+                    metadata={"tournament_id": updated_tournament.id},
+                    exclude_user_ids=[updated_tournament.organizer_id],
+                )
+
                 result_serializer = TournamentDetailSerializer(updated_tournament, context={"request": request})
                 return api_response(
                     is_success=True,
@@ -274,6 +340,21 @@ class UpdateTournamentView(generics.UpdateAPIView):
             )
             if serializer.is_valid():
                 updated_tournament = serializer.save()
+
+                _notify_tournament_user(
+                    updated_tournament.organizer,
+                    title="Tournament Updated",
+                    message=f"Your tournament '{updated_tournament.name}' has been updated.",
+                    metadata={"tournament_id": updated_tournament.id},
+                )
+                _notify_tournament_participants(
+                    updated_tournament,
+                    title="Tournament Updated",
+                    message=f"Tournament '{updated_tournament.name}' has new updates. Please review latest details.",
+                    metadata={"tournament_id": updated_tournament.id},
+                    exclude_user_ids=[updated_tournament.organizer_id],
+                )
+
                 result_serializer = TournamentDetailSerializer(updated_tournament, context={"request": request})
                 return api_response(
                     is_success=True,
@@ -326,7 +407,27 @@ class DeleteTournamentView(generics.DestroyAPIView):
     def delete(self, request, tournament_id):
         try:
             tournament = self.get_queryset().get(id=tournament_id)
+
+            participant_users = list(
+                User.objects.filter(
+                    id__in=TournamentParticipant.objects.filter(
+                        tournament=tournament
+                    ).values_list("player_id", flat=True)
+                )
+            )
+            tournament_name = tournament.name
+            deleted_tournament_id = tournament.id
+
             tournament.delete()
+
+            for participant_user in participant_users:
+                _notify_tournament_user(
+                    participant_user,
+                    title="Tournament Cancelled",
+                    message=f"Tournament '{tournament_name}' has been cancelled by organizer.",
+                    metadata={"tournament_id": deleted_tournament_id},
+                )
+
             return api_response(
                 is_success=True,
                 status_code=status.HTTP_204_NO_CONTENT,
@@ -483,6 +584,38 @@ class JoinTournamentView(generics.CreateAPIView):
                 member_participant.full_clean()
                 member_participant.save()
 
+            _notify_tournament_user(
+                user,
+                title="Tournament Joined",
+                message=f"You joined '{tournament.name}' with team '{team.team_name}'.",
+                metadata={
+                    "tournament_id": tournament.id,
+                    "team_id": team.id,
+                },
+            )
+            _notify_tournament_user(
+                tournament.organizer,
+                title="New Team Registered",
+                message=f"Team '{team.team_name}' joined your tournament '{tournament.name}'.",
+                metadata={
+                    "tournament_id": tournament.id,
+                    "team_id": team.id,
+                    "captain_id": user.id,
+                },
+            )
+
+            for member_id in team_members:
+                member_user = User.objects.filter(id=member_id).first()
+                _notify_tournament_user(
+                    member_user,
+                    title="Added To Tournament Team",
+                    message=f"You were added to team '{team.team_name}' in tournament '{tournament.name}'.",
+                    metadata={
+                        "tournament_id": tournament.id,
+                        "team_id": team.id,
+                    },
+                )
+
             return team
 
         else:
@@ -495,6 +628,20 @@ class JoinTournamentView(generics.CreateAPIView):
             )
             participant.full_clean()
             participant.save()
+
+            _notify_tournament_user(
+                user,
+                title="Tournament Joined",
+                message=f"You joined tournament '{tournament.name}'.",
+                metadata={"tournament_id": tournament.id},
+            )
+            _notify_tournament_user(
+                tournament.organizer,
+                title="New Player Registered",
+                message=f"A player joined your tournament '{tournament.name}'.",
+                metadata={"tournament_id": tournament.id, "player_id": user.id},
+            )
+
             return participant
 
     @swagger_auto_schema(

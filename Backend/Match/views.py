@@ -7,7 +7,9 @@ from django.shortcuts import get_object_or_404
 
 from esport.response import api_response
 from .models import Match
-from tournament.models import Tournament
+from tournament.models import Tournament, TournamentParticipant
+from Notification.models import Notification
+from Notification.services import send_notification_to_user
 from .serializers import (
     MatchCreateSerializer,
     MatchDetailSerializer,
@@ -16,6 +18,29 @@ from .serializers import (
 
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+
+
+def _notify_match_participants(tournament, title, message, metadata=None, exclude_user_ids=None):
+    excluded = set(exclude_user_ids or [])
+    sent_user_ids = set()
+
+    participants = TournamentParticipant.objects.filter(
+        tournament=tournament
+    ).select_related("player")
+
+    for participant in participants:
+        user_id = participant.player_id
+        if user_id in excluded or user_id in sent_user_ids:
+            continue
+
+        sent_user_ids.add(user_id)
+        send_notification_to_user(
+            recipient=participant.player,
+            title=title,
+            message=message,
+            notification_type=Notification.NotificationTypes.TOURNAMENT,
+            metadata=metadata or {},
+        )
 
 # Creating a view to create a match in the database and only the organizer of the tournament can create a match
 class CreateMatchView(generics.CreateAPIView):
@@ -44,6 +69,18 @@ class CreateMatchView(generics.CreateAPIView):
             )
             if serializer.is_valid():
                 match = serializer.save()
+
+                _notify_match_participants(
+                    match.tournament,
+                    title="New Match Scheduled",
+                    message=f"Match {match.match_number} ({match.group}) has been scheduled for tournament '{match.tournament.name}'.",
+                    metadata={
+                        "tournament_id": match.tournament_id,
+                        "match_id": match.id,
+                    },
+                    exclude_user_ids=[request.user.id],
+                )
+
                 return api_response(
                     is_success=True,
                     status_code=status.HTTP_201_CREATED,
@@ -166,6 +203,19 @@ class UpdateMatchView(generics.UpdateAPIView):
             serializer = self.serializer_class(match, data=request.data, partial=True)
             if serializer.is_valid():
                 updated_match = serializer.save()
+
+                _notify_match_participants(
+                    updated_match.tournament,
+                    title="Match Updated",
+                    message=f"Match {updated_match.match_number} in tournament '{updated_match.tournament.name}' was updated (status: {updated_match.status}).",
+                    metadata={
+                        "tournament_id": updated_match.tournament_id,
+                        "match_id": updated_match.id,
+                        "status": updated_match.status,
+                    },
+                    exclude_user_ids=[request.user.id],
+                )
+
                 return api_response(
                     is_success=True,
                     status_code=status.HTTP_200_OK,
@@ -212,8 +262,25 @@ class DeleteMatchView(generics.DestroyAPIView):
                     error_message="You do not have permission to delete this match.",
                     status_code=status.HTTP_403_FORBIDDEN
                 )
+
+            tournament = match.tournament
+            match_number = match.match_number
+            group_name = match.group
+            deleted_match_id = match.id
                 
             match.delete()
+
+            _notify_match_participants(
+                tournament,
+                title="Match Cancelled",
+                message=f"Match {match_number} ({group_name}) in tournament '{tournament.name}' has been cancelled.",
+                metadata={
+                    "tournament_id": tournament.id,
+                    "match_id": deleted_match_id,
+                },
+                exclude_user_ids=[request.user.id],
+            )
+
             return api_response(
                 is_success=True,
                 status_code=status.HTTP_200_OK,

@@ -3,6 +3,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from Match.models import Match
+from Notification.models import Notification
+from Notification.services import send_notification_to_user
 from esport.response import api_response
 
 from .models import Result
@@ -33,6 +35,20 @@ class CreateResultView(generics.CreateAPIView):
 			serializer = self.serializer_class(data=request.data, context={"request": request})
 			if serializer.is_valid():
 				result = serializer.save()
+
+				send_notification_to_user(
+					recipient=result.tournament.organizer,
+					title="Result Submitted",
+					message=f"A new result was submitted for match {result.match.match_number} in tournament '{result.tournament.name}'.",
+					notification_type=Notification.NotificationTypes.RESULT,
+					metadata={
+						"tournament_id": result.tournament_id,
+						"match_id": result.match_id,
+						"result_id": result.id,
+						"submitted_by": result.submitted_by_id,
+					},
+				)
+
 				return api_response(
 					is_success=True,
 					status_code=status.HTTP_201_CREATED,
@@ -155,6 +171,24 @@ class UpdateResultStatusView(generics.UpdateAPIView):
 			)
 			if serializer.is_valid():
 				updated = serializer.save()
+
+				note = ""
+				if updated.organizer_note:
+					note = f" Note: {updated.organizer_note}"
+
+				send_notification_to_user(
+					recipient=updated.submitted_by,
+					title="Result Review Update",
+					message=f"Your submitted result for match {updated.match.match_number} is now {updated.status.lower()}.{note}",
+					notification_type=Notification.NotificationTypes.RESULT,
+					metadata={
+						"tournament_id": updated.tournament_id,
+						"match_id": updated.match_id,
+						"result_id": updated.id,
+						"status": updated.status,
+					},
+				)
+
 				return api_response(
 					is_success=True,
 					status_code=status.HTTP_200_OK,

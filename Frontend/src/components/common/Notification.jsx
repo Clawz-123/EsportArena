@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Bell, CheckCircle, AlertCircle, Info, Trophy, Trash2 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 
 import {
@@ -8,6 +8,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from '../../slices/notificationSlice'
+import { resolveNotificationPath } from '../../utils/notificationNavigation'
 
 const formatNotificationTime = (notification) => {
   if (notification?.timestamp) return notification.timestamp
@@ -48,9 +49,10 @@ const NotificationIcon = ({ type, icon }) => {
   }
 }
 
-const NotificationItem = ({ notification, onDelete, onMarkRead }) => {
+const NotificationItem = ({ notification, onDelete, onMarkRead, onOpen }) => {
   return (
     <div
+      onClick={() => onOpen(notification)}
       className={`px-4 py-3 border-b border-slate-800 hover:bg-slate-900/50 transition-colors cursor-pointer group ${
         !notification.is_read ? 'bg-slate-900/30' : ''
       }`}
@@ -74,7 +76,10 @@ const NotificationItem = ({ notification, onDelete, onMarkRead }) => {
             <div className="shrink-0 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
               {!notification.is_read && (
                 <button
-                  onClick={() => onMarkRead(notification.id)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onMarkRead(notification.id)
+                  }}
                   className="p-1.5 hover:bg-slate-800 rounded transition-colors"
                   title="Mark as read"
                 >
@@ -82,7 +87,10 @@ const NotificationItem = ({ notification, onDelete, onMarkRead }) => {
                 </button>
               )}
               <button
-                onClick={() => onDelete(notification.id)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDelete(notification.id)
+                }}
                 className="p-1.5 hover:bg-red-500/10 rounded transition-colors"
                 title="Delete"
               >
@@ -102,12 +110,15 @@ const NotificationDropdown = () => {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef(null)
   const buttonRef = useRef(null)
+  const navigate = useNavigate()
 
   const dispatch = useDispatch()
   const { user } = useSelector((state) => state.auth || {})
   const { items: notifications = [], unreadCount = 0 } = useSelector((state) => state.notifications || {})
 
+  const isAdmin = user?.role === 'SuperAdmin'
   const notificationsPath = user?.is_organizer ? '/organizer/notifications' : '/player/notifications'
+  const showViewAllLink = !isAdmin
 
   const handleDelete = (id) => {
     dispatch(deleteNotification(id))
@@ -119,6 +130,20 @@ const NotificationDropdown = () => {
 
   const handleMarkAllRead = () => {
     dispatch(markAllNotificationsRead())
+  }
+
+  const handleOpenNotification = (notification) => {
+    const path = resolveNotificationPath(notification, user)
+
+    if (!notification?.is_read) {
+      dispatch(markNotificationRead(notification.id))
+    }
+
+    setIsOpen(false)
+
+    if (path) {
+      navigate(path)
+    }
   }
 
   useEffect(() => {
@@ -178,6 +203,7 @@ const NotificationDropdown = () => {
                   notification={notification}
                   onDelete={handleDelete}
                   onMarkRead={handleMarkRead}
+                  onOpen={handleOpenNotification}
                 />
               ))
             ) : (
@@ -188,7 +214,7 @@ const NotificationDropdown = () => {
             )}
           </div>
 
-          {notifications.length > 0 && (
+          {notifications.length > 0 && showViewAllLink && (
             <div className="px-4 py-3 border-t border-slate-800 bg-slate-900/20">
               <Link
                 to={notificationsPath}

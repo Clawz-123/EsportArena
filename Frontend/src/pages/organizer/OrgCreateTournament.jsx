@@ -1,5 +1,5 @@
-import React, {  useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useEffect, useMemo } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Formik, Form, Field, ErrorMessage } from 'formik'
 import { toast } from 'react-toastify'
 import { Calendar, ChevronDown } from 'lucide-react'
@@ -7,41 +7,100 @@ import OrgSidebar from './OrgSidebar'
 import ProfileMenu from '../../components/common/ProfileMenu'
 import { tournamentValidationSchema } from '../utils/organizerCreateFromValidation'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
-import { createTournament, clearError, clearSuccess } from '../../slices/tournamentSlice'
+import {
+  createTournament,
+  updateTournament,
+  fetchTournamentDetail,
+  clearError,
+  clearSuccess,
+} from '../../slices/tournamentSlice'
+
+const defaultInitialValues = {
+  name: '',
+  gameTitle: '',
+  matchFormat: '',
+  description: '',
+  registrationStart: '',
+  registrationEnd: '',
+  matchStart: '',
+  expectedEnd: '',
+  maxParticipants: '',
+  autoGenerateBracket: false,
+  entryFee: '0',
+  prizeFirst: '0',
+  prizeSecond: '0',
+  prizeThird: '0',
+  matchRules: '',
+  requireResultProof: false,
+  proofType: 'Screenshot Only',
+  resultTimeLimit: '24',
+  visibility: 'Public',
+  autoStartTournament: false,
+  isDraft: false,
+}
 
 // Component for the tournament creation page for organizers
 const OrgCreateTournament = () => {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const dispatch = useAppDispatch()
+  const editTournamentId = searchParams.get('editId')
+  const parsedEditTournamentId = editTournamentId ? Number(editTournamentId) : null
+  const isEditMode = Boolean(parsedEditTournamentId)
   
-  const { createLoading, createError } = useAppSelector(
+  const { createLoading, createError, updateLoading, updateError, currentTournament } = useAppSelector(
     (state) => state.tournament
   )
 
-// Setting up the initial form values for the tournament creation form
-  const initialValues = {
-    name: '',
-    gameTitle: '',
-    matchFormat: '',
-    description: '',
-    registrationStart: '',
-    registrationEnd: '',
-    matchStart: '',
-    expectedEnd: '',
-    maxParticipants: '',
-    autoGenerateBracket: false,
-    entryFee: '0',
-    prizeFirst: '0',
-    prizeSecond: '0',
-    prizeThird: '0',
-    matchRules: '',
-    requireResultProof: false,
-    proofType: 'Screenshot Only',
-    resultTimeLimit: '24',
-    visibility: 'Public',
-    autoStartTournament: false,
-    isDraft: false,
+  const isRegistrationOpen = (tournament) => {
+    if (!tournament?.registration_start || !tournament?.registration_end) {
+      return false
+    }
+
+    const now = new Date()
+    now.setHours(0, 0, 0, 0)
+
+    const registrationStart = new Date(tournament.registration_start)
+    registrationStart.setHours(0, 0, 0, 0)
+
+    const registrationEnd = new Date(tournament.registration_end)
+    registrationEnd.setHours(0, 0, 0, 0)
+
+    return now >= registrationStart && now <= registrationEnd
   }
+
+  const editTournament =
+    isEditMode && currentTournament?.id === parsedEditTournamentId ? currentTournament : null
+
+  const initialValues = useMemo(() => {
+    if (!isEditMode || !editTournament) {
+      return defaultInitialValues
+    }
+
+    return {
+      name: editTournament.name || '',
+      gameTitle: editTournament.game_title || '',
+      matchFormat: editTournament.match_format || '',
+      description: editTournament.description || '',
+      registrationStart: editTournament.registration_start || '',
+      registrationEnd: editTournament.registration_end || '',
+      matchStart: editTournament.match_start || '',
+      expectedEnd: editTournament.expected_end || '',
+      maxParticipants: editTournament.max_participants ? String(editTournament.max_participants) : '',
+      autoGenerateBracket: Boolean(editTournament.auto_generate_bracket),
+      entryFee: String(editTournament.entry_fee ?? 0),
+      prizeFirst: String(editTournament.prize_first ?? 0),
+      prizeSecond: String(editTournament.prize_second ?? 0),
+      prizeThird: String(editTournament.prize_third ?? 0),
+      matchRules: editTournament.match_rules || '',
+      requireResultProof: Boolean(editTournament.require_result_proof),
+      proofType: editTournament.proof_type || 'Screenshot Only',
+      resultTimeLimit: String(editTournament.result_time_limit_hours ?? 24),
+      visibility: editTournament.visibility || 'Public',
+      autoStartTournament: Boolean(editTournament.auto_start_tournament),
+      isDraft: Boolean(editTournament.is_draft),
+    }
+  }, [editTournament, isEditMode])
 
   // Created a helper function to calculate the total prize 
   const calculateTotalPrize = (values) => {
@@ -52,7 +111,7 @@ const OrgCreateTournament = () => {
     )
   }
 
-  // Handling the form submission by dispatching the createTournament thunk with the form values and showing success or error messages accordingly
+  // Handling the form submission by dispatching create/update tournament thunks based on mode
   const handleSubmit = async (values, actions) => {
     const payload = {
       name: values.name,
@@ -78,28 +137,70 @@ const OrgCreateTournament = () => {
       is_draft: values.isDraft,
     }
 
-    // Dispatching the createTournament thunk and handling the result 
+    // Dispatching create/update tournament action and handling the result
     try {
-      const result = await dispatch(createTournament(payload))
-      if (createTournament.fulfilled.match(result)) {
-        toast.success('Tournament created successfully!')
-        actions.resetForm()
-        navigate('/Orgtournaments')
+      const result = isEditMode
+        ? await dispatch(
+            updateTournament({
+              tournamentId: parsedEditTournamentId,
+              tournamentData: payload,
+            })
+          )
+        : await dispatch(createTournament(payload))
+
+      const isSuccess = isEditMode
+        ? updateTournament.fulfilled.match(result)
+        : createTournament.fulfilled.match(result)
+
+      if (isSuccess) {
+        toast.success(isEditMode ? 'Tournament updated successfully!' : 'Tournament created successfully!')
+        if (isEditMode) {
+          navigate(`/organizer/tournaments/${parsedEditTournamentId}`)
+        } else {
+          actions.resetForm()
+          navigate('/Orgtournaments')
+        }
       } else {
         const errorMessage =
           result.payload?.error_message ||
           result.payload?.Error_Message ||
           result.payload?.message ||
-          'Failed to create tournament'
+          (isEditMode ? 'Failed to update tournament' : 'Failed to create tournament')
         toast.error(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage))
       }
     } catch (error) {
-      console.error('Tournament creation error:', error)
-      toast.error('Failed to create tournament')
+      console.error('Tournament submit error:', error)
+      toast.error(isEditMode ? 'Failed to update tournament' : 'Failed to create tournament')
     } finally {
       actions.setSubmitting(false)
     }
   }
+
+  useEffect(() => {
+    if (isEditMode && parsedEditTournamentId) {
+      dispatch(fetchTournamentDetail(parsedEditTournamentId))
+    }
+  }, [dispatch, isEditMode, parsedEditTournamentId])
+
+  useEffect(() => {
+    if (!isEditMode || !editTournament) return
+
+    if (!isRegistrationOpen(editTournament)) {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      const registrationEnd = new Date(editTournament.registration_end)
+      registrationEnd.setHours(0, 0, 0, 0)
+
+      const hasRegistrationEnded = today > registrationEnd
+      if (hasRegistrationEnded) {
+        toast.error('Registration ended. Tournament cannot be edited.')
+      } else {
+        toast.error('Only registration-open tournaments can be edited.')
+      }
+      navigate(`/organizer/tournaments/${editTournament.id}`, { replace: true })
+    }
+  }, [editTournament, isEditMode, navigate])
 
   // Using useEffect to clear any existing errors or success messages
   useEffect(() => {
@@ -109,19 +210,20 @@ const OrgCreateTournament = () => {
     }
   }, [dispatch])
 
-  // Using useEffect to show error messages if tournament creation fails
+  // Using useEffect to show error messages if tournament create/update fails
   useEffect(() => {
-    if (createError) {
+    const formError = isEditMode ? updateError : createError
+    if (formError) {
       const errorMessage =
-        createError?.error_message ||
-        createError?.Error_Message ||
-        createError?.message ||
-        'Failed to create tournament'
+        formError?.error_message ||
+        formError?.Error_Message ||
+        formError?.message ||
+        (isEditMode ? 'Failed to update tournament' : 'Failed to create tournament')
       toast.error(
         typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage)
       )
     }
-  }, [createError])
+  }, [createError, isEditMode, updateError])
 
   return (
     <div className="flex min-h-screen bg-[#0B1020] text-[#E5E7EB]">
@@ -133,9 +235,13 @@ const OrgCreateTournament = () => {
         {/* Header */}
         <header className="bg-[#0B1020]/80 border-b border-white/10 px-8 py-6 flex items-center justify-between backdrop-blur">
           <div>
-            <h1 className="text-2xl md:text-3xl font-semibold text-[#F8FAFC]">Create Tournament</h1>
+            <h1 className="text-2xl md:text-3xl font-semibold text-[#F8FAFC]">
+              {isEditMode ? 'Edit Tournament' : 'Create Tournament'}
+            </h1>
             <p className="text-sm text-[#94A3B8] mt-2">
-              Build a new bracket in a few steps. You can save as a draft anytime.
+              {isEditMode
+                ? 'Update your tournament settings while registration is open.'
+                : 'Build a new bracket in a few steps. You can save as a draft anytime.'}
             </p>
           </div>
           <ProfileMenu />
@@ -518,7 +624,7 @@ const OrgCreateTournament = () => {
               </div>
 
               {/* SECTION 6: Visibility & Control */}
-              <div className="bg-gradient-to-br from-[#0E1628] via-[#0E1628] to-[#0B1222] border border-white/10 rounded-2xl p-6 md:p-8 space-y-5 shadow-[0_12px_30px_rgba(15,23,42,0.35)]">
+              <div className="bg-linear-to-br from-[#0E1628] via-[#0E1628] to-[#0B1222] border border-white/10 rounded-2xl p-6 md:p-8 space-y-5 shadow-[0_12px_30px_rgba(15,23,42,0.35)]">
                 <div className="flex items-center gap-3">
                   <span className="h-2 w-2 rounded-full bg-[#60A5FA] shadow-[0_0_10px_rgba(96,165,250,0.7)]" />
                   <h2 className="text-base font-semibold text-[#F8FAFC]">Visibility & Control</h2>
@@ -578,10 +684,12 @@ const OrgCreateTournament = () => {
               <div className="flex flex-wrap gap-4 justify-start pb-6">
                 <button
                   type="submit"
-                  disabled={createLoading || isSubmitting}
+                  disabled={createLoading || updateLoading || isSubmitting}
                   className="bg-[#38BDF8] hover:bg-[#0EA5E9] text-[#0B1020] font-semibold px-8 py-2.5 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {createLoading ? 'Creating...' : 'Create Tournament'}
+                  {createLoading || updateLoading
+                    ? (isEditMode ? 'Updating...' : 'Creating...')
+                    : (isEditMode ? 'Update Tournament' : 'Create Tournament')}
                 </button>
                 <button
                   type="button"

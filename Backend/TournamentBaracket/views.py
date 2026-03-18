@@ -4,8 +4,10 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .models import TournamentBracket
 from .serializers import TournamentBracketSerializer
-from tournament.models import Tournament, TournamentTeam
+from tournament.models import Tournament, TournamentTeam, TournamentParticipant
 from LeaderBoard.models import GroupLeaderboardEntry
+from Notification.models import Notification
+from Notification.services import send_notification_to_user
 
 # Create your views here.
 
@@ -38,8 +40,39 @@ class TournamentBracketView(generics.GenericAPIView):
         if serializer.is_valid():
             bracket = serializer.save()
             self._sync_group_leaderboard(bracket)
+
+            self._notify_participants(
+                bracket.tournament,
+                title='Bracket Updated',
+                message=f"Bracket for tournament '{bracket.tournament.name}' has been updated.",
+                metadata={'tournament_id': bracket.tournament_id},
+                exclude_user_ids=[request.user.id],
+            )
+
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def _notify_participants(self, tournament, title, message, metadata=None, exclude_user_ids=None):
+        excluded = set(exclude_user_ids or [])
+        sent_user_ids = set()
+
+        participants = TournamentParticipant.objects.filter(
+            tournament=tournament
+        ).select_related('player')
+
+        for participant in participants:
+            user_id = participant.player_id
+            if user_id in excluded or user_id in sent_user_ids:
+                continue
+
+            sent_user_ids.add(user_id)
+            send_notification_to_user(
+                recipient=participant.player,
+                title=title,
+                message=message,
+                notification_type=Notification.NotificationTypes.TOURNAMENT,
+                metadata=metadata or {},
+            )
 
     def _sync_group_leaderboard(self, bracket):
         bracket_data = bracket.bracket_data

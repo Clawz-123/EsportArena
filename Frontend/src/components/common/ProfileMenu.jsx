@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { logoutUser } from '../../slices/auth'
 import { fetchUserProfile } from '../../slices/viewprofile'
+import NotificationDropdown from './Notification'
 
 const ProfileMenu = () => {
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -58,74 +59,78 @@ const ProfileMenu = () => {
   }, [showUserMenu])
 
   return (
-    <div className="relative">
-      <button
-        ref={buttonRef}
-        onClick={() => setShowUserMenu((v) => !v)}
-        className="flex items-center gap-2 focus:outline-none"
-        aria-label="User menu"
-      >
-        {profile?.profile_image ? (
-          <img
-            src={profile.profile_image}
-            alt={getDisplayName(user, profile)}
-            className="h-9 w-9 rounded-full object-cover"
-          />
-        ) : (
-          <div className="h-9 w-9 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-semibold">
-            {getInitials(user, profile)}
-          </div>
-        )}
-      </button>
-      {showUserMenu && (
-        <div
-          ref={menuRef}
-          className="absolute right-0 mt-2 w-56 rounded-md bg-[#0a0e1a] border border-slate-800 shadow-xl overflow-hidden z-50"
+    <div className="flex items-center gap-3">
+      <NotificationDropdown />
+
+      <div className="relative">
+        <button
+          ref={buttonRef}
+          onClick={() => setShowUserMenu((v) => !v)}
+          className="flex items-center gap-2 focus:outline-none"
+          aria-label="User menu"
         >
-          <div className="px-3 py-3 border-b border-slate-800">
-            <div className="flex items-center gap-3">
-              {profile?.profile_image ? (
-                <img
-                  src={profile.profile_image}
-                  alt={getDisplayName(user, profile)}
-                  className="h-9 w-9 rounded-full object-cover"
-                />
-              ) : (
-                <div className="h-9 w-9 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-semibold">
-                  {getInitials(user, profile)}
-                </div>
-              )}
-              <div className="min-w-0">
-                <div className="text-sm text-white truncate">
-                  {getDisplayName(user, profile)}
+          {profile?.profile_image ? (
+            <img
+              src={profile.profile_image}
+              alt={getDisplayName(user, profile)}
+              className="h-9 w-9 rounded-full object-cover"
+            />
+          ) : (
+            <div className="h-9 w-9 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-semibold">
+              {getInitials(user, profile)}
+            </div>
+          )}
+        </button>
+        {showUserMenu && (
+          <div
+            ref={menuRef}
+            className="absolute right-0 mt-2 w-56 rounded-md bg-[#0a0e1a] border border-slate-800 shadow-xl overflow-hidden z-50"
+          >
+            <div className="px-3 py-3 border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                {profile?.profile_image ? (
+                  <img
+                    src={profile.profile_image}
+                    alt={getDisplayName(user, profile)}
+                    className="h-9 w-9 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="h-9 w-9 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-semibold">
+                    {getInitials(user, profile)}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <div className="text-sm text-white truncate">
+                    {getDisplayName(user, profile)}
+                  </div>
                 </div>
               </div>
             </div>
+            <ul className="py-1">
+              <li>
+                <button
+                  className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
+                  onClick={() => {
+                    setShowUserMenu(false)
+                    navigate("/view-profile")
+                  }}
+                >
+                  View Profile
+                </button>
+              </li>
+              <li className="border-t border-slate-800" />
+              <li>
+                <button
+                  className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-800 hover:text-red-300"
+                  onClick={handleLogout}
+                >
+                  Logout
+                </button>
+              </li>
+            </ul>
           </div>
-          <ul className="py-1">
-            <li>
-              <button
-                className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
-                onClick={() => {
-                  setShowUserMenu(false)
-                  navigate("/view-profile")
-                }}
-              >
-                View Profile
-              </button>
-            </li>
-            <li className="border-t border-slate-800" />
-            <li>
-              <button
-                className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-800 hover:text-red-300"
-                onClick={handleLogout}
-              >
-                Logout
-              </button>
-            </li>
-          </ul>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Check, X, Filter, Search, Eye, AlertCircle, CheckCircle2, XCircle, Clock, ChevronDown, Trophy } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import OrgSidebar from '../organizer/OrgSidebar'
@@ -31,11 +32,13 @@ const TabButton = ({ id, label, count, icon: Icon, activeTab, setActiveTab }) =>
 
 const OrgResultVerification = () => {
   const dispatch = useAppDispatch()
+  const [searchParams] = useSearchParams()
+  const queryTournamentId = searchParams.get('tournamentId')
   const { tournaments, loading: tournamentsLoading } = useAppSelector((state) => state.tournament || {})
   const { results, loading: resultsLoading, updateLoading } = useAppSelector((state) => state.result || {})
 
   const [activeTab, setActiveTab] = useState('pending')
-  const [selectedTournamentId, setSelectedTournamentId] = useState('all')
+  const [selectedTournamentId, setSelectedTournamentId] = useState(queryTournamentId || 'all')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedResult, setSelectedResult] = useState(null)
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Bell,
   CheckCircle,
@@ -20,6 +21,7 @@ import {
 } from '../../slices/notificationSlice'
 import PlayerSidebar from './PlayerSidebar'
 import ProfileMenu from '../../components/common/ProfileMenu'
+import { resolveNotificationPath } from '../../utils/notificationNavigation'
 
 const formatNotificationTime = (notification) => {
   if (notification?.timestamp) return notification.timestamp
@@ -109,7 +111,7 @@ const fallbackIcon = {
   color: 'text-slate-400',
 }
 
-const NotificationCard = ({ notification, onDelete, onMarkRead }) => {
+const NotificationCard = ({ notification, onDelete, onMarkRead, onOpen }) => {
   const cfg =
     iconConfig[notification.icon] ||
     iconConfig[notification.notification_type] ||
@@ -119,6 +121,7 @@ const NotificationCard = ({ notification, onDelete, onMarkRead }) => {
 
   return (
     <div
+      onClick={() => onOpen(notification)}
       className={`group relative flex items-start gap-4 px-5 py-4 transition-all duration-200 hover:bg-[#1E293B]/60 ${
         !notification.is_read
           ? 'border-l-[3px] border-l-blue-500 bg-blue-500/3'
@@ -161,7 +164,10 @@ const NotificationCard = ({ notification, onDelete, onMarkRead }) => {
       <div className="shrink-0 flex items-center gap-1 pt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
         {!notification.is_read && (
           <button
-            onClick={() => onMarkRead(notification.id)}
+            onClick={(e) => {
+              e.stopPropagation()
+              onMarkRead(notification.id)
+            }}
             className="flex h-8 w-8 items-center justify-center rounded-md text-[#64748B] hover:bg-blue-500/10 hover:text-blue-400 transition-colors"
             title="Mark as read"
           >
@@ -169,7 +175,10 @@ const NotificationCard = ({ notification, onDelete, onMarkRead }) => {
           </button>
         )}
         <button
-          onClick={() => onDelete(notification.id)}
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete(notification.id)
+          }}
           className="flex h-8 w-8 items-center justify-center rounded-md text-[#64748B] hover:bg-rose-500/10 hover:text-rose-400 transition-colors"
           title="Delete"
         >
@@ -187,11 +196,13 @@ const TABS = [
 ]
 
 const Notifications = () => {
+  const navigate = useNavigate()
   const dispatch = useDispatch()
   const [filter, setFilter] = useState('all')
   const { items: notifications = [], unreadCount = 0, loading } = useSelector(
     (state) => state.notifications || {}
   )
+  const { user } = useSelector((state) => state.auth || {})
 
   useEffect(() => {
     dispatch(fetchNotifications())
@@ -217,6 +228,18 @@ const Notifications = () => {
 
   const handleMarkAllRead = () =>
     dispatch(markAllNotificationsRead())
+
+  const handleOpenNotification = (notification) => {
+    const path = resolveNotificationPath(notification, user)
+
+    if (!notification?.is_read) {
+      dispatch(markNotificationRead(notification.id))
+    }
+
+    if (path) {
+      navigate(path)
+    }
+  }
 
   return (
     <div className="flex min-h-screen bg-[#0F172A]">
@@ -301,6 +324,7 @@ const Notifications = () => {
                     notification={notification}
                     onDelete={handleDelete}
                     onMarkRead={handleMarkRead}
+                    onOpen={handleOpenNotification}
                   />
                 ))
               ) : (
