@@ -4,6 +4,7 @@ import { Menu, X, Gamepad2, ChevronDown } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { logoutUser } from "../../slices/auth";
 import { fetchUserProfile } from "../../slices/viewprofile";
+import NotificationDropdown from "./Notification";
 
 
 const navLinks = [
@@ -126,7 +127,12 @@ function Navbar() {
                                 </Link>
                             </>
                         ) : (
-                            <div className="relative">
+                            <div className="flex items-center gap-3">
+                                {/* Notification Dropdown */}
+                                <NotificationDropdown />
+                                
+                                {/* User Profile Menu */}
+                                <div className="relative">
                                 <button
                                     ref={buttonRef}
                                     onClick={() => setShowUserMenu((v) => !v)}
@@ -203,6 +209,7 @@ function Navbar() {
                                     </div>
                                 )}
                             </div>
+                        </div>
                         )}
                     </div>
 

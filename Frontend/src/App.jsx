@@ -19,6 +19,8 @@ import Tournament from './pages/public/Tournament.jsx'
 import PlayerDashboard from './pages/player/PlayerDashboard.jsx'
 import PlayerMyTournament from './pages/player/PlayerMyTournament.jsx'
 import PlayerWalletandEarning from './pages/player/PlayerWalletandEarning.jsx'
+import PlayerNotifications from './pages/player/Notifications.jsx'
+import OrgNotification from './pages/organizer/OrgNotification.jsx'
 import WalletKhaltiReturn from './pages/player/WalletKhaltiReturn.jsx'
 import WalletEsewaReturn from './pages/player/WalletEsewaReturn.jsx'
 import WalletStripeReturn from './pages/player/WalletStripeReturn.jsx'
@@ -81,6 +83,13 @@ const AdminGate = ({ children }) => {
   return children
 }
 
+// Keep /notifications route working while routing to role-specific pages
+const NotificationsRedirect = () => {
+  const { user } = useSelector((state) => state.auth || {})
+  const target = user?.is_organizer ? '/organizer/notifications' : '/player/notifications'
+  return <Navigate to={target} replace />
+}
+
 function App() {
   return (
     <Provider store={store}>
@@ -104,6 +113,9 @@ function App() {
           <Route path='/PlayerDashboard' element={<AuthGate> <PlayerDashboard /></AuthGate>} />
           <Route path='/PlayerMyTournament' element={<AuthGate> <PlayerMyTournament /></AuthGate>} />
           <Route path='/PlayerWalletandEarning' element={<AuthGate> <PlayerWalletandEarning /></AuthGate>} />
+          <Route path='/player/notifications' element={<AuthGate> <PlayerNotifications /></AuthGate>} />
+          <Route path='/organizer/notifications' element={<AuthGate> <OrgNotification /></AuthGate>} />
+          <Route path='/notifications' element={<AuthGate> <NotificationsRedirect /></AuthGate>} />
           <Route path='/wallet/khalti-return' element={<AuthGate> <WalletKhaltiReturn /></AuthGate>} />
           <Route path='/wallet/esewa-return' element={<AuthGate> <WalletEsewaReturn /></AuthGate>} />
           <Route path='/wallet/stripe-return' element={<AuthGate> <WalletStripeReturn /></AuthGate>} />
