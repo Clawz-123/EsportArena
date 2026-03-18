@@ -40,9 +40,11 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'daphne',
     'django.contrib.staticfiles',
 
     # Third party apps
+    'channels',
     'rest_framework',
     'drf_yasg',
     'corsheaders',
@@ -58,6 +60,7 @@ INSTALLED_APPS = [
     'Result',
     'Wallet',
     'Payment',
+    'Notification',
 ]
 
 MIDDLEWARE = [
@@ -98,6 +101,26 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'esport.wsgi.application'
+ASGI_APPLICATION = 'esport.asgi.application'
+
+REDIS_URL = config('REDIS_URL', default='')
+
+if REDIS_URL:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                'hosts': [REDIS_URL],
+            },
+        },
+    }
+else:
+    # In-memory layer is good for local single-process development.
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        },
+    }
 
 
 # Database

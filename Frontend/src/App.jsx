@@ -31,6 +31,7 @@ import AdminDashboard from './pages/admin/AdminDashboard.jsx'
 import AdminPayment from './pages/admin/AdminPayment.jsx'
 import AdminUsers from './pages/admin/AdminUsers.jsx'
 import AdminTournaments from './pages/admin/AdminTournaments.jsx'
+import NotificationSocketManager from './components/common/NotificationSocketManager.jsx'
 
 // Redirect SuperAdmin away from public pages to admin dashboard
 const HomeRedirect = ({ children }) => {
@@ -94,6 +95,7 @@ function App() {
   return (
     <Provider store={store}>
       <Router>
+        <NotificationSocketManager />
         <Routes>
           <Route path='/' element={<HomeRedirect><Home /></HomeRedirect>} />
           <Route path='/login' element={<Login />} />

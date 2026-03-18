@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
 	Bell,
 	CheckCircle,
@@ -10,55 +10,30 @@ import {
 	CheckCheck,
 	BellOff,
 } from 'lucide-react'
+import { useDispatch, useSelector } from 'react-redux'
+
+import {
+	deleteNotification,
+	fetchNotifications,
+	markAllNotificationsRead,
+	markNotificationRead,
+} from '../../slices/notificationSlice'
 import OrgSidebar from './OrgSidebar'
 import ProfileMenu from '../../components/common/ProfileMenu'
 
-const MOCK_ORG_NOTIFICATIONS = [
-	{
-		id: 1,
-		type: 'tournament_update',
-		title: 'Bracket Generated',
-		description:
-			'Your tournament "Valorant City Clash" bracket has been generated successfully.',
-		timestamp: '10 min ago',
-		date: '2026-03-18',
-		read: false,
-		icon: 'trophy',
-	},
-	{
-		id: 2,
-		type: 'result_submitted',
-		title: 'Result Submitted',
-		description:
-			'Team Alpha submitted results for Match #12. Review is required.',
-		timestamp: '1 hour ago',
-		date: '2026-03-18',
-		read: false,
-		icon: 'info',
-	},
-	{
-		id: 3,
-		type: 'payment_success',
-		title: 'Prize Payment Processed',
-		description:
-			'A payout request for $120 has been processed successfully.',
-		timestamp: '4 hours ago',
-		date: '2026-03-18',
-		read: true,
-		icon: 'check',
-	},
-	{
-		id: 4,
-		type: 'tournament_alert',
-		title: 'Registration Closing Soon',
-		description:
-			'Registration for "Spring Open" closes in 3 hours.',
-		timestamp: '1 day ago',
-		date: '2026-03-17',
-		read: true,
-		icon: 'alert',
-	},
-]
+const formatNotificationTime = (notification) => {
+	if (notification?.timestamp) return notification.timestamp
+	if (!notification?.created_at) return 'Just now'
+
+	const created = new Date(notification.created_at)
+	if (Number.isNaN(created.getTime())) return 'Just now'
+
+	const diffSeconds = Math.floor((Date.now() - created.getTime()) / 1000)
+	if (diffSeconds < 60) return 'Just now'
+	if (diffSeconds < 3600) return `${Math.floor(diffSeconds / 60)} min ago`
+	if (diffSeconds < 86400) return `${Math.floor(diffSeconds / 3600)} hours ago`
+	return `${Math.floor(diffSeconds / 86400)} days ago`
+}
 
 const iconConfig = {
 	trophy: {
@@ -71,12 +46,22 @@ const iconConfig = {
 		bg: 'bg-amber-500/10',
 		color: 'text-amber-400',
 	},
+	tournament: {
+		Icon: Trophy,
+		bg: 'bg-amber-500/10',
+		color: 'text-amber-400',
+	},
 	check: {
 		Icon: CheckCircle,
 		bg: 'bg-emerald-500/10',
 		color: 'text-emerald-400',
 	},
 	payment_success: {
+		Icon: CheckCircle,
+		bg: 'bg-emerald-500/10',
+		color: 'text-emerald-400',
+	},
+	payment: {
 		Icon: CheckCircle,
 		bg: 'bg-emerald-500/10',
 		color: 'text-emerald-400',
@@ -101,6 +86,16 @@ const iconConfig = {
 		bg: 'bg-blue-500/10',
 		color: 'text-blue-400',
 	},
+	result: {
+		Icon: Info,
+		bg: 'bg-blue-500/10',
+		color: 'text-blue-400',
+	},
+	system: {
+		Icon: AlertCircle,
+		bg: 'bg-rose-500/10',
+		color: 'text-rose-400',
+	},
 }
 
 const fallbackIcon = {
@@ -110,13 +105,17 @@ const fallbackIcon = {
 }
 
 const NotificationCard = ({ notification, onDelete, onMarkRead }) => {
-	const cfg = iconConfig[notification.icon] || iconConfig[notification.type] || fallbackIcon
+	const cfg =
+		iconConfig[notification.icon] ||
+		iconConfig[notification.notification_type] ||
+		iconConfig[notification.type] ||
+		fallbackIcon
 	const IconComp = cfg.Icon
 
 	return (
 		<div
 			className={`group relative flex items-start gap-4 px-5 py-4 transition-all duration-200 hover:bg-[#1E293B]/60 ${
-				!notification.read
+				!notification.is_read
 					? 'border-l-[3px] border-l-blue-500 bg-blue-500/3'
 					: 'border-l-[3px] border-l-transparent'
 			}`}
@@ -133,29 +132,29 @@ const NotificationCard = ({ notification, onDelete, onMarkRead }) => {
 				<div className="flex items-center gap-2 mb-0.5">
 					<h4
 						className={`text-sm font-semibold ${
-							!notification.read ? 'text-white' : 'text-[#CBD5E1]'
+							!notification.is_read ? 'text-white' : 'text-[#CBD5E1]'
 						}`}
 					>
 						{notification.title}
 					</h4>
-					{!notification.read && (
+					{!notification.is_read && (
 						<span className="inline-flex h-4.5 items-center rounded-full bg-blue-500/15 px-2 text-[10px] font-bold uppercase tracking-wide text-blue-400">
 							New
 						</span>
 					)}
 				</div>
 				<p className="text-[13px] leading-relaxed text-[#94A3B8]">
-					{notification.description}
+					{notification.message || notification.description}
 				</p>
 				<span className="mt-1.5 inline-flex items-center gap-1 text-xs text-[#64748B]">
 					<Clock className="h-3 w-3" />
-					{notification.timestamp}
+					{formatNotificationTime(notification)}
 				</span>
 			</div>
 
 			{/* Actions */}
 			<div className="shrink-0 flex items-center gap-1 pt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-				{!notification.read && (
+				{!notification.is_read && (
 					<button
 						onClick={() => onMarkRead(notification.id)}
 						className="flex h-8 w-8 items-center justify-center rounded-md text-[#64748B] hover:bg-blue-500/10 hover:text-blue-400 transition-colors"
@@ -183,14 +182,19 @@ const TABS = [
 ]
 
 const OrgNotification = () => {
-	const [notifications, setNotifications] = useState(MOCK_ORG_NOTIFICATIONS)
+	const dispatch = useDispatch()
 	const [filter, setFilter] = useState('all')
+	const { items: notifications = [], unreadCount = 0, loading } = useSelector(
+		(state) => state.notifications || {}
+	)
 
-	const unreadCount = notifications.filter((n) => !n.read).length
+	useEffect(() => {
+		dispatch(fetchNotifications())
+	}, [dispatch])
 
 	const filteredNotifications = notifications.filter((n) => {
-		if (filter === 'unread') return !n.read
-		if (filter === 'read') return n.read
+		if (filter === 'unread') return !n.is_read
+		if (filter === 'read') return n.is_read
 		return true
 	})
 
@@ -201,15 +205,13 @@ const OrgNotification = () => {
 	}
 
 	const handleDelete = (id) =>
-		setNotifications((prev) => prev.filter((n) => n.id !== id))
+		dispatch(deleteNotification(id))
 
 	const handleMarkRead = (id) =>
-		setNotifications((prev) =>
-			prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-		)
+		dispatch(markNotificationRead(id))
 
 	const handleMarkAllRead = () =>
-		setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+		dispatch(markAllNotificationsRead())
 
 	return (
 		<div className="flex h-screen bg-[#0F172A]">
@@ -285,7 +287,9 @@ const OrgNotification = () => {
 
 						{/* Notification list */}
 						<div className="min-h-[calc(100vh-250px)] rounded-xl border border-[#1F2937] bg-[#111827] overflow-hidden divide-y divide-[#1E293B]">
-							{filteredNotifications.length > 0 ? (
+							{loading ? (
+								<div className="px-6 py-10 text-sm text-[#94A3B8]">Loading notifications...</div>
+							) : filteredNotifications.length > 0 ? (
 								filteredNotifications.map((notification) => (
 									<NotificationCard
 										key={notification.id}

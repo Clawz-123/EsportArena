@@ -14,6 +14,8 @@ import stripe
 
 from accounts.permission import IsSuperUser
 from esport.response import api_response
+from Notification.models import Notification
+from Notification.services import send_notification_to_user
 from Wallet.models import Wallet, WalletTransaction
 from Wallet.serializers import WalletSerializer
 from .models import PaymentOrder, WithdrawalRequest
@@ -109,6 +111,16 @@ def _esewa_signature(payload, signed_field_names, secret_key):
 	message = ','.join(parts)
 	mac = hmac.new(secret_key.encode('utf-8'), message.encode('utf-8'), hashlib.sha256).digest()
 	return base64.b64encode(mac).decode('utf-8')
+
+
+def _send_payment_notification(user, title, message, metadata=None):
+	send_notification_to_user(
+		recipient=user,
+		title=title,
+		message=message,
+		notification_type=Notification.NotificationTypes.PAYMENT,
+		metadata=metadata or {},
+	)
 
 
 class WalletTopUpInitiateView(APIView):
@@ -315,6 +327,17 @@ class WalletTopUpVerifyView(APIView):
 				status=WalletTransaction.Status.COMPLETED,
 				note='Top-up completed',
 			)
+
+		_send_payment_notification(
+			request.user,
+			title='Wallet Top-up Successful',
+			message=f'Your Khalti top-up of {order.coins} coins is completed.',
+			metadata={
+				'order_id': order.id,
+				'provider': order.provider,
+				'coins': order.coins,
+			},
+		)
 
 		return api_response(
 			result={
@@ -531,6 +554,17 @@ class WalletEsewaVerifyView(APIView):
 				note='Top-up completed',
 			)
 
+		_send_payment_notification(
+			request.user,
+			title='Wallet Top-up Successful',
+			message=f'Your eSewa top-up of {order.coins} coins is completed.',
+			metadata={
+				'order_id': order.id,
+				'provider': order.provider,
+				'coins': order.coins,
+			},
+		)
+
 		return api_response(
 			result={
 				'wallet': WalletSerializer(wallet).data,
@@ -733,6 +767,17 @@ class StripeTopUpVerifyView(APIView):
 				note='Top-up completed',
 			)
 
+		_send_payment_notification(
+			request.user,
+			title='Wallet Top-up Successful',
+			message=f'Your Stripe top-up of {order.coins} coins is completed.',
+			metadata={
+				'order_id': order.id,
+				'provider': order.provider,
+				'coins': order.coins,
+			},
+		)
+
 		return api_response(
 			result={
 				'wallet': WalletSerializer(wallet).data,
@@ -794,6 +839,17 @@ class StripeWebhookView(APIView):
 					note='Top-up completed',
 				)
 
+			_send_payment_notification(
+				order.user,
+				title='Wallet Top-up Successful',
+				message=f'Your Stripe top-up of {order.coins} coins is completed.',
+				metadata={
+					'order_id': order.id,
+					'provider': order.provider,
+					'coins': order.coins,
+				},
+			)
+
 			return api_response(status_code=status.HTTP_200_OK)
 
 		if event_type in ['payout.paid', 'payout.failed']:
@@ -821,6 +877,17 @@ class StripeWebhookView(APIView):
 						status=WalletTransaction.Status.COMPLETED,
 						note='Withdrawal completed',
 					)
+
+					_send_payment_notification(
+						withdrawal.user,
+						title='Withdrawal Completed',
+						message=f'Your {withdrawal.provider} withdrawal of {withdrawal.coins} coins is completed.',
+						metadata={
+							'withdrawal_id': withdrawal.id,
+							'provider': withdrawal.provider,
+							'coins': withdrawal.coins,
+						},
+					)
 				return api_response(status_code=status.HTTP_200_OK)
 
 			if event_type == 'payout.failed':
@@ -842,6 +909,17 @@ class StripeWebhookView(APIView):
 							status=WalletTransaction.Status.FAILED,
 							note='Withdrawal failed',
 						)
+
+					_send_payment_notification(
+						withdrawal.user,
+						title='Withdrawal Failed',
+						message=f'Your {withdrawal.provider} withdrawal of {withdrawal.coins} coins failed and has been refunded.',
+						metadata={
+							'withdrawal_id': withdrawal.id,
+							'provider': withdrawal.provider,
+							'coins': withdrawal.coins,
+						},
+					)
 				return api_response(status_code=status.HTTP_200_OK)
 
 		return api_response(status_code=status.HTTP_200_OK)
@@ -1017,6 +1095,17 @@ class StripeWithdrawView(APIView):
 				note='Withdrawal requested',
 			)
 
+		_send_payment_notification(
+			user,
+			title='Withdrawal Requested',
+			message=f'Your Stripe withdrawal request for {coins} coins has been submitted for review.',
+			metadata={
+				'withdrawal_id': withdrawal.id,
+				'provider': WithdrawalRequest.Provider.STRIPE,
+				'coins': coins,
+			},
+		)
+
 		try:
 			transfer = stripe.Transfer.create(
 				amount=net_cents,
@@ -1043,6 +1132,17 @@ class StripeWithdrawView(APIView):
 					note='Withdrawal failed',
 				)
 
+			_send_payment_notification(
+				user,
+				title='Withdrawal Failed',
+				message=f'Your Stripe withdrawal of {coins} coins failed and has been refunded.',
+				metadata={
+					'withdrawal_id': withdrawal.id,
+					'provider': WithdrawalRequest.Provider.STRIPE,
+					'coins': coins,
+				},
+			)
+
 			return api_response(
 				is_success=False,
 				error_message=str(exc),
@@ -1060,6 +1160,17 @@ class StripeWithdrawView(APIView):
 			transaction_type=WalletTransaction.TransactionType.WITHDRAWAL,
 			status=WalletTransaction.Status.PENDING,
 		).update(status=WalletTransaction.Status.COMPLETED, note='Withdrawal completed via Stripe')
+
+		_send_payment_notification(
+			user,
+			title='Withdrawal Completed',
+			message=f'Your Stripe withdrawal of {coins} coins is completed.',
+			metadata={
+				'withdrawal_id': withdrawal.id,
+				'provider': WithdrawalRequest.Provider.STRIPE,
+				'coins': coins,
+			},
+		)
 
 		return api_response(
 			result={'withdrawal': WithdrawalRequestSerializer(withdrawal).data},
@@ -1101,6 +1212,17 @@ class ManualWithdrawView(APIView):
 			amount=net_amount,
 			platform_fee=platform_fee,
 			coins=coins,
+		)
+
+		_send_payment_notification(
+			request.user,
+			title='Withdrawal Requested',
+			message=f'Your {provider} withdrawal request for {coins} coins has been submitted for review.',
+			metadata={
+				'withdrawal_id': withdrawal.id,
+				'provider': provider,
+				'coins': coins,
+			},
 		)
 
 		return api_response(
@@ -1224,6 +1346,17 @@ class AdminWithdrawalApproveView(APIView):
 				note=f'Withdrawal via {withdrawal.provider} to {withdrawal.account_identifier}',
 			)
 
+		_send_payment_notification(
+			withdrawal.user,
+			title='Withdrawal Approved',
+			message=f'Your {withdrawal.provider} withdrawal of {withdrawal.coins} coins was approved.',
+			metadata={
+				'withdrawal_id': withdrawal.id,
+				'provider': withdrawal.provider,
+				'coins': withdrawal.coins,
+			},
+		)
+
 		return api_response(
 			is_success=True,
 			status_code=status.HTTP_200_OK,
@@ -1257,6 +1390,17 @@ class AdminWithdrawalRejectView(APIView):
 			withdrawal.status = WithdrawalRequest.Status.FAILED
 			withdrawal.updated_at = timezone.now()
 			withdrawal.save(update_fields=['status', 'updated_at'])
+
+		_send_payment_notification(
+			withdrawal.user,
+			title='Withdrawal Rejected',
+			message=f'Your {withdrawal.provider} withdrawal of {withdrawal.coins} coins was rejected.',
+			metadata={
+				'withdrawal_id': withdrawal.id,
+				'provider': withdrawal.provider,
+				'coins': withdrawal.coins,
+			},
+		)
 
 		return api_response(
 			is_success=True,
