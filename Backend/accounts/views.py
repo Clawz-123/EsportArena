@@ -5,7 +5,7 @@ from rest_framework import status, generics
 
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
-from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
@@ -34,6 +34,11 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
 # Create your views here.
+
+
+# Custom TokenRefreshView to allow unauthenticated requests
+class CustomTokenRefreshView(TokenRefreshView):
+    permission_classes = [AllowAny]
 
 
 # View for User Registration

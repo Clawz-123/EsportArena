@@ -10,6 +10,7 @@ from .models import Wallet
 from .serializers import WalletSerializer, WalletTransactionSerializer
 
 
+
 def _get_or_create_wallet(user):
 	wallet, _ = Wallet.objects.get_or_create(user=user)
 	return wallet

@@ -3,6 +3,7 @@ from django.db import models
 from django.core.validators import MinValueValidator
 
 
+
 class Wallet(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -14,6 +15,8 @@ class Wallet(models.Model):
 
     def __str__(self):
         return f"{self.user.email}'s Wallet - Balance: {self.balance}"
+
+
 
 
 class WalletTransaction(models.Model):

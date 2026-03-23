@@ -73,20 +73,7 @@ class WithdrawalRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = WithdrawalRequest
         fields = [
-            'id',
-            'provider',
-            'account_identifier',
-            'amount',
-            'platform_fee',
-            'coins',
-            'status',
-            'stripe_account_id',
-            'stripe_transfer_id',
-            'stripe_payout_id',
-            'receipt_image',
-            'created_at',
-            'updated_at',
-        ]
+            'id', 'provider', 'account_identifier', 'amount', 'platform_fee', 'coins', 'status', 'stripe_account_id', 'stripe_transfer_id', 'stripe_payout_id', 'receipt_image', 'created_at', 'updated_at',]
         read_only_fields = fields
 
     def get_receipt_image(self, obj):

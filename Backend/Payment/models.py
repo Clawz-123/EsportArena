@@ -4,6 +4,7 @@ from django.utils import timezone
 from django.core.validators import MinValueValidator
 
 
+
 class PaymentOrder(models.Model):
 	class Provider(models.TextChoices):
 		KHALTI = 'khalti', 'Khalti'
