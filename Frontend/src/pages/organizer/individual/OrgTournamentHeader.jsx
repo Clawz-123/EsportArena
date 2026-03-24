@@ -149,7 +149,7 @@ const OrgTournamentHeader = () => {
       case 'leaderboard':
         return <LeaderBoardCard tournamentId={id} />
       case 'forum':
-        return <ForumCard tournamentId={id} />
+        return <ForumCard tournament={tournament} />
       default:
         return <ParticipantCard tournamentId={id} />
     }

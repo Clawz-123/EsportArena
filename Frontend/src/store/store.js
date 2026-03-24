@@ -10,6 +10,7 @@ import resultReducer from "../slices/resultSlice";
 import walletSlice from "../slices/walletSlice";
 import adminReducer from "../slices/adminSlice";
 import notificationReducer from "../slices/notificationSlice";
+import chatReducer from "../slices/ChatSlice";
 
 export const store = configureStore({
   // Adding reducers for different created slices
@@ -25,6 +26,7 @@ export const store = configureStore({
     wallet: walletSlice,
     admin: adminReducer,
     notifications: notificationReducer,
+    chat: chatReducer,
   },
   // Enabling Redux DevTools only in development mode
   devTools: import.meta.env.DEV,

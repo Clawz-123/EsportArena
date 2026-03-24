@@ -1,50 +1,17 @@
-import React, { useState } from 'react'
-import { Send, Megaphone, X, Bell } from 'lucide-react'
+import React, { useState, useEffect, useRef } from 'react'
+import { Send, Megaphone, X, Bell, Loader } from 'lucide-react'
+import { useAppDispatch, useAppSelector } from '../../../store/hooks'
+import { fetchMessages, fetchAnnouncements, postMessage, postAnnouncement, addMessage, addAnnouncement, setCurrentUserId } from '../../../slices/ChatSlice'
+import { chatAPI, formatBackendMessage, formatBackendAnnouncement } from '../../../axios/chatAPI'
 
 const ForumCard = ({ tournament }) => {
-  const [activeTab, setActiveTab] = useState('General')
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      author: 'Alex_Pro',
-      avatar: 'https://ui-avatars.com/api/?name=Alex+Pro&background=random',
-      message: 'When will the bracket be released?',
-      timestamp: '2 hours ago',
-      isMe: false,
-    },
-    {
-      id: 2,
-      author: 'You',
-      avatar: 'https://ui-avatars.com/api/?name=You&background=0D8ABC&color=fff',
-      message: 'Brackets will be released tomorrow at 10 AM',
-      timestamp: '1 hour ago',
-      isMe: true,
-    },
-    {
-      id: 3,
-      author: 'Raj Patel',
-      avatar: 'https://ui-avatars.com/api/?name=Raj+Patel&background=random',
-      message: 'Good luck to all teams!',
-      timestamp: '30 minutes ago',
-      isMe: false,
-    },
-  ])
+  const dispatch = useAppDispatch()
+  const { messages, announcements, loading } = useAppSelector((state) => state.chat)
+  const { user } = useAppSelector((state) => state.auth || {})
 
+  const [activeTab, setActiveTab] = useState('General')
   const [newMessage, setNewMessage] = useState('')
-  const [announcements, setAnnouncements] = useState([
-    {
-      id: 1,
-      title: 'Leaderboard Updated',
-      description: 'The latest rankings have been updated. Team Alpha maintains the lead with 45 points.',
-      timestamp: '45 minutes ago',
-    },
-    {
-      id: 2,
-      title: 'Tournament Starting Soon',
-      description: 'The tournament will begin in 24 hours. Make sure all teams are ready!',
-      timestamp: '2 hours ago',
-    },
-  ])
+  const [isSending, setIsSending] = useState(false)
 
   // Announcement composer state
   const [showAnnouncementComposer, setShowAnnouncementComposer] = useState(false)
@@ -54,22 +21,99 @@ const ForumCard = ({ tournament }) => {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handlePostMessage = () => {
-    if (newMessage.trim()) {
-      const timeString = 'Just now'
+  // Ref for auto-scrolling
+  const messagesEndRef = useRef(null)
+  const messagesContainerRef = useRef(null)
 
-      setMessages([
-        ...messages,
-        {
-          id: messages.length + 1,
-          author: 'You',
-          avatar: 'https://ui-avatars.com/api/?name=You&background=0D8ABC&color=fff',
-          message: newMessage,
-          timestamp: timeString,
-          isMe: true,
-        },
-      ])
-      setNewMessage('')
+  // Auto-scroll to bottom when messages change
+  const scrollToBottom = () => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      })
+    }
+  }
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
+
+  // Initialize current user ID
+  useEffect(() => {
+    if (user?.id) {
+      dispatch(setCurrentUserId(user.id))
+    }
+  }, [user, dispatch])
+
+  // Fetch messages and announcements
+  useEffect(() => {
+    if (tournament?.id) {
+      dispatch(fetchMessages(tournament.id))
+      dispatch(fetchAnnouncements(tournament.id))
+    }
+  }, [dispatch, tournament?.id])
+
+  // WebSocket connection for real-time updates
+  useEffect(() => {
+    if (!tournament?.id || !user?.id) return
+
+    const token = localStorage.getItem('access_token')
+    if (!token) return
+
+    try {
+      const websocket = chatAPI.connectWebSocket(tournament.id, token)
+
+      websocket.onopen = () => {
+        console.log('WebSocket connected')
+      }
+
+      websocket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+
+          if (data.event === 'chat_message') {
+            dispatch(addMessage(data.data))
+          } else if (data.event === 'connected') {
+            console.log('Connected to tournament chat')
+          }
+        } catch (error) {
+          console.error('Error processing WebSocket message:', error)
+        }
+      }
+
+      websocket.onerror = (error) => {
+        console.error('WebSocket error:', error)
+      }
+
+      websocket.onclose = () => {
+        console.log('WebSocket disconnected')
+      }
+
+      return () => {
+        if (websocket && websocket.readyState === WebSocket.OPEN) {
+          websocket.close()
+        }
+      }
+    } catch (error) {
+      console.error('Failed to connect WebSocket:', error)
+    }
+  }, [tournament?.id, user?.id, dispatch])
+
+  const handlePostMessage = async (e) => {
+    if (e) e.preventDefault()
+    if (!newMessage.trim() || isSending) return
+
+    const messageText = newMessage
+    setNewMessage('')
+    setIsSending(true)
+    try {
+      await dispatch(postMessage({ tournamentId: tournament.id, message: messageText }))
+    } catch (error) {
+      console.error('Error posting message:', error)
+      setNewMessage(messageText)
+    } finally {
+      setIsSending(false)
     }
   }
 
@@ -89,27 +133,8 @@ const ForumCard = ({ tournament }) => {
 
     setIsSubmitting(true)
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch(`/api/chat/tournaments/${tournament.id}/announcements/`, {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'Authorization': `Bearer ${accessToken}`,
-      //   },
-      //   body: JSON.stringify({
-      //     message: announcementForm.description,
-      //     message_type: 'announcement',
-      //   }),
-      // })
-
-      const newAnnouncement = {
-        id: announcements.length + 1,
-        title: announcementForm.title,
-        description: announcementForm.description,
-        timestamp: 'Just now',
-      }
-
-      setAnnouncements([newAnnouncement, ...announcements])
+      const fullMessage = `${announcementForm.title}\n${announcementForm.description}`
+      await dispatch(postAnnouncement({ tournamentId: tournament.id, message: fullMessage }))
       setAnnouncementForm({
         title: '',
         description: '',
@@ -122,6 +147,10 @@ const ForumCard = ({ tournament }) => {
       setIsSubmitting(false)
     }
   }
+
+  // Format messages for display
+  const formattedMessages = messages.map((msg) => formatBackendMessage(msg, user?.id)).filter(Boolean)
+  const formattedAnnouncements = announcements.map((ann) => formatBackendAnnouncement(ann)).filter(Boolean)
 
   return (
     <div className="w-full space-y-6">
@@ -149,53 +178,73 @@ const ForumCard = ({ tournament }) => {
         </button>
       </div>
 
-      <div className="bg-[#0B1220] border border-[#1F2937] rounded-xl h-162.5 flex flex-col relative overflow-hidden shadow-sm">
+      <div className="bg-[#0B1220] border border-[#1F2937] rounded-xl h-[650px] flex flex-col overflow-hidden shadow-sm">
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto px-6 pt-6 pb-28 custom-scrollbar space-y-6">
+        <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-6 py-6 custom-scrollbar space-y-6">
           {activeTab === 'General' ? (
-            messages.map((msg) => (
-              <div key={msg.id} className={`flex gap-4 ${msg.isMe ? 'flex-row-reverse' : ''}`}>
-                <div className="shrink-0 mt-1">
-                  <div className="w-10 h-10 rounded-full bg-[#1F2937] border border-[#374151] overflow-hidden flex items-center justify-center">
-                    {msg.avatar && msg.avatar.startsWith('http') ? (
-                      <img src={msg.avatar} alt={msg.author} className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-xs font-semibold text-[#9CA3AF]">{msg.avatar}</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className={`flex flex-col max-w-[70%] ${msg.isMe ? 'items-end' : 'items-start'}`}>
-                  <div className="flex items-baseline gap-2 mb-1.5 px-1">
-                    {msg.isMe ? (
-                      <>
-                        <span className="text-[11px] text-[#6B7280]">{msg.timestamp}</span>
-                        <span className="text-sm text-[#E5E7EB] font-medium">You</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-sm text-[#E5E7EB] font-medium">{msg.author}</span>
-                        <span className="text-[11px] text-[#6B7280]">{msg.timestamp}</span>
-                      </>
-                    )}
-                  </div>
-
-                  <div
-                    className={`px-5 py-3 rounded-2xl text-sm leading-relaxed shadow-sm ${
-                      msg.isMe
-                        ? 'bg-[#2563EB] text-white rounded-tr-sm'
-                        : 'bg-[#1F2937] text-[#E5E7EB] rounded-tl-sm border border-[#374151]'
-                    }`}
-                  >
-                    {msg.message}
-                  </div>
-                </div>
+            loading ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader className="w-8 h-8 text-[#2563EB] animate-spin" />
               </div>
-            ))
+            ) : formattedMessages.length > 0 ? (
+              <>
+                {formattedMessages.map((msg) => (
+                  <div key={msg.id} className={`flex gap-4 ${msg.isMe ? 'flex-row-reverse' : ''}`}>
+                    <div className="shrink-0 mt-1">
+                      <div className="w-10 h-10 rounded-full bg-[#1F2937] border border-[#374151] overflow-hidden flex items-center justify-center">
+                        <img src={msg.avatar} alt={msg.author} className="w-full h-full object-cover" />
+                      </div>
+                    </div>
+
+                    <div className={`flex flex-col max-w-[70%] ${msg.isMe ? 'items-end' : 'items-start'}`}>
+                      <div className="flex items-baseline gap-2 mb-1.5 px-1">
+                        {msg.isMe ? (
+                          <>
+                            <span className="text-[11px] text-[#6B7280]">{msg.timestamp}</span>
+                            <span className="text-sm text-[#E5E7EB] font-medium">You</span>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${msg.role === 'organizer' ? 'bg-orange-500/30 text-orange-300' : 'bg-blue-500/20 text-blue-300'}`}>
+                              {msg.role === 'organizer' ? 'Organizer' : 'Player'}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-sm text-[#E5E7EB] font-medium">{msg.author}</span>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${msg.role === 'organizer' ? 'bg-orange-500/30 text-orange-300' : 'bg-blue-500/20 text-blue-300'}`}>
+                              {msg.role === 'organizer' ? 'Organizer' : 'Player'}
+                            </span>
+                            <span className="text-[11px] text-[#6B7280]">{msg.timestamp}</span>
+                          </>
+                        )}
+                      </div>
+
+                      <div
+                        className={`px-5 py-3 rounded-2xl text-sm leading-relaxed shadow-sm ${
+                          msg.isMe
+                            ? 'bg-[#2563EB] text-white rounded-tr-sm'
+                            : 'bg-[#1F2937] text-[#E5E7EB] rounded-tl-sm border border-[#374151]'
+                        }`}
+                      >
+                        {msg.message}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <div ref={messagesEndRef} />
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <Megaphone className="w-12 h-12 text-[#374151] mx-auto mb-3 opacity-50" />
+                <p className="text-sm text-[#9CA3AF]">No messages yet</p>
+              </div>
+            )
           ) : (
             <div className="space-y-4">
-              {announcements.length > 0 ? (
-                announcements.map((announcement) => (
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader className="w-8 h-8 text-[#2563EB] animate-spin" />
+                </div>
+              ) : formattedAnnouncements.length > 0 ? (
+                formattedAnnouncements.map((announcement) => (
                   <div
                     key={announcement.id}
                     className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-4 backdrop-blur-sm transition-all hover:border-opacity-50"
@@ -231,42 +280,43 @@ const ForumCard = ({ tournament }) => {
           )}
         </div>
 
-        {/* Input Areas */}
+        {/* Input Areas - fixed at bottom inside flex column */}
         {activeTab === 'General' && (
-          <div className="absolute bottom-6 left-6 right-6">
-            <div className="bg-[#111827] rounded-xl p-2 pl-4 flex items-center gap-3 border border-[#374151] shadow-2xl">
+          <div className="shrink-0 px-6 pb-5 pt-3 border-t border-[#1F2937] bg-[#0B1220]">
+            <form onSubmit={handlePostMessage} className="bg-[#111827] rounded-xl p-2 pl-4 flex items-center gap-3 border border-[#374151] shadow-2xl">
               <input
                 type="text"
                 placeholder="Type a message..."
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handlePostMessage()}
-                className="flex-1 bg-transparent text-sm text-white placeholder-[#6B7280] focus:outline-none py-3"
+                disabled={isSending}
+                className="flex-1 bg-transparent text-sm text-white placeholder-[#6B7280] focus:outline-none py-3 disabled:opacity-50"
               />
               <button
-                onClick={handlePostMessage}
-                disabled={!newMessage.trim()}
+                type="submit"
+                disabled={!newMessage.trim() || isSending}
                 className={`p-3 rounded-lg transition-colors ${
-                  newMessage.trim()
+                  newMessage.trim() && !isSending
                     ? 'bg-[#2563EB] hover:bg-[#1d4ed8] text-white'
                     : 'bg-[#1F2937] text-[#4B5563] cursor-not-allowed'
                 }`}
               >
-                <Send className="w-5 h-5" />
+                {isSending ? (
+                  <Loader className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Send className="w-5 h-5" />
+                )}
               </button>
-            </div>
-            <div className="text-[11px] text-[#6B7280] mt-2 px-1 font-medium">
-              Press Enter to send
-            </div>
+            </form>
           </div>
         )}
 
         {/* Announcement Composer Button */}
         {activeTab === 'Announcements' && (
-          <div className="absolute bottom-6 left-6 right-6">
+          <div className="shrink-0 px-6 pb-5 pt-3 border-t border-[#1F2937] bg-[#0B1220]">
             <button
               onClick={() => setShowAnnouncementComposer(!showAnnouncementComposer)}
-              className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2 text-sm"
+              className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2 text-sm"
             >
               <Megaphone className="w-4 h-4" />
               {showAnnouncementComposer ? 'Cancel' : 'Post Announcement'}
