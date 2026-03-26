@@ -318,12 +318,14 @@ const OrgCreateTournament = () => {
                         }`}
                       >
                         <option value="">Select format</option>
-                        <option value="Solo">Solo</option>
-                        <option value="Duo">Duo</option>
-                        <option value="Squad">Squad</option>
+                        <option value="Solo">Solo (1 player)</option>
+                        <option value="Duo">Duo (2 players)</option>
+                        <option value="Squad">Squad (4 players)</option>
                       </Field>
                       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280] pointer-events-none" />
                     </div>
+               
+                    
                     <ErrorMessage name="matchFormat" component="p" className="text-red-400 text-xs mt-1" />
                   </div>
                 </div>
