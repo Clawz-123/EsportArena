@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { X, ArrowRight, ArrowLeft, AlertCircle, ExternalLink } from 'lucide-react'
+import ConfirmationModal from '../../../components/common/ConfirmationModal'
 
 const METHODS = [
   {
@@ -50,6 +51,7 @@ const WithdrawModal = ({ balance, onClose, onSubmit, onStripeConnect, onStripeWi
   const [selectedMethod, setSelectedMethod] = useState(null)
   const [accountId, setAccountId] = useState('')
   const [error, setError] = useState('')
+  const [showConfirmation, setShowConfirmation] = useState(false)
 
   const coinNum = Number(coins) || 0
   const walletBalance = Number(balance) || 0
@@ -89,12 +91,17 @@ const WithdrawModal = ({ balance, onClose, onSubmit, onStripeConnect, onStripeWi
   }
 
   const handleConfirm = () => {
+    setShowConfirmation(true)
+  }
+
+  const handleConfirmationConfirm = () => {
     if (isStripe) {
       onStripeWithdraw({ coins: coinNum })
     } else {
       const id = accountId.trim()
       onSubmit({ coins: coinNum, provider: selectedMethod.id, account_identifier: id })
     }
+    setShowConfirmation(false)
   }
 
   const quickAmounts = [100, 500, 1000, 5000]
@@ -341,6 +348,19 @@ const WithdrawModal = ({ balance, onClose, onSubmit, onStripeConnect, onStripeWi
             </>
           )}
         </div>
+
+        {/* Confirmation Modal */}
+        <ConfirmationModal
+          isOpen={showConfirmation}
+          title="Confirm Withdrawal?"
+          message={`You are withdrawing ${displayCurrency} ${displayAmount} to your ${selectedMethod?.name} account. This action cannot be reversed.`}
+          confirmText="Confirm Withdrawal"
+          cancelText="Cancel"
+          variant="warning"
+          isLoading={loading}
+          onConfirm={handleConfirmationConfirm}
+          onCancel={() => setShowConfirmation(false)}
+        />
       </div>
     </div>
   )

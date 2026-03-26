@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react'
 import AdminPageLayout from './admincomponents/PageLayout'
 import DataTable from './admincomponents/DataTable'
 import { formatDateTime } from './admincomponents/adminfunctions'
+import ConfirmationModal from '../../components/common/ConfirmationModal'
 import axiosInstance from '../../axios/axiousinstance'
 import {
   CreditCard,
@@ -44,6 +45,7 @@ const AdminPayment = () => {
   const [filter, setFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
   const [approveModal, setApproveModal] = useState(null) // withdrawal object being approved
+  const [rejectConfirm, setRejectConfirm] = useState(null) // withdrawal object being rejected
   const [receiptFile, setReceiptFile] = useState(null)
   const [receiptPreview, setReceiptPreview] = useState(null)
   const [viewReceipt, setViewReceipt] = useState(null) // URL to view
@@ -219,7 +221,7 @@ const AdminPayment = () => {
                       <CheckCircle className="w-3.5 h-3.5" /> Approve
                     </button>
                     <button
-                      onClick={() => handleAction(w.id, 'reject')}
+                      onClick={() => setRejectConfirm(w)}
                       disabled={actionLoading === w.id}
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-medium hover:bg-rose-500/20 transition-colors disabled:opacity-50"
                     >
@@ -352,6 +354,24 @@ const AdminPayment = () => {
           </div>
         </div>
       )}
+
+      {/* Reject Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={!!rejectConfirm}
+        title="Reject Withdrawal?"
+        message={`Are you sure you want to reject this withdrawal request? The user will be notified and the amount will be credited back to their account.`}
+        confirmText="Reject"
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={actionLoading === rejectConfirm?.id}
+        onConfirm={() => {
+          if (rejectConfirm) {
+            handleAction(rejectConfirm.id, 'reject');
+            setRejectConfirm(null);
+          }
+        }}
+        onCancel={() => setRejectConfirm(null)}
+      />
     </AdminPageLayout>
   )
 }

@@ -7,6 +7,7 @@ import {
   fetchTournamentTeams,
   deleteTournament,
 } from '../../../slices/tournamentSlice'
+import ConfirmationModal from '../../../components/common/ConfirmationModal'
 import OrgSidebar from '../OrgSidebar'
 import ProfileMenu from '../../../components/common/ProfileMenu'
 import ParticipantCard from './ParticapantCard'
@@ -323,33 +324,17 @@ const OrgTournamentHeader = () => {
         </div>
 
         {/* Delete Confirmation Modal */}
-        {deleteConfirmation.isOpen && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-[#111827] border border-[#1F2937] rounded-lg p-6 max-w-md w-full mx-4">
-              <h3 className="text-lg font-semibold text-[#E5E7EB] mb-2">
-                Delete Tournament?
-              </h3>
-              <p className="text-sm text-[#9CA3AF] mb-6">
-                Are you sure you want to delete <strong>"{tournament.name}"</strong>? This action cannot be undone. Note: You can only delete tournaments that have no participants.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={handleCancelDelete}
-                  className="flex-1 px-4 py-2.5 bg-[#1F2937] hover:bg-[#2D3748] text-[#E5E7EB] font-medium rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirmDelete}
-                  disabled={deleteLoading}
-                  className="flex-1 px-4 py-2.5 bg-[#EF4444] hover:bg-[#DC2626] disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
-                >
-                  {deleteLoading ? 'Deleting...' : 'Delete'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <ConfirmationModal
+          isOpen={deleteConfirmation.isOpen}
+          title="Delete Tournament?"
+          message={`Are you sure you want to delete "${tournament.name}"? This action cannot be undone. Note: You can only delete tournaments that have no participants.`}
+          confirmText="Delete Tournament"
+          cancelText="Cancel"
+          variant="danger"
+          isLoading={deleteLoading}
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+        />
       </div>
     </div>
   )

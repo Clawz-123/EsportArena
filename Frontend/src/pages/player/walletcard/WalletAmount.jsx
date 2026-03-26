@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { X, ArrowRight } from 'lucide-react';
+import ConfirmationModal from '../../../components/common/ConfirmationModal';
 
 const WalletAmount = ({ onClose, onContinue }) => {
   const [selectedAmount, setSelectedAmount] = useState('');
   const [customAmount, setCustomAmount] = useState('');
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   const presetAmounts = [100, 250, 500, 1000, 2500, 5000];
 
@@ -17,8 +19,14 @@ const WalletAmount = ({ onClose, onContinue }) => {
   const handleContinue = () => {
     const amount = getFinalAmount();
     if (amount >= 10) {
-      onContinue(amount);
+      setShowConfirmation(true);
     }
+  };
+
+  const handleConfirmationConfirm = () => {
+    const amount = getFinalAmount();
+    onContinue(amount);
+    setShowConfirmation(false);
   };
 
   const handlePresetSelect = (amount) => {
@@ -113,6 +121,18 @@ const WalletAmount = ({ onClose, onContinue }) => {
           </button>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showConfirmation}
+        title="Add Funds to Wallet?"
+        message={`You are about to add ${getFinalAmount().toLocaleString()} coins to your wallet. You will be redirected to select a payment method.`}
+        confirmText="Continue"
+        cancelText="Cancel"
+        variant="info"
+        onConfirm={handleConfirmationConfirm}
+        onCancel={() => setShowConfirmation(false)}
+      />
     </div>
   );
 };
