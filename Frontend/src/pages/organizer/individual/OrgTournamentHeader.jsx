@@ -5,6 +5,7 @@ import { useAppDispatch, useAppSelector } from '../../../store/hooks'
 import {
   fetchTournamentDetail,
   fetchTournamentTeams,
+  deleteTournament,
 } from '../../../slices/tournamentSlice'
 import OrgSidebar from '../OrgSidebar'
 import ProfileMenu from '../../../components/common/ProfileMenu'
@@ -19,14 +20,18 @@ import {
   DollarSign,
   Trophy,
   Calendar,
+  Trash2,
 } from 'lucide-react'
 
 const OrgTournamentHeader = () => {
   const navigate = useNavigate()
   const { id } = useParams()
   const dispatch = useAppDispatch()
-  const { currentTournament, loading, teams } = useAppSelector((state) => state.tournament)
+  const { currentTournament, loading, teams, deleteLoading, deleteError, deleteSuccess } = useAppSelector((state) => state.tournament)
   const [activeTab, setActiveTab] = useState('participants')
+  const [deleteConfirmation, setDeleteConfirmation] = useState({
+    isOpen: false,
+  })
 
   useEffect(() => {
     if (id) {
@@ -34,6 +39,18 @@ const OrgTournamentHeader = () => {
       dispatch(fetchTournamentTeams(id))
     }
   }, [id, dispatch])
+
+  // Handle delete success/error
+  useEffect(() => {
+    if (deleteSuccess) {
+      toast.success('Tournament deleted successfully!')
+      setDeleteConfirmation({ isOpen: false })
+      navigate('/Orgtournaments')
+    }
+    if (deleteError) {
+      toast.error(deleteError || 'Failed to delete tournament')
+    }
+  }, [deleteSuccess, deleteError, navigate])
 
   if (loading) {
     return (
@@ -93,6 +110,36 @@ const OrgTournamentHeader = () => {
     navigate(`/OrgResultVerification?tournamentId=${tournament.id}`)
   }
 
+  const handleOpenDeleteConfirm = () => {
+    // Check if tournament can be deleted
+    if (tournament?.status === 'Active') {
+      toast.error('Cannot delete tournament that is currently ongoing. Tournament can only be deleted during registration phase.')
+      return
+    }
+
+    if (tournament?.status === 'Completed') {
+      toast.error('Cannot delete completed tournament.')
+      return
+    }
+
+    if (!isRegistrationOpen(tournament)) {
+      toast.error('Tournament can only be deleted during registration phase.')
+      return
+    }
+
+    setDeleteConfirmation({ isOpen: true })
+  }
+
+  const handleConfirmDelete = async () => {
+    if (tournament?.id) {
+      await dispatch(deleteTournament(tournament.id))
+    }
+  }
+
+  const handleCancelDelete = () => {
+    setDeleteConfirmation({ isOpen: false })
+  }
+
   const getTournamentStatus = (tournament) => {
     if (!tournament) return 'upcoming'
     const now = new Date()
@@ -106,6 +153,18 @@ const OrgTournamentHeader = () => {
 
   const status = getTournamentStatus(tournament)
   const statusColor = status === 'ongoing' ? 'bg-[#10B981]' : status === 'completed' ? 'bg-[#9CA3AF]' : 'bg-[#3B82F6]'
+
+  const canDeleteTournament = () => {
+    // Cannot delete if tournament is ongoing or completed
+    if (tournament?.status === 'Active' || tournament?.status === 'Completed') {
+      return false
+    }
+    // Can only delete during registration phase
+    if (!isRegistrationOpen(tournament)) {
+      return false
+    }
+    return true
+  }
 
   const summaryCards = [
     {
@@ -208,6 +267,18 @@ const OrgTournamentHeader = () => {
                 >
                   Verify Results
                 </button>
+                <button
+                  onClick={handleOpenDeleteConfirm}
+                  disabled={!canDeleteTournament()}
+                  className={`px-4 py-2 rounded-md flex items-center gap-2 font-semibold transition-colors ${
+                    canDeleteTournament()
+                      ? 'bg-[#EF4444] text-white hover:bg-[#DC2626]'
+                      : 'bg-[#6B7280] text-[#D1D5DB] cursor-not-allowed opacity-60'
+                  }`}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete Tournament
+                </button>
               </div>
             </div>
 
@@ -250,6 +321,35 @@ const OrgTournamentHeader = () => {
             {renderTabContent()}
           </div>
         </div>
+
+        {/* Delete Confirmation Modal */}
+        {deleteConfirmation.isOpen && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-[#111827] border border-[#1F2937] rounded-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-lg font-semibold text-[#E5E7EB] mb-2">
+                Delete Tournament?
+              </h3>
+              <p className="text-sm text-[#9CA3AF] mb-6">
+                Are you sure you want to delete <strong>"{tournament.name}"</strong>? This action cannot be undone. Note: You can only delete tournaments that have no participants.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleCancelDelete}
+                  className="flex-1 px-4 py-2.5 bg-[#1F2937] hover:bg-[#2D3748] text-[#E5E7EB] font-medium rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  disabled={deleteLoading}
+                  className="flex-1 px-4 py-2.5 bg-[#EF4444] hover:bg-[#DC2626] disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+                >
+                  {deleteLoading ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

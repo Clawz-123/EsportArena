@@ -77,7 +77,7 @@ class CreateTournamentView(generics.CreateAPIView):
         tournament = serializer.save()
         prize_total = (tournament.prize_first or 0) + (tournament.prize_second or 0) + (tournament.prize_third or 0)
 
-        if not tournament.is_draft and prize_total > 0:
+        if prize_total > 0:
             organizer_wallet, _ = Wallet.objects.get_or_create(user=tournament.organizer)
             required_amount = Decimal(prize_total)
 
@@ -104,7 +104,7 @@ class CreateTournamentView(generics.CreateAPIView):
             message=f"Your tournament '{tournament.name}' has been created successfully.",
             metadata={
                 "tournament_id": tournament.id,
-                "status": "draft" if tournament.is_draft else "published",
+                "status": "published",
             },
         )
 
@@ -394,9 +394,10 @@ class DeleteTournamentView(generics.DestroyAPIView):
         return Tournament.objects.filter(organizer=self.request.user)
 
     @swagger_auto_schema(
-        operation_description="Delete a tournament (Organizer only)",
+        operation_description="Delete a tournament (Organizer only). Tournament can only be deleted if no players have joined yet and it's still in registration phase.",
         responses={
             204: openapi.Response(description="Tournament deleted successfully"),
+            400: openapi.Response(description="Bad Request - Tournament has participants or is not in registration phase"),
             403: openapi.Response(description="Forbidden - Not the tournament organizer"),
             404: openapi.Response(description="Tournament not found"),
             500: openapi.Response(description="Internal Server Error"),
@@ -408,25 +409,34 @@ class DeleteTournamentView(generics.DestroyAPIView):
         try:
             tournament = self.get_queryset().get(id=tournament_id)
 
-            participant_users = list(
-                User.objects.filter(
-                    id__in=TournamentParticipant.objects.filter(
-                        tournament=tournament
-                    ).values_list("player_id", flat=True)
+            # Check if tournament is in ongoing or completed status
+            if tournament.status == Tournament.Status.ACTIVE:
+                return api_response(
+                    is_success=False,
+                    error_message="Cannot delete tournament that is currently ongoing. Tournament can only be deleted during registration phase.",
+                    status_code=status.HTTP_400_BAD_REQUEST,
                 )
-            )
+
+            if tournament.status == Tournament.Status.COMPLETED:
+                return api_response(
+                    is_success=False,
+                    error_message="Cannot delete completed tournament.",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Check if tournament has any participants
+            participant_count = TournamentParticipant.objects.filter(tournament=tournament).count()
+            
+            if participant_count > 0:
+                return api_response(
+                    is_success=False,
+                    error_message=f"Cannot delete tournament with {participant_count} participant(s) already joined. Tournament can only be deleted if no players have joined.",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+
             tournament_name = tournament.name
             deleted_tournament_id = tournament.id
-
             tournament.delete()
-
-            for participant_user in participant_users:
-                _notify_tournament_user(
-                    participant_user,
-                    title="Tournament Cancelled",
-                    message=f"Tournament '{tournament_name}' has been cancelled by organizer.",
-                    metadata={"tournament_id": deleted_tournament_id},
-                )
 
             return api_response(
                 is_success=True,
@@ -453,8 +463,7 @@ class GetAllPublicTournamentsView(generics.ListAPIView):
     permission_classes = [AllowAny]
     
     def get_queryset(self):
-        # Exclude draft tournaments from public view
-        return Tournament.objects.filter(is_draft=False)
+        return Tournament.objects.all()
 
     @swagger_auto_schema(
         operation_description="Get all public tournaments created by all organizers (for players)",
@@ -616,6 +625,9 @@ class JoinTournamentView(generics.CreateAPIView):
                     },
                 )
 
+            # Check if tournament should auto-start
+            self._check_and_auto_start_tournament(tournament)
+
             return team
 
         else:
@@ -642,7 +654,34 @@ class JoinTournamentView(generics.CreateAPIView):
                 metadata={"tournament_id": tournament.id, "player_id": user.id},
             )
 
+            # Check if tournament should auto-start
+            self._check_and_auto_start_tournament(tournament)
+
             return participant
+
+    def _check_and_auto_start_tournament(self, tournament):
+        """Check if tournament should auto-start and trigger it if conditions are met"""
+        if not tournament.auto_start_tournament:
+            return  # Auto-start not enabled
+        
+        if tournament.status == Tournament.Status.ACTIVE:
+            return  # Tournament already started
+        
+        # Count current participants
+        participant_count = TournamentParticipant.objects.filter(tournament=tournament).count()
+        
+        # Check if max participants reached
+        if participant_count >= tournament.max_participants:
+            # Auto-start the tournament
+            started = tournament.start_tournament()
+            if started:
+                # Notify organizer
+                _notify_tournament_user(
+                    tournament.organizer,
+                    title="Tournament Auto-Started",
+                    message=f"Tournament '{tournament.name}' has been automatically started as all slots are filled.",
+                    metadata={"tournament_id": tournament.id},
+                )
 
     @swagger_auto_schema(
         operation_description="Join a tournament (Players only)",

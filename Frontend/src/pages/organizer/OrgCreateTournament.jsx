@@ -34,9 +34,7 @@ const defaultInitialValues = {
   requireResultProof: false,
   proofType: 'Screenshot Only',
   resultTimeLimit: '24',
-  visibility: 'Public',
   autoStartTournament: false,
-  isDraft: false,
 }
 
 // Component for the tournament creation page for organizers
@@ -96,9 +94,7 @@ const OrgCreateTournament = () => {
       requireResultProof: Boolean(editTournament.require_result_proof),
       proofType: editTournament.proof_type || 'Screenshot Only',
       resultTimeLimit: String(editTournament.result_time_limit_hours ?? 24),
-      visibility: editTournament.visibility || 'Public',
       autoStartTournament: Boolean(editTournament.auto_start_tournament),
-      isDraft: Boolean(editTournament.is_draft),
     }
   }, [editTournament, isEditMode])
 
@@ -132,9 +128,7 @@ const OrgCreateTournament = () => {
       require_result_proof: values.requireResultProof,
       proof_type: values.proofType,
       result_time_limit_hours: parseInt(values.resultTimeLimit),
-      visibility: values.visibility,
       auto_start_tournament: values.autoStartTournament,
-      is_draft: values.isDraft,
     }
 
     // Dispatching create/update tournament action and handling the result
@@ -241,7 +235,7 @@ const OrgCreateTournament = () => {
             <p className="text-sm text-[#94A3B8] mt-2">
               {isEditMode
                 ? 'Update your tournament settings while registration is open.'
-                : 'Build a new bracket in a few steps. You can save as a draft anytime.'}
+                : 'Build a new bracket in a few steps.'}
             </p>
           </div>
           <ProfileMenu />
@@ -333,12 +327,12 @@ const OrgCreateTournament = () => {
                 {/* Description */}
                 <div>
                   <label className="block text-sm font-medium text-[#E5E7EB] mb-2">
-                    Description (Optional)
+                    Description <span className="text-red-400">*</span>
                   </label>
                   <Field
                     as="textarea"
                     name="description"
-                    placeholder="Enter tournament description, rules overview, etc."
+                    placeholder="Enter tournament description, rules overview, etc. (minimum 50 words)"
                     rows="4"
                     className={`w-full bg-[#0B1120] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] placeholder-[#6B7280] focus:outline-none focus:border-[#3B82F6] transition-colors resize-none ${
                       touched.description && errors.description ? 'border-red-400' : 'border-white/10'
@@ -625,46 +619,13 @@ const OrgCreateTournament = () => {
                 </div>
               </div>
 
-              {/* SECTION 6: Visibility & Control */}
+              {/* SECTION 6: Control */}
               <div className="bg-linear-to-br from-[#0E1628] via-[#0E1628] to-[#0B1222] border border-white/10 rounded-2xl p-6 md:p-8 space-y-5 shadow-[0_12px_30px_rgba(15,23,42,0.35)]">
                 <div className="flex items-center gap-3">
                   <span className="h-2 w-2 rounded-full bg-[#60A5FA] shadow-[0_0_10px_rgba(96,165,250,0.7)]" />
-                  <h2 className="text-base font-semibold text-[#F8FAFC]">Visibility & Control</h2>
+                  <h2 className="text-base font-semibold text-[#F8FAFC]">Control</h2>
                 </div>
-                <p className="text-xs text-[#94A3B8]">Choose who can find the tournament.</p>
-
-                <div>
-                  <label className="block text-sm font-medium text-[#E5E7EB] mb-3">
-                    Tournament Visibility <span className="text-red-400">*</span>
-                  </label>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <Field
-                        type="radio"
-                        id="public"
-                        name="visibility"
-                        value="Public"
-                        className="w-4 h-4 cursor-pointer accent-[#3B82F6]"
-                      />
-                      <label htmlFor="public" className="text-sm text-[#E5E7EB] cursor-pointer">
-                        Public – listed in tournament directory
-                      </label>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Field
-                        type="radio"
-                        id="private"
-                        name="visibility"
-                        value="Private"
-                        className="w-4 h-4 cursor-pointer accent-[#3B82F6]"
-                      />
-                      <label htmlFor="private" className="text-sm text-[#E5E7EB] cursor-pointer">
-                        Private – invite only
-                      </label>
-                    </div>
-                  </div>
-                  <ErrorMessage name="visibility" component="p" className="text-red-400 text-xs mt-1" />
-                </div>
+                <p className="text-xs text-[#94A3B8]">Configure tournament automation settings.</p>
 
                 <div className="flex items-center gap-3">
                   <Field

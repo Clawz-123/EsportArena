@@ -16,6 +16,12 @@ export const tournamentValidationSchema = Yup.object().shape({
     .oneOf(["Solo", "Duo", "Squad"], "Invalid match format"),
   
   description: Yup.string()
+    .required("Tournament description is required")
+    .test('word-count', 'Description must contain at least 50 words', function(value) {
+      if (!value) return false;
+      const wordCount = value.trim().split(/\s+/).length;
+      return wordCount >= 50;
+    })
     .max(1000, "Description cannot exceed 1000 characters"),
   
   registrationStart: Yup.date()
@@ -89,11 +95,5 @@ export const tournamentValidationSchema = Yup.object().shape({
     .min(1, "Time limit must be at least 1 hour")
     .max(168, "Time limit cannot exceed 168 hours"),
   
-  visibility: Yup.string()
-    .required("Visibility is required")
-    .oneOf(["Public", "Private"], "Invalid visibility option"),
-  
   autoStartTournament: Yup.boolean(),
-  
-  isDraft: Yup.boolean(),
 });

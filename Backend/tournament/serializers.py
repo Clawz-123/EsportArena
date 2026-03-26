@@ -29,9 +29,7 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
 			"require_result_proof",
 			"proof_type",
 			"result_time_limit_hours",
-			"visibility",
 			"auto_start_tournament",
-			"is_draft",
 		]
 
 	def validate(self, attrs):
@@ -74,9 +72,7 @@ class TournamentUpdateSerializer(serializers.ModelSerializer):
 			"require_result_proof",
 			"proof_type",
 			"result_time_limit_hours",
-			"visibility",
 			"auto_start_tournament",
-			"is_draft",
 		]
 
 	def validate(self, attrs):
@@ -146,9 +142,9 @@ class TournamentDetailSerializer(serializers.ModelSerializer):
 			"require_result_proof",
 			"proof_type",
 			"result_time_limit_hours",
-			"visibility",
 			"auto_start_tournament",
-			"is_draft",
+			"status",
+			"started_at",
 			"created_at",
 			"updated_at",
 		]
@@ -158,6 +154,8 @@ class TournamentDetailSerializer(serializers.ModelSerializer):
 			"organizer_name",
 			"organizer_profile_image",
 			"total_prize_pool",
+			"status",
+			"started_at",
 			"created_at",
 			"updated_at",
 		]

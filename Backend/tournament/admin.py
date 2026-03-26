@@ -15,15 +15,11 @@ class TournamentAdmin(admin.ModelAdmin):
         "max_participants",
         "entry_fee",
         "total_prize_pool",
-        "visibility",
-        "is_draft",
         "created_at",
     ]
     list_filter = [
         "game_title",
         "match_format",
-        "visibility",
-        "is_draft",
         "created_at",
     ]
     search_fields = ["name", "organizer__email", "organizer__name"]
@@ -44,8 +40,8 @@ class TournamentAdmin(admin.ModelAdmin):
         ("Rules & Results", {
             "fields": ("match_rules", "require_result_proof", "proof_type", "result_time_limit_hours")
         }),
-        ("Visibility & Control", {
-            "fields": ("visibility", "auto_start_tournament", "is_draft")
+        ("Control", {
+            "fields": ("auto_start_tournament", "status", "started_at")
         }),
         ("Timestamps", {
             "fields": ("created_at", "updated_at"),

@@ -24,6 +24,12 @@ class Tournament(models.Model):
 		PUBLIC = "Public", "Public"
 		PRIVATE = "Private", "Private"
 
+	class Status(models.TextChoices):
+		REGISTRATION_OPEN = "Registration Open", "Registration Open"
+		REGISTRATION_CLOSED = "Registration Closed", "Registration Closed"
+		ACTIVE = "Active", "Active"
+		COMPLETED = "Completed", "Completed"
+
 	organizer = models.ForeignKey(
 		settings.AUTH_USER_MODEL,
 		on_delete=models.CASCADE,
@@ -65,8 +71,12 @@ class Tournament(models.Model):
 		default=Visibility.PUBLIC,
 	)
 	auto_start_tournament = models.BooleanField(default=False)
-
-	is_draft = models.BooleanField(default=False)
+	status = models.CharField(
+		max_length=20,
+		choices=Status.choices,
+		default=Status.REGISTRATION_OPEN,
+	)
+	started_at = models.DateTimeField(null=True, blank=True)
 	created_at = models.DateTimeField(auto_now_add=True)
 	updated_at = models.DateTimeField(auto_now=True)
 
@@ -92,6 +102,17 @@ class Tournament(models.Model):
 		if self.expected_end and self.match_start:
 			if self.expected_end < self.match_start:
 				raise ValidationError("Expected end must be on or after match start.")
+
+	def start_tournament(self) -> bool:
+		"""Start the tournament and mark it as active"""
+		if self.status == self.Status.ACTIVE:
+			return False  # Tournament already started
+		
+		from django.utils import timezone
+		self.status = self.Status.ACTIVE
+		self.started_at = timezone.now()
+		self.save(update_fields=["status", "started_at", "updated_at"])
+		return True
 
 # Model for Tournament Team
 class TournamentTeam(models.Model):
