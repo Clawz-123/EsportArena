@@ -2,6 +2,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "../slices/auth";
 import profileReducer from "../slices/viewprofile";
 import tournamentReducer from "../slices/tournamentSlice";
+import tournamentHistoryReducer from "../slices/tournamentHistorySlice";
 import contactReducer from "../slices/contactMessage";
 import  bracketReducer  from "../slices/BracketSlice";
 import matchReducer from "../slices/MatchSlice";
@@ -18,6 +19,7 @@ export const store = configureStore({
     auth: authReducer,
     profile: profileReducer,
     tournament: tournamentReducer,
+    tournamentHistory: tournamentHistoryReducer,
     contact: contactReducer,
     bracket: bracketReducer,
     match: matchReducer,

@@ -13,4 +13,6 @@ urlpatterns = [
     path('join/', views.JoinTournamentView.as_view(), name='join-tournament'),
     path('participants/<int:tournament_id>/', views.GetTournamentParticipantsView.as_view(), name='tournament-participants'),
     path('teams/<int:tournament_id>/', views.GetTournamentTeamsView.as_view(), name='tournament-teams'),
+    path('player-history/', views.PlayerTournamentHistoryView.as_view(), name='player-history'),
+    path('organizer-history/', views.OrganizerTournamentHistoryView.as_view(), name='organizer-history'),
 ]

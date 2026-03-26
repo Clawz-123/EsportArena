@@ -9,6 +9,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.db import transaction
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 from esport.response import api_response
 from Wallet.models import Wallet, WalletTransaction
@@ -29,6 +30,41 @@ from drf_yasg import openapi
 
 
 User = get_user_model()
+
+
+def _effective_history_status(tournament):
+    """Return a timeline-correct status for history views.
+
+    This protects UI stats when DB status becomes stale.
+    """
+    today = timezone.localdate()
+
+    reg_start = tournament.registration_start
+    reg_end = tournament.registration_end
+    match_start = tournament.match_start
+    expected_end = tournament.expected_end
+
+    # Date-based completion should always be treated as completed in history.
+    if expected_end and today > expected_end:
+        return Tournament.Status.COMPLETED
+
+    # Honor explicitly completed status as well.
+    if tournament.status == Tournament.Status.COMPLETED:
+        return Tournament.Status.COMPLETED
+
+    # Active window based on match timeline.
+    if match_start and today >= match_start and (not expected_end or today <= expected_end):
+        return Tournament.Status.ACTIVE
+
+    # Registration lifecycle.
+    if reg_start and reg_end and reg_start <= today <= reg_end:
+        return Tournament.Status.REGISTRATION_OPEN
+
+    if reg_end and match_start and reg_end < today < match_start:
+        return Tournament.Status.REGISTRATION_CLOSED
+
+    # Future tournaments are treated as registration open for history grouping.
+    return Tournament.Status.REGISTRATION_OPEN
 
 
 def _notify_tournament_user(user, title, message, metadata=None):
@@ -870,6 +906,207 @@ class GetMyJoinedTournamentsView(generics.ListAPIView):
                 result={
                     "count": tournaments.count(),
                     "tournaments": serializer.data
+                },
+            )
+        except Exception as e:
+            return api_response(
+                is_success=False,
+                error_message=str(e),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class PlayerTournamentHistoryView(APIView):
+    """Get tournament history for authenticated player"""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description="Get all tournaments participated by the authenticated player with optional filters",
+        manual_parameters=[
+            openapi.Parameter('status', openapi.IN_QUERY, description='Filter by status: all, completed, ongoing, registered', type=openapi.TYPE_STRING),
+            openapi.Parameter('game_type', openapi.IN_QUERY, description='Filter by game type: PUBG Mobile, Free Fire', type=openapi.TYPE_STRING),
+            openapi.Parameter('month', openapi.IN_QUERY, description='Filter by month (1-12)', type=openapi.TYPE_INTEGER),
+            openapi.Parameter('year', openapi.IN_QUERY, description='Filter by year', type=openapi.TYPE_INTEGER),
+        ],
+        responses={
+            200: openapi.Response(description="Player tournament history retrieved successfully"),
+            500: openapi.Response(description="Internal Server Error"),
+        },
+        tags=["Tournament History"],
+    )
+    def get(self, request):
+        try:
+            user = request.user
+            status_filter = request.query_params.get('status', 'all')
+            game_type = request.query_params.get('game_type')
+            month = request.query_params.get('month')
+            year = request.query_params.get('year')
+
+            # Base queryset: tournaments this player participated in
+            queryset = Tournament.objects.filter(
+                participants__player=user
+            ).select_related('organizer').order_by('-match_start')
+
+            # Game type filter
+            if game_type:
+                queryset = queryset.filter(game_title=game_type)
+
+            # Time filters
+            if month and year:
+                queryset = queryset.filter(match_start__month=int(month), match_start__year=int(year))
+            elif year:
+                queryset = queryset.filter(match_start__year=int(year))
+
+            # Remove duplicates
+            queryset = queryset.distinct()
+
+            def status_matches_filter(effective_status):
+                if status_filter == 'completed':
+                    return effective_status == Tournament.Status.COMPLETED
+                if status_filter == 'ongoing':
+                    return effective_status == Tournament.Status.ACTIVE
+                if status_filter == 'registered':
+                    return effective_status == Tournament.Status.REGISTRATION_OPEN
+                return True
+            
+            # Get participant info for each tournament
+            tournaments_data = []
+            for tournament in queryset:
+                try:
+                    participant = TournamentParticipant.objects.get(
+                        tournament=tournament,
+                        player=user
+                    )
+                    tournament_dict = TournamentDetailSerializer(tournament, context={'request': request}).data
+
+                    effective_status = _effective_history_status(tournament)
+                    if not status_matches_filter(effective_status):
+                        continue
+
+                    tournament_dict['status'] = effective_status
+                    tournament_dict['joined_at'] = participant.joined_at.isoformat()
+                    tournaments_data.append(tournament_dict)
+                except TournamentParticipant.DoesNotExist:
+                    continue
+
+            # Calculate summary stats
+            total_tournaments = len(tournaments_data)
+            completed = sum(1 for t in tournaments_data if t['status'] == Tournament.Status.COMPLETED)
+            ongoing = sum(1 for t in tournaments_data if t['status'] == Tournament.Status.ACTIVE)
+            registered = sum(1 for t in tournaments_data if t['status'] == Tournament.Status.REGISTRATION_OPEN)
+
+            return api_response(
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+                result={
+                    "count": total_tournaments,
+                    "completed": completed,
+                    "ongoing": ongoing,
+                    "registered": registered,
+                    "tournaments": tournaments_data
+                },
+            )
+        except Exception as e:
+            return api_response(
+                is_success=False,
+                error_message=str(e),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class OrganizerTournamentHistoryView(APIView):
+    """Get tournament history for authenticated organizer"""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description="Get all tournaments created by the authenticated organizer with optional filters",
+        manual_parameters=[
+            openapi.Parameter('status', openapi.IN_QUERY, description='Filter by status: all, completed, ongoing, registered', type=openapi.TYPE_STRING),
+            openapi.Parameter('game_type', openapi.IN_QUERY, description='Filter by game type: PUBG Mobile, Free Fire', type=openapi.TYPE_STRING),
+            openapi.Parameter('month', openapi.IN_QUERY, description='Filter by month (1-12)', type=openapi.TYPE_INTEGER),
+            openapi.Parameter('year', openapi.IN_QUERY, description='Filter by year', type=openapi.TYPE_INTEGER),
+        ],
+        responses={
+            200: openapi.Response(description="Organizer tournament history retrieved successfully"),
+            500: openapi.Response(description="Internal Server Error"),
+        },
+        tags=["Tournament History"],
+    )
+    def get(self, request):
+        try:
+            user = request.user
+            status_filter = request.query_params.get('status', 'all')
+            game_type = request.query_params.get('game_type')
+            month = request.query_params.get('month')
+            year = request.query_params.get('year')
+
+            # Base queryset: tournaments created by this organizer
+            queryset = Tournament.objects.filter(organizer=user).order_by('-match_start')
+
+            # Game type filter
+            if game_type:
+                queryset = queryset.filter(game_title=game_type)
+
+            # Time filters
+            if month and year:
+                queryset = queryset.filter(match_start__month=int(month), match_start__year=int(year))
+            elif year:
+                queryset = queryset.filter(match_start__year=int(year))
+
+            def status_matches_filter(effective_status):
+                if status_filter == 'completed':
+                    return effective_status == Tournament.Status.COMPLETED
+                if status_filter == 'ongoing':
+                    return effective_status == Tournament.Status.ACTIVE
+                if status_filter == 'registered':
+                    return effective_status == Tournament.Status.REGISTRATION_OPEN
+                return True
+
+            # Get detailed tournament data with stats
+            tournaments_data = []
+            total_revenue = 0
+            total_participants = 0
+
+            for tournament in queryset:
+                tournament_dict = TournamentDetailSerializer(tournament, context={'request': request}).data
+
+                effective_status = _effective_history_status(tournament)
+                if not status_matches_filter(effective_status):
+                    continue
+
+                tournament_dict['status'] = effective_status
+                
+                # Add participant count
+                participant_count = TournamentParticipant.objects.filter(tournament=tournament).count()
+                tournament_dict['participants_count'] = participant_count
+                
+                # Add revenue (entry_fee * participants)
+                revenue = tournament.entry_fee * participant_count if tournament.entry_fee else 0
+                tournament_dict['revenue'] = revenue
+                
+                tournaments_data.append(tournament_dict)
+                total_revenue += revenue
+                total_participants += participant_count
+
+            # Calculate summary stats
+            total_tournaments = len(tournaments_data)
+            completed = sum(1 for t in tournaments_data if t['status'] == Tournament.Status.COMPLETED)
+            ongoing = sum(1 for t in tournaments_data if t['status'] == Tournament.Status.ACTIVE)
+            registered = sum(1 for t in tournaments_data if t['status'] == Tournament.Status.REGISTRATION_OPEN)
+
+            return api_response(
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+                result={
+                    "count": total_tournaments,
+                    "completed": completed,
+                    "ongoing": ongoing,
+                    "registered": registered,
+                    "total_revenue": total_revenue,
+                    "total_participants": total_participants,
+                    "tournaments": tournaments_data
                 },
             )
         except Exception as e:

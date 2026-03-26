@@ -7,6 +7,7 @@ import {
     Wallet,
     Bell,
     LogOut,
+    BarChart3,
 } from 'lucide-react'
 import { useAppDispatch } from '../../store/hooks'
 import { logoutUser } from '../../slices/auth'
@@ -14,6 +15,7 @@ import { logoutUser } from '../../slices/auth'
 const items = [
     { label: 'Dashboard', to: '/PlayerDashboard', icon: LayoutDashboard },
     { label: 'My Tournaments', to: '/PlayerMyTournament', icon: Trophy },
+    { label: 'Tournament History', to: '/player/history', icon: BarChart3 },
     { label: 'Wallet & Transactions', to: '/PlayerWalletandEarning', icon: Wallet },
     { label: 'Notifications', to: '/player/notifications', icon: Bell },
 ]

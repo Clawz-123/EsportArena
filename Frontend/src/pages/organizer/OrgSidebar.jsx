@@ -8,11 +8,13 @@ import {
     CheckCircle,
     Wallet,
     Bell,
+    BarChart3,
 } from 'lucide-react'
 
 const items = [
     { label: 'Dashboard', to: '/OrgDashboard', icon: LayoutDashboard },
     { label: 'My Tournaments', to: '/Orgtournaments', icon: Trophy },
+    { label: 'Tournament History', to: '/organizer/history', icon: BarChart3 },
     { label: 'Create Tournament', to: '/OrgCreateTournament', icon: PlusCircle },
     { label: 'Result Verification', to: '/OrgResultVerification', icon: CheckCircle },
     { label: 'Wallet & Earnings', to: '/OrgWallet', icon: Wallet },

@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { X, ArrowRight, ArrowLeft, AlertCircle, ExternalLink } from 'lucide-react'
 import ConfirmationModal from '../../../components/common/ConfirmationModal'
+import { validateCoins, validatePhoneNumber } from '../../utils/WithdrawValidation'
 
 const METHODS = [
   {
@@ -66,8 +67,10 @@ const WithdrawModal = ({ balance, onClose, onSubmit, onStripeConnect, onStripeWi
     : netCoins.toLocaleString()
 
   const handleAmountNext = () => {
-    if (coinNum < 10) return setError('Minimum withdrawal is 10 coins')
-    if (coinNum > walletBalance) return setError('Insufficient balance')
+    const validationError = validateCoins(coins, balance)
+    if (validationError) {
+      return setError(validationError)
+    }
     setError('')
     setStep(2)
   }
@@ -85,7 +88,12 @@ const WithdrawModal = ({ balance, onClose, onSubmit, onStripeConnect, onStripeWi
 
   const handleAccountNext = () => {
     const id = accountId.trim()
-    if (!id) return setError('Please enter your account details')
+    if (!selectedMethod) return
+    
+    const validationError = validatePhoneNumber(id, selectedMethod.id)
+    if (validationError) {
+      return setError(validationError)
+    }
     setError('')
     setStep(4) // go to final confirm
   }
@@ -104,7 +112,7 @@ const WithdrawModal = ({ balance, onClose, onSubmit, onStripeConnect, onStripeWi
     setShowConfirmation(false)
   }
 
-  const quickAmounts = [100, 500, 1000, 5000]
+  const quickAmounts = [100, 250, 500, 1000]
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -143,8 +151,12 @@ const WithdrawModal = ({ balance, onClose, onSubmit, onStripeConnect, onStripeWi
                   onChange={(e) => { setCoins(e.target.value); setError('') }}
                   placeholder="Enter coins to withdraw"
                   min={10}
+                  max={1000}
                   className="w-full px-4 py-3 rounded-lg bg-[#1E293B] border border-slate-600 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
                 />
+                <p className="text-xs text-slate-500 mt-1">
+                  Minimum: 10 coins • Maximum: 1000 coins
+                </p>
               </div>
 
               <div className="flex gap-2">
@@ -198,7 +210,6 @@ const WithdrawModal = ({ balance, onClose, onSubmit, onStripeConnect, onStripeWi
               <div className="space-y-3">
                 {METHODS.map((m) => {
                   const isStripeMethod = m.id === 'stripe'
-                  const notConnected = isStripeMethod && !stripeConnected
                   return (
                     <button
                       key={m.id}
@@ -273,6 +284,9 @@ const WithdrawModal = ({ balance, onClose, onSubmit, onStripeConnect, onStripeWi
                   placeholder={selectedMethod.placeholder}
                   className="w-full px-4 py-3 rounded-lg bg-[#1E293B] border border-slate-600 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
                 />
+                <p className="text-xs text-slate-500 mt-1">
+                  {selectedMethod.id === 'esewa' ? 'Enter your eSewa phone number (e.g., 9841234567)' : 'Enter your Khalti phone number (e.g., 9841234567)'}
+                </p>
               </div>
 
               {error && <p className="text-xs text-red-400 flex items-center gap-1"><AlertCircle className="w-3.5 h-3.5" />{error}</p>}

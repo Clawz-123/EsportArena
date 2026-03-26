@@ -22,7 +22,7 @@ const STATUS_FILTER_OPTIONS = [
   { value: 'Ongoing', label: 'Ongoing' },
   { value: 'Upcoming', label: 'Upcoming' },
   { value: 'Completed', label: 'Completed' },
-  { value: 'Draft', label: 'Draft' },
+  { value: 'Reg. Closed', label: 'Registration Closed' },
 ]
 
 const TABLE_HEADERS = [

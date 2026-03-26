@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Send, Megaphone, X, Bell, Loader } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '../../../store/hooks'
-import { fetchMessages, fetchAnnouncements, postMessage, postAnnouncement, addMessage, addAnnouncement, setCurrentUserId } from '../../../slices/ChatSlice'
+import { fetchMessages, fetchAnnouncements, postMessage, postAnnouncement, addMessage, setCurrentUserId } from '../../../slices/ChatSlice'
 import { chatAPI, formatBackendMessage, formatBackendAnnouncement } from '../../../axios/chatAPI'
 
 const ForumCard = ({ tournament }) => {
@@ -178,7 +178,7 @@ const ForumCard = ({ tournament }) => {
         </button>
       </div>
 
-      <div className="bg-[#0B1220] border border-[#1F2937] rounded-xl h-[650px] flex flex-col overflow-hidden shadow-sm">
+      <div className="bg-[#0B1220] border border-[#1F2937] rounded-xl h-162.5 flex flex-col overflow-hidden shadow-sm">
         {/* Messages Area */}
         <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-6 py-6 custom-scrollbar space-y-6">
           {activeTab === 'General' ? (
@@ -250,7 +250,7 @@ const ForumCard = ({ tournament }) => {
                     className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-4 backdrop-blur-sm transition-all hover:border-opacity-50"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center">
+                      <div className="shrink-0 w-8 h-8 rounded-lg bg-linear-to-br from-blue-600 to-blue-800 flex items-center justify-center">
                         <Bell className="w-4 h-4 text-white" />
                       </div>
 
@@ -328,11 +328,11 @@ const ForumCard = ({ tournament }) => {
       {/* Announcement Composer Modal */}
       {showAnnouncementComposer && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gradient-to-b from-[#0F172A] to-[#0B1220] border border-[#1F2937] rounded-xl w-full max-w-md max-h-[80vh] overflow-y-auto p-5 space-y-4 shadow-xl">
+          <div className="bg-linear-to-b from-[#0F172A] to-[#0B1220] border border-[#1F2937] rounded-xl w-full max-w-md max-h-[80vh] overflow-y-auto p-5 space-y-4 shadow-xl">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-linear-to-br from-blue-600 to-blue-800 flex items-center justify-center">
                   <Megaphone className="w-4 h-4 text-white" />
                 </div>
                 <h3 className="text-lg font-semibold text-white">Post Announcement</h3>

@@ -14,12 +14,14 @@ import OrgDashboard from './pages/organizer/OrgDashboard.jsx'
 import OrgTournaments from './pages/organizer/OrgTournaments.jsx'
 import OrgCreateTournament from './pages/organizer/OrgCreateTournament.jsx'
 import OrgParticipant from './pages/organizer/individual/OrgTournamentHeader.jsx'
+import OrgTournamentHistory from './pages/organizer/OrgTournamentHistory.jsx'
 import ContactUs from './pages/public/ContactUs.jsx'
 import Tournament from './pages/public/Tournament.jsx'
 import PlayerDashboard from './pages/player/PlayerDashboard.jsx'
 import PlayerMyTournament from './pages/player/PlayerMyTournament.jsx'
 import PlayerWalletandEarning from './pages/player/PlayerWalletandEarning.jsx'
 import PlayerNotifications from './pages/player/Notifications.jsx'
+import PlayerTournamentHistory from './pages/player/PlayerTournamentHistory.jsx'
 import OrgNotification from './pages/organizer/OrgNotification.jsx'
 import WalletKhaltiReturn from './pages/player/WalletKhaltiReturn.jsx'
 import WalletEsewaReturn from './pages/player/WalletEsewaReturn.jsx'
@@ -109,6 +111,7 @@ function App() {
           <Route path='/Orgtournaments' element={<AuthGate> <OrgTournaments /></AuthGate>} />
           <Route path='/OrgCreateTournament' element={<AuthGate> <OrgCreateTournament /></AuthGate>} />
           <Route path='/organizer/tournaments/:id' element={<AuthGate> <OrgParticipant /></AuthGate>} />
+          <Route path='/organizer/history' element={<AuthGate> <OrgTournamentHistory /></AuthGate>} />
           <Route path='/contact-us' element={<AuthGate> <ContactUs /></AuthGate>} />
           <Route path='/tournaments' element={<AuthGate> <Tournament /></AuthGate>} />
           <Route path='/tournaments/:id' element={<AuthGate> <TournaHeader /></AuthGate>} />
@@ -116,6 +119,7 @@ function App() {
           <Route path='/PlayerMyTournament' element={<AuthGate> <PlayerMyTournament /></AuthGate>} />
           <Route path='/PlayerWalletandEarning' element={<AuthGate> <PlayerWalletandEarning /></AuthGate>} />
           <Route path='/player/notifications' element={<AuthGate> <PlayerNotifications /></AuthGate>} />
+          <Route path='/player/history' element={<AuthGate> <PlayerTournamentHistory /></AuthGate>} />
           <Route path='/organizer/notifications' element={<AuthGate> <OrgNotification /></AuthGate>} />
           <Route path='/notifications' element={<AuthGate> <NotificationsRedirect /></AuthGate>} />
           <Route path='/wallet/khalti-return' element={<AuthGate> <WalletKhaltiReturn /></AuthGate>} />
