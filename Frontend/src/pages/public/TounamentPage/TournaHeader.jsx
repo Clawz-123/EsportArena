@@ -6,7 +6,6 @@ import { ChevronLeft, Calendar, Users, DollarSign, Trophy } from 'lucide-react'
 import Header from '../../../components/common/Header'
 import OverviewCard from './OverviewCard'
 import ForumCard from './ForumCard'
-import ResultCard from './ResultCard'
 import Leaderboard from './Leaderboard'
 
 const TournaHeader = () => {
@@ -83,7 +82,6 @@ const TournaHeader = () => {
   const tabs = [
     { id: 'overview', label: 'Overview' },
     { id: 'forums', label: 'Forums' },
-    { id: 'results', label: 'Results' },
     { id: 'leaderboard', label: 'Leaderboard' },
   ]
 
@@ -93,8 +91,6 @@ const TournaHeader = () => {
         return <OverviewCard tournament={tournament} />
       case 'forums':
         return <ForumCard tournament={tournament} />
-      case 'results':
-        return <ResultCard tournament={tournament} />
       case 'leaderboard':
         return <Leaderboard tournament={tournament} />
       default:

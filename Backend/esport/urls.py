@@ -42,7 +42,6 @@ urlpatterns = [
     path("api/contact/", include("contactMessage.urls")),
     path("api/match/", include("Match.urls")),
     path("api/leaderboard/", include("LeaderBoard.urls")),
-    path("api/result/", include("Result.urls")),
     path("api/wallet/", include("Wallet.urls")),
     path("api/payment/", include("Payment.urls")),
     path("api/notifications/", include("Notification.urls")),

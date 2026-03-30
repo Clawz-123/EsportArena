@@ -21,7 +21,6 @@ export const resolveNotificationPath = (notification, user) => {
   const isOrganizer = !!user?.is_organizer
 
   const isPayment = hasAny(type, ['payment', 'withdraw']) || !!metadata.order_id || !!metadata.withdrawal_id
-  const isResult = hasAny(type, ['result']) || !!metadata.result_id
   const isTournamentFlow =
     hasAny(type, ['tournament', 'match', 'bracket']) ||
     !!tournamentId ||
@@ -29,13 +28,12 @@ export const resolveNotificationPath = (notification, user) => {
 
   if (isAdmin) {
     if (isPayment) return '/admin/withdrawals'
-    if (isTournamentFlow || isResult) return '/admin/tournaments'
+    if (isTournamentFlow) return '/admin/tournaments'
     return '/admin/dashboard'
   }
 
   if (isOrganizer) {
     if (isPayment) return '/OrgWallet'
-    if (isResult) return '/OrgResultVerification'
     if (tournamentId) return `/organizer/tournaments/${tournamentId}`
     if (isTournamentFlow) return '/Orgtournaments'
     return '/OrgDashboard'
@@ -44,6 +42,6 @@ export const resolveNotificationPath = (notification, user) => {
   // Default player navigation.
   if (isPayment) return '/PlayerWalletandEarning'
   if (tournamentId) return `/tournaments/${tournamentId}`
-  if (isTournamentFlow || isResult) return '/PlayerMyTournament'
+  if (isTournamentFlow) return '/PlayerMyTournament'
   return '/PlayerDashboard'
 }

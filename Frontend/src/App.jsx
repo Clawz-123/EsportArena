@@ -27,7 +27,6 @@ import WalletKhaltiReturn from './pages/player/WalletKhaltiReturn.jsx'
 import WalletEsewaReturn from './pages/player/WalletEsewaReturn.jsx'
 import WalletStripeReturn from './pages/player/WalletStripeReturn.jsx'
 import TournaHeader from './pages/public/TounamentPage/TournaHeader.jsx'
-import OrgResultVerification from './pages/organizer/OrgResultVerification.jsx'
 import OrgWallet from './pages/organizer/OrgWallet.jsx'
 import AdminDashboard from './pages/admin/AdminDashboard.jsx'
 import AdminPayment from './pages/admin/AdminPayment.jsx'
@@ -127,7 +126,6 @@ function App() {
           <Route path='/wallet/esewa-return' element={<AuthGate> <WalletEsewaReturn /></AuthGate>} />
           <Route path='/wallet/stripe-return' element={<AuthGate> <WalletStripeReturn /></AuthGate>} />
           <Route path='/Tournaheader' element={<AuthGate> <TournaHeader /></AuthGate>} />
-          <Route path='/OrgResultVerification' element={<AuthGate> <OrgResultVerification /></AuthGate>} />
           <Route path='/OrgWallet' element={<AuthGate> <OrgWallet /></AuthGate>} />
 
           {/* Admin Routes */}

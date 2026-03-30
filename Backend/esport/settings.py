@@ -57,7 +57,6 @@ INSTALLED_APPS = [
     'TournamentBaracket',
     'Match',
     'LeaderBoard',
-    'Result',
     'Wallet',
     'Payment',
     'Notification',

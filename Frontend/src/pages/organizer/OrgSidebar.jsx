@@ -16,7 +16,6 @@ const items = [
     { label: 'My Tournaments', to: '/Orgtournaments', icon: Trophy },
     { label: 'Tournament History', to: '/organizer/history', icon: BarChart3 },
     { label: 'Create Tournament', to: '/OrgCreateTournament', icon: PlusCircle },
-    { label: 'Result Verification', to: '/OrgResultVerification', icon: CheckCircle },
     { label: 'Wallet & Earnings', to: '/OrgWallet', icon: Wallet },
     { label: 'Notifications', to: '/organizer/notifications', icon: Bell },
 ]

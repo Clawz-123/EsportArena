@@ -31,9 +31,6 @@ const defaultInitialValues = {
   prizeSecond: '0',
   prizeThird: '0',
   matchRules: '',
-  requireResultProof: false,
-  proofType: 'Screenshot Only',
-  resultTimeLimit: '24',
   autoStartTournament: false,
 }
 
@@ -91,9 +88,6 @@ const OrgCreateTournament = () => {
       prizeSecond: String(editTournament.prize_second ?? 0),
       prizeThird: String(editTournament.prize_third ?? 0),
       matchRules: editTournament.match_rules || '',
-      requireResultProof: Boolean(editTournament.require_result_proof),
-      proofType: editTournament.proof_type || 'Screenshot Only',
-      resultTimeLimit: String(editTournament.result_time_limit_hours ?? 24),
       autoStartTournament: Boolean(editTournament.auto_start_tournament),
     }
   }, [editTournament, isEditMode])
@@ -125,9 +119,6 @@ const OrgCreateTournament = () => {
       prize_second: parseInt(values.prizeSecond),
       prize_third: parseInt(values.prizeThird),
       match_rules: values.matchRules,
-      require_result_proof: values.requireResultProof,
-      proof_type: values.proofType,
-      result_time_limit_hours: parseInt(values.resultTimeLimit),
       auto_start_tournament: values.autoStartTournament,
     }
 
@@ -551,7 +542,7 @@ const OrgCreateTournament = () => {
                   <span className="h-2 w-2 rounded-full bg-[#F472B6] shadow-[0_0_10px_rgba(244,114,182,0.7)]" />
                   <h2 className="text-base font-semibold text-[#F8FAFC]">Match Rules & Result Settings</h2>
                 </div>
-                <p className="text-xs text-[#94A3B8]">Proof types and submission timing.</p>
+                <p className="text-xs text-[#94A3B8]">Match guidelines and rules.</p>
 
                 <div>
                   <label className="block text-sm font-medium text-[#E5E7EB] mb-2">
@@ -569,54 +560,6 @@ const OrgCreateTournament = () => {
                   <ErrorMessage name="matchRules" component="p" className="text-red-400 text-xs mt-1" />
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <Field
-                    type="checkbox"
-                    id="requireResultProof"
-                    name="requireResultProof"
-                    className="w-4 h-4 rounded bg-[#0B1120] border border-white/10 cursor-pointer accent-[#3B82F6]"
-                  />
-                  <label htmlFor="requireResultProof" className="text-sm text-[#E5E7EB] cursor-pointer">
-                    Require result proof for verification
-                  </label>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-[#E5E7EB] mb-2">
-                    Accepted Proof Type <span className="text-red-400">*</span>
-                  </label>
-                  <div className="relative">
-                    <Field
-                      as="select"
-                      name="proofType"
-                      className={`appearance-none w-full bg-[#0B1120] border rounded-md px-4 py-2.5 pr-10 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer ${
-                        touched.proofType && errors.proofType ? 'border-red-400' : 'border-white/10'
-                      }`}
-                    >
-                      <option value="Screenshot Only">Screenshot Only</option>
-                    </Field>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280] pointer-events-none" />
-                  </div>
-                  <ErrorMessage name="proofType" component="p" className="text-red-400 text-xs mt-1" />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-[#E5E7EB] mb-2">
-                    Result Submission Time Limit (Hours) <span className="text-red-400">*</span>
-                  </label>
-                  <Field
-                    type="number"
-                    name="resultTimeLimit"
-                    min="1"
-                    className={`w-full bg-[#0B1120] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors ${
-                      touched.resultTimeLimit && errors.resultTimeLimit ? 'border-red-400' : 'border-white/10'
-                    }`}
-                  />
-                  <ErrorMessage name="resultTimeLimit" component="p" className="text-red-400 text-xs mt-1" />
-                  <p className="text-xs text-[#6B7280] mt-1">
-                    Time allowed for players to submit results after a match
-                  </p>
-                </div>
               </div>
 
               {/* SECTION 6: Control */}

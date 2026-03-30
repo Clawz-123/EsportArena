@@ -26,9 +26,6 @@ class TournamentCreateSerializer(serializers.ModelSerializer):
 			"prize_second",
 			"prize_third",
 			"match_rules",
-			"require_result_proof",
-			"proof_type",
-			"result_time_limit_hours",
 			"auto_start_tournament",
 		]
 
@@ -69,9 +66,6 @@ class TournamentUpdateSerializer(serializers.ModelSerializer):
 			"prize_second",
 			"prize_third",
 			"match_rules",
-			"require_result_proof",
-			"proof_type",
-			"result_time_limit_hours",
 			"auto_start_tournament",
 		]
 
@@ -139,9 +133,6 @@ class TournamentDetailSerializer(serializers.ModelSerializer):
 			"prize_third",
 			"total_prize_pool",
 			"match_rules",
-			"require_result_proof",
-			"proof_type",
-			"result_time_limit_hours",
 			"auto_start_tournament",
 			"status",
 			"started_at",

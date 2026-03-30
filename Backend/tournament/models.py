@@ -17,8 +17,6 @@ class Tournament(models.Model):
 		DUO = "Duo", "Duo"
 		SQUAD = "Squad", "Squad"
 
-	class ProofTypes(models.TextChoices):
-		SCREENSHOT_ONLY = "Screenshot Only", "Screenshot Only"
 
 	class Visibility(models.TextChoices):
 		PUBLIC = "Public", "Public"
@@ -54,16 +52,6 @@ class Tournament(models.Model):
 	prize_third = models.PositiveIntegerField(default=0)
 
 	match_rules = models.TextField(blank=True)
-	require_result_proof = models.BooleanField(default=False)
-	proof_type = models.CharField(
-		max_length=30,
-		choices=ProofTypes.choices,
-		default=ProofTypes.SCREENSHOT_ONLY,
-	)
-	result_time_limit_hours = models.PositiveIntegerField(
-		default=24,
-		validators=[MinValueValidator(1)],
-	)
 
 	visibility = models.CharField(
 		max_length=10,

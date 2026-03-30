@@ -83,17 +83,8 @@ export const tournamentValidationSchema = Yup.object().shape({
   matchRules: Yup.string()
     .max(2000, "Match rules cannot exceed 2000 characters"),
   
-  requireResultProof: Yup.boolean(),
-  
-  proofType: Yup.string()
-    .required("Proof type is required")
-    .oneOf(["Screenshot Only"], "Invalid proof type"),
-  
-  resultTimeLimit: Yup.number()
-    .required("Result time limit is required")
-    .typeError("Time limit must be a number")
-    .min(1, "Time limit must be at least 1 hour")
-    .max(168, "Time limit cannot exceed 168 hours"),
+  matchRules: Yup.string()
+    .max(2000, "Match rules cannot exceed 2000 characters"),
   
   autoStartTournament: Yup.boolean(),
 });

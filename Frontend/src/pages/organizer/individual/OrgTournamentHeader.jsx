@@ -106,10 +106,6 @@ const OrgTournamentHeader = () => {
     navigate(`/OrgCreateTournament?editId=${tournament.id}`)
   }
 
-  const handleVerifyResults = () => {
-    if (!tournament?.id) return
-    navigate(`/OrgResultVerification?tournamentId=${tournament.id}`)
-  }
 
   const handleOpenDeleteConfirm = () => {
     // Check if tournament can be deleted
@@ -261,12 +257,6 @@ const OrgTournamentHeader = () => {
                   className="px-4 py-2 rounded-md bg-[#1E293B] text-white hover:bg-[#2D3748] transition-colors"
                 >
                   Edit Tournament
-                </button>
-                <button
-                  onClick={handleVerifyResults}
-                  className="px-4 py-2 rounded-md bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors font-semibold"
-                >
-                  Verify Results
                 </button>
                 <button
                   onClick={handleOpenDeleteConfirm}
