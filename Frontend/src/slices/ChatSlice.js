@@ -6,10 +6,12 @@ export const fetchMessages = createAsyncThunk(
   async (tournamentId, { rejectWithValue }) => {
     try {
       const response = await chatAPI.getMessages(tournamentId)
-      const messages = response.data.Result || []
+      const payload = response.data || {}
+      const messages = payload.result || payload.Result || []
       return messages
     } catch (error) {
-      return rejectWithValue(error.response?.data?.Error_Message || 'Failed to fetch messages')
+      const apiError = error.response?.data
+      return rejectWithValue(apiError?.error || apiError?.Error_Message || 'Failed to fetch messages')
     }
   }
 )
@@ -19,9 +21,11 @@ export const fetchAnnouncements = createAsyncThunk(
   async (tournamentId, { rejectWithValue }) => {
     try {
       const response = await chatAPI.getAnnouncements(tournamentId)
-      return response.data.Result || []
+      const payload = response.data || {}
+      return payload.result || payload.Result || []
     } catch (error) {
-      return rejectWithValue(error.response?.data?.Error_Message || 'Failed to fetch announcements')
+      const apiError = error.response?.data
+      return rejectWithValue(apiError?.error || apiError?.Error_Message || 'Failed to fetch announcements')
     }
   }
 )
@@ -32,7 +36,14 @@ export const postMessage = createAsyncThunk(
     try {
       const state = getState()
       const response = await chatAPI.postMessage(tournamentId, message)
-      const messageData = response.data.Result
+      const payload = response.data || {}
+      if (payload.blocked) {
+        return rejectWithValue(payload.error || 'Message blocked by moderation')
+      }
+      if (payload.success === false) {
+        return rejectWithValue(payload.error || 'Failed to post message')
+      }
+      const messageData = payload.result || payload.Result || payload
 
       // Ensure message has sender info - if not provided by backend, use current user
       if (state.auth?.user) {
@@ -52,7 +63,8 @@ export const postMessage = createAsyncThunk(
 
       return messageData
     } catch (error) {
-      return rejectWithValue(error.response?.data?.Error_Message || 'Failed to post message')
+      const apiError = error.response?.data
+      return rejectWithValue(apiError?.error || apiError?.Error_Message || 'Failed to post message')
     }
   }
 )
@@ -62,9 +74,17 @@ export const postAnnouncement = createAsyncThunk(
   async ({ tournamentId, message }, { rejectWithValue }) => {
     try {
       const response = await chatAPI.postAnnouncement(tournamentId, message)
-      return response.data.Result
+      const payload = response.data || {}
+      if (payload.blocked) {
+        return rejectWithValue(payload.error || 'Announcement blocked by moderation')
+      }
+      if (payload.success === false) {
+        return rejectWithValue(payload.error || 'Failed to post announcement')
+      }
+      return payload.result || payload.Result || payload
     } catch (error) {
-      return rejectWithValue(error.response?.data?.Error_Message || 'Failed to post announcement')
+      const apiError = error.response?.data
+      return rejectWithValue(apiError?.error || apiError?.Error_Message || 'Failed to post announcement')
     }
   }
 )

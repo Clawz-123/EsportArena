@@ -1,46 +1,20 @@
-import axios from 'axios'
-
-const API_BASE_URL = 'http://localhost:8000/api'
+import axiosInstance from './axiousinstance'
 
 export const chatAPI = {
   getMessages: (tournamentId) => {
-    return axios.get(`${API_BASE_URL}/chat/tournaments/${tournamentId}/messages/`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-      },
-    })
+    return axiosInstance.get(`/chat/tournaments/${tournamentId}/messages/`)
   },
 
   postMessage: (tournamentId, message) => {
-    return axios.post(
-      `${API_BASE_URL}/chat/tournaments/${tournamentId}/messages/`,
-      { message },
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-        },
-      }
-    )
+    return axiosInstance.post(`/chat/tournaments/${tournamentId}/messages/`, { message })
   },
 
   getAnnouncements: (tournamentId) => {
-    return axios.get(`${API_BASE_URL}/chat/tournaments/${tournamentId}/announcements/`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-      },
-    })
+    return axiosInstance.get(`/chat/tournaments/${tournamentId}/announcements/`)
   },
 
   postAnnouncement: (tournamentId, message) => {
-    return axios.post(
-      `${API_BASE_URL}/chat/tournaments/${tournamentId}/announcements/`,
-      { message },
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-        },
-      }
-    )
+    return axiosInstance.post(`/chat/tournaments/${tournamentId}/announcements/`, { message })
   },
 
   connectWebSocket: (tournamentId, token) => {

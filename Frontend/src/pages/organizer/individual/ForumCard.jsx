@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Send, Megaphone, X, Bell, Loader } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '../../../store/hooks'
-import { fetchMessages, fetchAnnouncements, postMessage, postAnnouncement, addMessage, setCurrentUserId } from '../../../slices/ChatSlice'
+import { fetchMessages, fetchAnnouncements, postAnnouncement, addMessage, setCurrentUserId } from '../../../slices/ChatSlice'
 import { chatAPI, formatBackendMessage, formatBackendAnnouncement } from '../../../axios/chatAPI'
+import ChatInput from '../../../components/common/ChatInput'
 
 const ForumCard = ({ tournament }) => {
   const dispatch = useAppDispatch()
@@ -10,8 +11,6 @@ const ForumCard = ({ tournament }) => {
   const { user } = useAppSelector((state) => state.auth || {})
 
   const [activeTab, setActiveTab] = useState('General')
-  const [newMessage, setNewMessage] = useState('')
-  const [isSending, setIsSending] = useState(false)
 
   // Announcement composer state
   const [showAnnouncementComposer, setShowAnnouncementComposer] = useState(false)
@@ -99,23 +98,6 @@ const ForumCard = ({ tournament }) => {
       console.error('Failed to connect WebSocket:', error)
     }
   }, [tournament?.id, user?.id, dispatch])
-
-  const handlePostMessage = async (e) => {
-    if (e) e.preventDefault()
-    if (!newMessage.trim() || isSending) return
-
-    const messageText = newMessage
-    setNewMessage('')
-    setIsSending(true)
-    try {
-      await dispatch(postMessage({ tournamentId: tournament.id, message: messageText }))
-    } catch (error) {
-      console.error('Error posting message:', error)
-      setNewMessage(messageText)
-    } finally {
-      setIsSending(false)
-    }
-  }
 
   const handleAnnouncementFormChange = (e) => {
     const { name, value } = e.target
@@ -283,31 +265,11 @@ const ForumCard = ({ tournament }) => {
         {/* Input Areas - fixed at bottom inside flex column */}
         {activeTab === 'General' && (
           <div className="shrink-0 px-6 pb-5 pt-3 border-t border-[#1F2937] bg-[#0B1220]">
-            <form onSubmit={handlePostMessage} className="bg-[#111827] rounded-xl p-2 pl-4 flex items-center gap-3 border border-[#374151] shadow-2xl">
-              <input
-                type="text"
-                placeholder="Type a message..."
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                disabled={isSending}
-                className="flex-1 bg-transparent text-sm text-white placeholder-[#6B7280] focus:outline-none py-3 disabled:opacity-50"
-              />
-              <button
-                type="submit"
-                disabled={!newMessage.trim() || isSending}
-                className={`p-3 rounded-lg transition-colors ${
-                  newMessage.trim() && !isSending
-                    ? 'bg-[#2563EB] hover:bg-[#1d4ed8] text-white'
-                    : 'bg-[#1F2937] text-[#4B5563] cursor-not-allowed'
-                }`}
-              >
-                {isSending ? (
-                  <Loader className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Send className="w-5 h-5" />
-                )}
-              </button>
-            </form>
+            <ChatInput
+              endpoint={`/chat/tournaments/${tournament?.id}/messages/`}
+              onMessageSent={(msg) => dispatch(addMessage(msg))}
+              placeholder="Type a message..."
+            />
           </div>
         )}
 
