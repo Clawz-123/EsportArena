@@ -77,3 +77,22 @@ class ModerationWord(models.Model):
 
 	def __str__(self):
 		return self.word
+
+
+class ReportedMessage(models.Model):
+	class Status(models.TextChoices):
+		OPEN = "open", "Open"
+		REVIEWING = "reviewing", "Reviewing"
+		RESOLVED = "resolved", "Resolved"
+
+	message = models.ForeignKey(ChatMessage, on_delete=models.CASCADE, related_name="reports")
+	reported_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+	reason = models.TextField(blank=True)
+	created_at = models.DateTimeField(auto_now_add=True)
+	status = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN)
+
+	class Meta:
+		ordering = ["-created_at"]
+
+	def __str__(self):
+		return f"Report {self.id} on message {self.message_id}"

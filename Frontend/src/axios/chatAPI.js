@@ -17,6 +17,14 @@ export const chatAPI = {
     return axiosInstance.post(`/chat/tournaments/${tournamentId}/announcements/`, { message })
   },
 
+  reportMessage: (messageId, reason) => {
+    return axiosInstance.post(`/chat/messages/${messageId}/report/`, { reason })
+  },
+
+  deleteMessage: (messageId) => {
+    return axiosInstance.delete(`/chat/messages/${messageId}/`)
+  },
+
   connectWebSocket: (tournamentId, token) => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const wsUrl = `${protocol}//localhost:8000/ws/chat/tournaments/${tournamentId}/?token=${token}`

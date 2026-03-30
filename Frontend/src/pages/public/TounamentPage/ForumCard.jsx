@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { MessageSquare, Megaphone, Loader } from 'lucide-react'
+import { MessageSquare, Megaphone, Loader, Flag, Trash2 } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '../../../store/hooks'
-import { fetchMessages, fetchAnnouncements, addMessage, addAnnouncement, setCurrentUserId } from '../../../slices/ChatSlice'
+import { fetchMessages, fetchAnnouncements, addMessage, addAnnouncement, setCurrentUserId, removeMessage } from '../../../slices/ChatSlice'
 import { chatAPI, formatBackendMessage, formatBackendAnnouncement } from '../../../axios/chatAPI'
 import ChatInput from '../../../components/common/ChatInput'
+import ConfirmationModal from '../../../components/common/ConfirmationModal'
 
 const ForumCard = ({ tournament }) => {
   const dispatch = useAppDispatch()
@@ -11,6 +12,9 @@ const ForumCard = ({ tournament }) => {
   const { user } = useAppSelector((state) => state.auth || {})
 
   const [activeTab, setActiveTab] = useState('General')
+  const [actionFor, setActionFor] = useState(null)
+  const [pendingAction, setPendingAction] = useState(null)
+  const [isProcessing, setIsProcessing] = useState(false)
 
   // Ref for auto-scrolling
   const messagesEndRef = useRef(null)
@@ -139,7 +143,7 @@ const ForumCard = ({ tournament }) => {
                       </div>
                     </div>
 
-                    <div className={`flex flex-col max-w-[70%] ${msg.isMe ? 'items-end' : 'items-start'}`}>
+                    <div className={`relative flex flex-col max-w-[70%] ${msg.isMe ? 'items-end' : 'items-start'}`}>
                       <div className="flex items-baseline gap-2 mb-1.5 px-1">
                         {msg.isMe ? (
                           <>
@@ -161,7 +165,8 @@ const ForumCard = ({ tournament }) => {
                       </div>
 
                       <div
-                        className={`px-5 py-3 rounded-2xl text-sm leading-relaxed shadow-sm ${
+                        onClick={() => setActionFor(actionFor === msg.id ? null : msg.id)}
+                        className={`px-5 py-3 rounded-2xl text-sm leading-relaxed shadow-sm cursor-pointer ${
                           msg.isMe
                             ? 'bg-[#2563EB] text-white rounded-tr-sm'
                             : 'bg-[#1F2937] text-[#E5E7EB] rounded-tl-sm border border-[#374151]'
@@ -169,6 +174,41 @@ const ForumCard = ({ tournament }) => {
                       >
                         {msg.message}
                       </div>
+
+                      {actionFor === msg.id && (
+                        <div className="absolute top-full mt-1 right-0 z-10 min-w-[140px] rounded-lg border border-[#1F2937] bg-[#0b1220] shadow-lg">
+                          {!msg.isMe && (
+                            <button
+                              onClick={() => {
+                                setPendingAction({
+                                  type: 'report',
+                                  messageId: msg.id,
+                                  preview: msg.message,
+                                })
+                                setActionFor(null)
+                              }}
+                              className="w-full px-3 py-2 text-left text-sm text-[#E5E7EB] hover:bg-amber-500/10 flex items-center gap-2"
+                            >
+                              <Flag className="w-4 h-4 text-amber-300" /> Report
+                            </button>
+                          )}
+                          {msg.isMe && (
+                            <button
+                              onClick={() => {
+                                setPendingAction({
+                                  type: 'delete',
+                                  messageId: msg.id,
+                                  preview: msg.message,
+                                })
+                                setActionFor(null)
+                              }}
+                              className="w-full px-3 py-2 text-left text-sm text-[#E5E7EB] hover:bg-red-500/10 flex items-center gap-2"
+                            >
+                              <Trash2 className="w-4 h-4 text-red-300" /> Delete
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -234,6 +274,37 @@ const ForumCard = ({ tournament }) => {
           </div>
         )}
       </div>
+
+      <ConfirmationModal
+        isOpen={!!pendingAction}
+        title={pendingAction?.type === 'delete' ? 'Delete this message?' : 'Report this message?'}
+        message={pendingAction?.preview ? `"${pendingAction.preview}"` : 'Are you sure you want to continue?'}
+        confirmText={pendingAction?.type === 'delete' ? 'Delete' : 'Report'}
+        cancelText="Cancel"
+        variant={pendingAction?.type === 'delete' ? 'danger' : 'warning'}
+        isLoading={isProcessing}
+        onCancel={() => {
+          if (isProcessing) return
+          setPendingAction(null)
+        }}
+        onConfirm={async () => {
+          if (!pendingAction) return
+          setIsProcessing(true)
+          try {
+            if (pendingAction.type === 'delete') {
+              await chatAPI.deleteMessage(pendingAction.messageId)
+              dispatch(removeMessage(pendingAction.messageId))
+            } else if (pendingAction.type === 'report') {
+              await chatAPI.reportMessage(pendingAction.messageId, '')
+            }
+          } catch (error) {
+            console.error('Action failed', error)
+          } finally {
+            setIsProcessing(false)
+            setPendingAction(null)
+          }
+        }}
+      />
     </div>
   )
 }

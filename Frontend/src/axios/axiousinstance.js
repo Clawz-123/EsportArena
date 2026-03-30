@@ -39,6 +39,12 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+
+    // Skip refresh logic for auth endpoints to avoid redirect loops on login failures
+    const isAuthEndpoint = originalRequest?.url?.includes('/accounts/login/') || originalRequest?.url?.includes('/accounts/register/') || originalRequest?.url?.includes('/accounts/token/refresh/');
+    if (isAuthEndpoint) {
+      return Promise.reject(error);
+    }
     
     // Checking if the error is a 401 Unauthorized and we haven't already tried to refresh the token
     if (error.response?.status === 401 && !originalRequest._retry) {

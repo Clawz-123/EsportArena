@@ -33,6 +33,7 @@ import AdminDashboard from './pages/admin/AdminDashboard.jsx'
 import AdminPayment from './pages/admin/AdminPayment.jsx'
 import AdminUsers from './pages/admin/AdminUsers.jsx'
 import AdminTournaments from './pages/admin/AdminTournaments.jsx'
+import AdminReports from './pages/admin/AdminReports.jsx'
 import NotificationSocketManager from './components/common/NotificationSocketManager.jsx'
 
 // Redirect SuperAdmin away from public pages to admin dashboard
@@ -134,6 +135,7 @@ function App() {
           <Route path='/admin/withdrawals' element={<AdminGate> <AdminPayment /></AdminGate>} />
           <Route path='/admin/users' element={<AdminGate> <AdminUsers /></AdminGate>} />
           <Route path='/admin/tournaments' element={<AdminGate> <AdminTournaments /></AdminGate>} />
+          <Route path='/admin/reports' element={<AdminGate> <AdminReports /></AdminGate>} />
 
         </Routes>
       </Router>

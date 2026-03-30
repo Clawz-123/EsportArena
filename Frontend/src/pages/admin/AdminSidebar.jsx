@@ -6,6 +6,7 @@ import {
   CreditCard,
   Users,
   Trophy,
+  ShieldAlert,
   LogOut,
 } from 'lucide-react'
 import { useAppDispatch } from '../../store/hooks'
@@ -16,6 +17,7 @@ const items = [
   { label: 'Withdrawals', to: '/admin/withdrawals', icon: CreditCard },
   { label: 'Users', to: '/admin/users', icon: Users },
   { label: 'Tournaments', to: '/admin/tournaments', icon: Trophy },
+  { label: 'Reports', to: '/admin/reports', icon: ShieldAlert },
 ]
 
 const SidebarItem = ({ to, label, icon }) => (

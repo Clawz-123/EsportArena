@@ -1,7 +1,9 @@
 import logging
+from datetime import datetime, timedelta
 
+from django.utils import timezone
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -10,10 +12,11 @@ logger = logging.getLogger(__name__)
 from esport.response import api_response
 from tournament.models import Tournament
 
-from .models import BlockedMessage, ChatMessage, ModerationWord, ToxicUserWhitelist
+from .models import BlockedMessage, ChatMessage, ModerationWord, ReportedMessage, ToxicUserWhitelist
 from .serializers import ChatMessageSerializer
 from .services import broadcast_chat_message
 from .toxicity import get_toxic_filter
+from .models import ReportedMessage
 
 
 def _is_user_whitelisted(user) -> bool:
@@ -150,6 +153,21 @@ class TournamentChatMessageView(APIView):
 		)
 
 
+class ChatMessageDetailView(APIView):
+	permission_classes = [IsAuthenticated]
+
+	def delete(self, request, message_id):
+		message = ChatMessage.objects.filter(id=message_id).select_related("sender").first()
+		if not message:
+			return Response({"success": False, "error": "Message not found."}, status=status.HTTP_404_NOT_FOUND)
+
+		if message.sender_id != request.user.id and not request.user.is_staff:
+			return Response({"success": False, "error": "Not allowed to delete this message."}, status=status.HTTP_403_FORBIDDEN)
+
+		message.delete()
+		return Response({"success": True}, status=status.HTTP_200_OK)
+
+
 class TournamentAnnouncementView(APIView):
 	permission_classes = [IsAuthenticated]
 
@@ -273,3 +291,145 @@ class ChatMessageCheckView(APIView):
 			},
 			status=status.HTTP_200_OK,
 		)
+
+
+class ReportChatMessageView(APIView):
+	permission_classes = [IsAuthenticated]
+
+	def post(self, request, message_id):
+		reason = (request.data.get("reason") or "").strip()
+		message_obj = ChatMessage.objects.filter(id=message_id).first()
+		if not message_obj:
+			return Response(
+				{"success": False, "error": "Message not found."},
+				status=status.HTTP_404_NOT_FOUND,
+			)
+
+		report = ReportedMessage.objects.create(
+			message=message_obj,
+			reported_by=request.user if request.user.is_authenticated else None,
+			reason=reason,
+		)
+
+		return Response(
+			{"success": True, "report_id": report.id, "status": report.status},
+			status=status.HTTP_201_CREATED,
+		)
+
+
+class AdminReportedMessagesView(APIView):
+	permission_classes = [IsAuthenticated, IsAdminUser]
+
+	def get(self, request):
+		reports = (
+			ReportedMessage.objects.select_related("message", "message__sender", "reported_by")
+			.order_by("-created_at")
+		)
+		results = []
+		for r in reports:
+			msg = r.message
+			sender = msg.sender
+			reporter = r.reported_by
+			results.append(
+				{
+					"id": r.id,
+					"status": r.status,
+					"reason": r.reason or "",
+					"created_at": r.created_at,
+					"message_id": msg.id,
+					"message": msg.message,
+					"tournament_id": msg.tournament_id,
+					"sender": {
+						"id": sender.id if sender else None,
+						"email": getattr(sender, "email", None),
+						"name": getattr(sender, "name", None),
+					},
+					"reported_by": {
+						"id": reporter.id if reporter else None,
+						"email": getattr(reporter, "email", None),
+						"name": getattr(reporter, "name", None),
+					},
+				}
+			)
+
+		return Response({"success": True, "results": results}, status=status.HTTP_200_OK)
+
+
+class AdminBlockUserFromReportView(APIView):
+	permission_classes = [IsAuthenticated, IsAdminUser]
+
+	def post(self, request, report_id):
+		report = ReportedMessage.objects.select_related("message__sender").filter(id=report_id).first()
+		if not report:
+			return Response({"success": False, "error": "Report not found."}, status=status.HTTP_404_NOT_FOUND)
+		sender = report.message.sender if report.message else None
+		if not sender:
+			return Response({"success": False, "error": "Sender not found."}, status=status.HTTP_404_NOT_FOUND)
+
+		duration_key = str(request.data.get("duration", "7d")).lower()
+		custom_until_str = request.data.get("until")
+		durations = {
+			"1d": 1,
+			"1_day": 1,
+			"3d": 3,
+			"7d": 7,
+			"1w": 7,
+			"30d": 30,
+		}
+		blocked_until = None
+		if custom_until_str:
+			try:
+				dt = datetime.fromisoformat(custom_until_str)
+				blocked_until = timezone.make_aware(dt) if timezone.is_naive(dt) else dt
+			except Exception:
+				return Response({"success": False, "error": "Invalid date format for 'until'. Use ISO datetime."}, status=status.HTTP_400_BAD_REQUEST)
+		else:
+			days = durations.get(duration_key)
+			if days is None:
+				# allow numeric days like "2" or "2.5"
+				try:
+					days = float(duration_key)
+				except Exception:
+					return Response({"success": False, "error": "Invalid duration."}, status=status.HTTP_400_BAD_REQUEST)
+			blocked_until = timezone.now() + timedelta(days=days)
+
+		block_reason = (request.data.get("reason") or "Blocked by admin for toxic language.").strip()
+
+		sender.blocked_until = blocked_until
+		sender.blocked_reason = block_reason
+		sender.is_blocked = True
+		sender.is_active = True  # keep account usable after block expires
+		sender.save(update_fields=["blocked_until", "blocked_reason", "is_blocked", "is_active"])
+
+		# Force-logout the user by blacklisting all their outstanding refresh tokens
+		try:
+			from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
+			tokens = OutstandingToken.objects.filter(user=sender)
+			for t in tokens:
+				BlacklistedToken.objects.get_or_create(token=t)
+		except Exception as e:
+			logger.error(f"Failed to blacklist tokens for blocked user {sender.id}: {str(e)}")
+
+		report.status = ReportedMessage.Status.RESOLVED
+		report.save(update_fields=["status"])
+
+		return Response(
+			{
+				"success": True,
+				"blocked_user_id": sender.id,
+				"blocked_until": blocked_until.isoformat(),
+				"report_status": report.status,
+			},
+			status=status.HTTP_200_OK,
+		)
+
+
+class AdminCancelReportView(APIView):
+	permission_classes = [IsAuthenticated, IsAdminUser]
+
+	def post(self, request, report_id):
+		report = ReportedMessage.objects.filter(id=report_id).first()
+		if not report:
+			return Response({"success": False, "error": "Report not found."}, status=status.HTTP_404_NOT_FOUND)
+		report.delete()
+		return Response({"success": True, "message": "Report cancelled."}, status=status.HTTP_200_OK)

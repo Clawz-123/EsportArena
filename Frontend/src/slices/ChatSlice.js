@@ -115,6 +115,10 @@ const chatSlice = createSlice({
         state.messages[existingIndex] = { ...state.messages[existingIndex], ...newMsg }
       }
     },
+    removeMessage: (state, action) => {
+      const id = action.payload
+      state.messages = state.messages.filter((m) => m.id !== id)
+    },
     addAnnouncement: (state, action) => {
       const newAnnouncement = action.payload
       const exists = state.announcements.some((a) => a.id === newAnnouncement.id)
@@ -189,5 +193,5 @@ const chatSlice = createSlice({
   },
 })
 
-export const { setCurrentUserId, addMessage, addAnnouncement, clearMessages } = chatSlice.actions
+export const { setCurrentUserId, addMessage, addAnnouncement, clearMessages, removeMessage } = chatSlice.actions
 export default chatSlice.reducer

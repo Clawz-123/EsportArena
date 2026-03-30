@@ -87,7 +87,7 @@ class RegisterUserView(generics.CreateAPIView):
         except Exception as e:
             return api_response(
                 is_success=False,
-                error_message=(e),
+                error_message=str(e),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -333,12 +333,59 @@ class LoginUserView(TokenObtainPairView):
             if serializer.is_valid():
                 email = serializer.validated_data['email']
                 password = serializer.validated_data['password']
+
+                # Helper function for getting accurate block message based on reason and remaining time
+                def get_block_message(u):
+                    if u.blocked_until and u.blocked_until > timezone.now():
+                        rem = u.blocked_until - timezone.now()
+                        d, h, m = rem.days, rem.seconds // 3600, (rem.seconds % 3600) // 60
+                        time_parts = []
+                        if d > 0: time_parts.append(f"{d} days")
+                        if h > 0: time_parts.append(f"{h} hours")
+                        if m > 0 or not time_parts: time_parts.append(f"{m} minutes")
+                        time_str = " ".join(time_parts)
+                        
+                        if "toxic" in (u.blocked_reason or "").lower():
+                            return f"You have been blocked due to toxic word your account will be un block in {time_str}."
+                        return f"You have been blocked by admin for {time_str}."
+                    return "You have been permanently blocked by admin."
+
+                # Early block check before password verification so blocked users see the block message instead of invalid credentials
+                user_candidate = User.objects.filter(email=email).first()
+                if user_candidate:
+                    # Auto-clear expired blocks for visibility
+                    if user_candidate.blocked_until and user_candidate.blocked_until <= timezone.now():
+                        user_candidate.is_blocked = False
+                        user_candidate.blocked_until = None
+                        user_candidate.blocked_reason = ""
+                        user_candidate.save(update_fields=["is_blocked", "blocked_until", "blocked_reason"])
+                    
+                    if user_candidate.is_blocked or (user_candidate.blocked_until and user_candidate.blocked_until > timezone.now()):
+                        return api_response(
+                            is_success=False,
+                            error_message=get_block_message(user_candidate),
+                            status_code=status.HTTP_403_FORBIDDEN,
+                        )
+
                 user = authenticate(request, username=email, password=password)
 
                 if user is not None:
+
+                    if user.is_blocked or (user.blocked_until and user.blocked_until > timezone.now()):
+                        return api_response(
+                            is_success=False,
+                            error_message=get_block_message(user),
+                            status_code=status.HTTP_403_FORBIDDEN,
+                        )
+
+                    if user.blocked_until and user.blocked_until <= timezone.now():
+                        user.blocked_until = None
+                        user.blocked_reason = ""
+                        user.is_blocked = False
+                        user.save(update_fields=["blocked_until", "blocked_reason", "is_blocked"])
+
                     # Update last_login
                     from django.contrib.auth import update_session_auth_hash
-                    from django.utils import timezone
                     user.last_login = timezone.now()
                     user.save(update_fields=['last_login'])
                     
@@ -371,7 +418,7 @@ class LoginUserView(TokenObtainPairView):
         except Exception as e:
             return api_response(
                 is_success=False,
-                error_message=(e),
+                error_message=str(e),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -413,7 +460,7 @@ class LogoutUserView(APIView):
         except Exception as e:
             return api_response(
                 is_success=False,
-                error_message=(e, "An error occurred during logout."),
+                error_message=str(e),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
     

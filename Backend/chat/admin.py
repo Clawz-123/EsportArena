@@ -4,6 +4,7 @@ from .models import (
 	BlockedMessage,
 	ChatMessage,
 	ModerationWord,
+	ReportedMessage,
 	ToxicUserWhitelist,
 )
 
@@ -32,3 +33,10 @@ class ToxicUserWhitelistAdmin(admin.ModelAdmin):
 class ModerationWordAdmin(admin.ModelAdmin):
 	list_display = ("id", "word", "created_at", "added_by")
 	search_fields = ("word",)
+
+
+@admin.register(ReportedMessage)
+class ReportedMessageAdmin(admin.ModelAdmin):
+	list_display = ("id", "message", "reported_by", "status", "created_at")
+	list_filter = ("status", "created_at")
+	search_fields = ("reason", "message__message", "reported_by__email")

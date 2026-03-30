@@ -38,8 +38,21 @@ const Login = () => {
           let errorMessage = 'Login failed';
           if (typeof errorPayload === 'string') {
             errorMessage = errorPayload;
+          } else if (errorPayload?.error_message || errorPayload?.Error_Message) {
+            // api_response error structure (camel/lower)
+            const raw = errorPayload.error_message ?? errorPayload.Error_Message;
+            if (typeof raw === 'string') {
+              errorMessage = raw;
+            } else {
+              const firstError = Object.values(raw)[0];
+              errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+            }
           } else if (errorPayload?.detail) {
             errorMessage = errorPayload.detail;
+          } else if (errorPayload?.error) {
+            errorMessage = errorPayload.error;
+          } else if (errorPayload?.Error_Message || errorPayload?.error_message) {
+            errorMessage = errorPayload.Error_Message || errorPayload.error_message;
           } else if (errorPayload && typeof errorPayload === 'object') {
             // Fallback for field errors: grab the first value of the first key
             const firstError = Object.values(errorPayload)[0];
