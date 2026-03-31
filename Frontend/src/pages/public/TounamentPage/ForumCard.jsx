@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { MessageSquare, Megaphone, Loader, Flag, Trash2 } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '../../../store/hooks'
-import { fetchMessages, fetchAnnouncements, addMessage, addAnnouncement, setCurrentUserId, removeMessage } from '../../../slices/ChatSlice'
+import { fetchMessages, fetchAnnouncements, addMessage, setCurrentUserId, removeMessage } from '../../../slices/ChatSlice'
 import { chatAPI, formatBackendMessage, formatBackendAnnouncement } from '../../../axios/chatAPI'
 import ChatInput from '../../../components/common/ChatInput'
 import ConfirmationModal from '../../../components/common/ConfirmationModal'
@@ -125,7 +125,7 @@ const ForumCard = ({ tournament }) => {
         </button>
       </div>
 
-      <div className="bg-[#0B1220] border border-[#1F2937] rounded-xl h-[650px] flex flex-col overflow-hidden shadow-sm">
+      <div className="bg-[#0B1220] border border-[#1F2937] rounded-xl h-162.5 flex flex-col overflow-hidden shadow-sm">
         {/* Messages Area */}
         <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-6 py-6 custom-scrollbar space-y-6">
           {activeTab === 'General' ? (
@@ -176,7 +176,7 @@ const ForumCard = ({ tournament }) => {
                       </div>
 
                       {actionFor === msg.id && (
-                        <div className="absolute top-full mt-1 right-0 z-10 min-w-[140px] rounded-lg border border-[#1F2937] bg-[#0b1220] shadow-lg">
+                        <div className="absolute top-full mt-1 right-0 z-10 min-w-35 rounded-lg border border-[#1F2937] bg-[#0b1220] shadow-lg">
                           {!msg.isMe && (
                             <button
                               onClick={() => {
@@ -233,7 +233,7 @@ const ForumCard = ({ tournament }) => {
                     className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-4 backdrop-blur-sm transition-all hover:border-opacity-50"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center">
+                      <div className="shrink-0 w-8 h-8 rounded-lg bg-linear-to-br from-blue-600 to-blue-800 flex items-center justify-center">
                         <Megaphone className="w-4 h-4 text-white" />
                       </div>
 

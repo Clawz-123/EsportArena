@@ -7,7 +7,6 @@ import contactReducer from "../slices/contactMessage";
 import  bracketReducer  from "../slices/BracketSlice";
 import matchReducer from "../slices/MatchSlice";
 import leaderBoardReducer from "../slices/leaderBoardSlice";
-import resultReducer from "../slices/resultSlice";
 import walletSlice from "../slices/walletSlice";
 import adminReducer from "../slices/adminSlice";
 import notificationReducer from "../slices/notificationSlice";
@@ -24,7 +23,6 @@ export const store = configureStore({
     bracket: bracketReducer,
     match: matchReducer,
     leaderboard: leaderBoardReducer,
-    result: resultReducer,
     wallet: walletSlice,
     admin: adminReducer,
     notifications: notificationReducer,
