@@ -129,65 +129,116 @@ const LeaderBoardCard = ({ tournamentId }) => {
           </div>
         </div>
 
-        <div className="bg-[#1E293B] rounded-lg border border-[#2D3748] overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-[#2D3748]">
-                <th className="px-6 py-3 text-left text-xs font-semibold text-[#9CA3AF] uppercase">Rank</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-[#9CA3AF] uppercase">Team</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-[#9CA3AF] uppercase">Points</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-[#9CA3AF] uppercase">Kills</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-[#9CA3AF] uppercase">WWCD</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-[#9CA3AF] uppercase">Total</th>
-                <th className="px-6 py-3 text-right text-xs font-semibold text-[#9CA3AF] uppercase">Edit</th>
-               </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan="7" className="px-6 py-8 text-center">
-                    <p className="text-sm text-[#9CA3AF]">Loading leaderboard...</p>
-                  </td>
+        <div className="bg-[#111827] rounded-xl border border-white/5 overflow-hidden shadow-2xl">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-[#1e293b]/50 border-b border-white/10">
+                  <th className="px-6 py-4 text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">Rank</th>
+                  <th className="px-6 py-4 text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">Team</th>
+                  <th className="px-6 py-4 text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider text-center">Placement</th>
+                  <th className="px-6 py-4 text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider text-center">Kill Pts</th>
+                  <th className="px-6 py-4 text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider text-center">WWCD</th>
+                  <th className="px-6 py-4 text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider text-center">Total Pts</th>
+                  <th className="px-6 py-4 text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider text-right">Edit</th>
                 </tr>
-              ) : error ? (
-                <tr>
-                  <td colSpan="7" className="px-6 py-8 text-center">
-                    <p className="text-sm text-red-400">Failed to load leaderboard.</p>
-                  </td>
-                </tr>
-              ) : leaderboard.length > 0 ? (
-                leaderboard.map((entry, index) => (
-                  <tr key={entry.id} className="border-b border-[#2D3748] last:border-0 hover:bg-[#2D3748]/30 transition-colors">
-                    <td className="px-6 py-4 text-sm text-white">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">#{index + 1}</span>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {loading ? (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-12 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+                        <p className="text-sm text-[#94a3b8]">Loading standings...</p>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-white font-medium">{entry.team_name}</td>
-                    <td className="px-6 py-4 text-sm text-white font-semibold">{entry.placement_points}</td>
-                    <td className="px-6 py-4 text-sm text-white">{entry.kill_points}</td>
-                    <td className="px-6 py-4 text-sm text-[#10B981]">{entry.wwcd}</td>
-                    <td className="px-6 py-4 text-sm text-white font-semibold">{entry.total_points}</td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        className="text-[#9CA3AF] hover:text-white inline-flex items-center gap-2 text-sm transition-colors"
-                        onClick={() => openEditPoints(entry)}
-                        title="Edit points"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
+                  </tr>
+                ) : error ? (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-12 text-center text-red-400 text-sm">
+                      Failed to load leaderboard. Please try again.
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="7" className="px-6 py-8 text-center">
-                    <p className="text-sm text-[#9CA3AF]">No leaderboard data yet.</p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                ) : leaderboard.length > 0 ? (
+                  leaderboard.map((entry, index) => {
+                    const rank = index + 1
+                    const isTop3 = rank <= 3
+                    const rankStyles = {
+                      1: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
+                      2: 'bg-slate-300/10 text-slate-300 border-slate-300/20',
+                      3: 'bg-amber-600/10 text-amber-600 border-amber-600/20'
+                    }
+
+                    return (
+                      <tr 
+                        key={entry.id} 
+                        className={`group transition-all hover:bg-white/[0.02] ${isTop3 ? 'bg-white/[0.01]' : ''}`}
+                      >
+                        <td className="px-6 py-4">
+                          <div className={`
+                            w-8 h-8 rounded-lg border flex items-center justify-center font-bold text-sm
+                            ${isTop3 ? rankStyles[rank] : 'text-[#64748b] border-transparent'}
+                          `}>
+                            {rank}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-[#1e293b] border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                              {entry.team_logo ? (
+                                <img src={entry.team_logo} alt={entry.team_name} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-xs font-bold text-blue-500">
+                                  {entry.team_name?.substring(0, 2).toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                            <span className={`font-semibold ${isTop3 ? 'text-white text-base' : 'text-[#e2e8f0] text-sm'}`}>
+                              {entry.team_name}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="text-[#94a3b8] font-medium">{entry.placement_points}</span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="text-[#94a3b8] font-medium">{entry.kill_points}</span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <span className={`font-bold ${entry.wwcd > 0 ? 'text-[#10b981]' : 'text-[#475569]'}`}>
+                              {entry.wwcd}
+                            </span>
+                            {entry.wwcd > 0 && <span className="text-[10px] text-[#10b981]/60 font-bold tracking-tighter">WIN</span>}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={`font-black tracking-tight ${isTop3 ? 'text-blue-400 text-lg' : 'text-white text-base'}`}>
+                            {entry.total_points}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button
+                            className="p-2 rounded-lg text-[#94a3b8] hover:text-white hover:bg-white/5 transition-all opacity-0 group-hover:opacity-100"
+                            onClick={() => openEditPoints(entry)}
+                            title="Edit points"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-12 text-center text-[#64748b] text-sm italic">
+                      No tournament data available for this group yet.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
       {editingEntry && (

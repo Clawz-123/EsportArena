@@ -143,7 +143,7 @@ const PlayerDashboard = () => {
                   Recent Tournaments
                 </h2>
                 <button
-                  onClick={() => navigate('/player/tournaments')}
+                  onClick={() => navigate('/PlayerMyTournament')}
                   className="text-sm font-medium text-[#3B82F6] hover:text-[#2563EB]"
                 >
                   View All
@@ -194,7 +194,7 @@ const PlayerDashboard = () => {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <button
-                            onClick={() => navigate(`/player/tournaments/${t.id}`)}
+                            onClick={() => navigate(`/tournaments/${t.id}`)}
                             className="text-sm font-medium text-[#3B82F6] hover:text-[#2563EB]"
                           >
                             View

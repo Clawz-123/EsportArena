@@ -6,6 +6,15 @@ from .models import GroupLeaderboardEntry
 class GroupLeaderboardEntrySerializer(serializers.ModelSerializer):
 	# Serializer for the GroupLeaderboardEntry model
 	team_name = serializers.CharField(source="team.team_name", read_only=True)
+	team_logo = serializers.SerializerMethodField()
+
+	def get_team_logo(self, obj):
+		if obj.team and obj.team.team_logo:
+			request = self.context.get('request')
+			if request:
+				return request.build_absolute_uri(obj.team.team_logo.url)
+			return obj.team.team_logo.url
+		return None
 
 	class Meta:
 		model = GroupLeaderboardEntry
@@ -16,6 +25,7 @@ class GroupLeaderboardEntrySerializer(serializers.ModelSerializer):
 			"group_name",
 			"team",
 			"team_name",
+			"team_logo",
 			"rank",
 			"wwcd",
 			"placement_points",

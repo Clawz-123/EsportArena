@@ -30,7 +30,7 @@ class CreateLeaderboardEntryView(generics.CreateAPIView):
 	)
 	def post(self, request):
 		try:
-			serializer = self.serializer_class(data=request.data)
+			serializer = self.serializer_class(data=request.data, context={"request": request})
 			if serializer.is_valid():
 				entry = serializer.save()
 				return api_response(
@@ -38,7 +38,7 @@ class CreateLeaderboardEntryView(generics.CreateAPIView):
 					status_code=status.HTTP_201_CREATED,
 					result={
 						"message": "Leaderboard entry created successfully.",
-						"entry": GroupLeaderboardEntrySerializer(entry).data,
+						"entry": GroupLeaderboardEntrySerializer(entry, context={"request": request}).data,
 					},
 				)
 			return api_response(
@@ -87,7 +87,7 @@ class ListLeaderboardEntriesView(generics.ListAPIView):
 				entries = entries.filter(group_name=group_name)
 
 			entries = entries.order_by("rank", "-total_points")
-			serializer = self.serializer_class(entries, many=True)
+			serializer = self.serializer_class(entries, many=True, context={"request": request})
 			return api_response(
 				is_success=True,
 				status_code=status.HTTP_200_OK,
@@ -132,7 +132,7 @@ class UpdateLeaderboardEntryView(generics.UpdateAPIView):
 					status_code=status.HTTP_403_FORBIDDEN,
 				)
 
-			serializer = self.serializer_class(entry, data=request.data, partial=True)
+			serializer = self.serializer_class(entry, data=request.data, partial=True, context={"request": request})
 			if serializer.is_valid():
 				updated_entry = serializer.save()
 				return api_response(
@@ -140,7 +140,7 @@ class UpdateLeaderboardEntryView(generics.UpdateAPIView):
 					status_code=status.HTTP_200_OK,
 					result={
 						"message": "Leaderboard entry updated successfully.",
-						"entry": GroupLeaderboardEntrySerializer(updated_entry).data,
+						"entry": GroupLeaderboardEntrySerializer(updated_entry, context={"request": request}).data,
 					},
 				)
 			return api_response(
