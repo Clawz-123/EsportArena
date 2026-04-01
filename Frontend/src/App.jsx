@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { Provider, useSelector } from 'react-redux'
 import { toast } from 'react-toastify'
 import { store } from './store/store.js'
-import Home from './pages/public/home.jsx'
+import Home from './pages/public/Home.jsx'
 import Login from './pages/auth/Login.jsx'
 import Register from './pages/auth/Register.jsx'
 import VerifyOtp from './pages/Otp/VerifyOtp.jsx'
