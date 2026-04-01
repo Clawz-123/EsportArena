@@ -8,7 +8,7 @@ import { registerUser, clearError } from "../../slices/auth";
 import {
   playerValidationSchema,
   organizerValidationSchema,
-} from "../utils/registerValidation";
+} from "../utils/registervalidation";
 
 const Register = () => {
   const [userType, setUserType] = useState("player");
