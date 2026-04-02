@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import JsonResponse
 from rest_framework import permissions
 
 from drf_yasg.views import get_schema_view
@@ -33,8 +34,22 @@ schema_view = get_schema_view(
     permission_classes=[permissions.AllowAny],
 )
 
+
+def root_view(request):
+    return JsonResponse(
+        {
+            "service": "Esport Arena API",
+            "status": "ok",
+            "docs": {
+                "swagger": "/swagger/",
+                "redoc": "/redoc/",
+            },
+        }
+    )
+
 # Joining the urls of accounts app, tournament app and admin panel
 urlpatterns = [
+    path("", root_view),
     path("admin/", admin.site.urls),
     path("api/accounts/", include("accounts.urls")),
     path("api/tournament/", include("tournament.urls")),
