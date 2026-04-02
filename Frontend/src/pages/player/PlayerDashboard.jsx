@@ -2,6 +2,7 @@ import React, { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import { fetchMyJoinedTournaments } from '../../slices/tournamentSlice'
+import { fetchWalletBalance } from '../../slices/walletSlice'
 import PlayerSidebar from './PlayerSidebar'
 import ProfileMenu from '../../components/common/ProfileMenu'
 import {
@@ -15,9 +16,11 @@ const PlayerDashboard = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { joinedTournaments, loading } = useAppSelector((state) => state.tournament)
+  const { balance } = useAppSelector((state) => state.wallet)
 
   useEffect(() => {
     dispatch(fetchMyJoinedTournaments())
+    dispatch(fetchWalletBalance())
   }, [dispatch])
 
   // Get tournament status
@@ -42,7 +45,7 @@ const PlayerDashboard = () => {
   const pendingCount = joinedTournaments.filter(t => getTournamentStatus(t) === 'registration').length
 
   const stats = [
-    {
+    {balance?.balance ? balance.balance.toLocaleString() : '
       label: 'Wallet Balance',
       value: '1,250',
       icon: Wallet,
