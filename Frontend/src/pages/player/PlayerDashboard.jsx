@@ -45,9 +45,9 @@ const PlayerDashboard = () => {
   const pendingCount = joinedTournaments.filter(t => getTournamentStatus(t) === 'registration').length
 
   const stats = [
-    {balance?.balance ? balance.balance.toLocaleString() : '
+    {
       label: 'Wallet Balance',
-      value: '1,250',
+      value: balance?.balance ? balance.balance.toLocaleString() : '0',
       icon: Wallet,
       color: 'text-[#3B82F6]',
     },
