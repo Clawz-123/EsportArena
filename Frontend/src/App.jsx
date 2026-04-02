@@ -122,9 +122,9 @@ function App() {
           <Route path='/player/history' element={<AuthGate> <PlayerTournamentHistory /></AuthGate>} />
           <Route path='/organizer/notifications' element={<AuthGate> <OrgNotification /></AuthGate>} />
           <Route path='/notifications' element={<AuthGate> <NotificationsRedirect /></AuthGate>} />
-          <Route path='/wallet/khalti-return' element={<AuthGate> <WalletKhaltiReturn /></AuthGate>} />
-          <Route path='/wallet/esewa-return' element={<AuthGate> <WalletEsewaReturn /></AuthGate>} />
-          <Route path='/wallet/stripe-return' element={<AuthGate> <WalletStripeReturn /></AuthGate>} />
+          <Route path='/wallet/khalti-return' element={<WalletKhaltiReturn />} />
+          <Route path='/wallet/esewa-return' element={<WalletEsewaReturn />} />
+          <Route path='/wallet/stripe-return' element={<WalletStripeReturn />} />
           <Route path='/Tournaheader' element={<AuthGate> <TournaHeader /></AuthGate>} />
           <Route path='/OrgWallet' element={<AuthGate> <OrgWallet /></AuthGate>} />
 
