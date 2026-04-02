@@ -27,7 +27,7 @@ export const chatAPI = {
 
   connectWebSocket: (tournamentId, token) => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsUrl = `${protocol}//localhost:8000/ws/chat/tournaments/${tournamentId}/?token=${token}`
+    const wsUrl = `${protocol}//esportarena-q3t0.onrender.com/ws/chat/tournaments/${tournamentId}/?token=${token}`
     return new WebSocket(wsUrl)
   },
 }

@@ -21,7 +21,7 @@ const NotificationSocketManager = () => {
       return
     }
 
-    const apiBase = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api'
+    const apiBase = import.meta.env.VITE_API_URL || 'https://esportarena-q3t0.onrender.com/api'
     const wsBase = apiBase.replace(/^http/, 'ws').replace(/\/api\/?$/, '')
 
     let manuallyClosed = false

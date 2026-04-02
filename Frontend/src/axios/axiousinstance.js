@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://esportarena-q3t0.onrender.com/api';
 // Creating a hepler function to get the access token from local storage
 const getAccessToken = () => {
   return localStorage.getItem('access_token');
