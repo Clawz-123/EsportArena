@@ -3,6 +3,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from accounts.models import User
+from esport.media_utils import resolve_media_url
 from .models import Tournament, TournamentTeam, TournamentParticipant
 
 
@@ -105,9 +106,7 @@ class TournamentDetailSerializer(serializers.ModelSerializer):
 	def get_organizer_profile_image(self, obj):
 		if obj.organizer and obj.organizer.profile_image:
 			request = self.context.get('request')
-			if request:
-				return request.build_absolute_uri(obj.organizer.profile_image.url)
-			return obj.organizer.profile_image.url
+			return resolve_media_url(request, obj.organizer.profile_image)
 		return None
 
 	class Meta:
@@ -162,9 +161,7 @@ class TournamentParticipantSerializer(serializers.ModelSerializer):
 	def get_player_profile_image(self, obj):
 		if obj.player and obj.player.profile_image:
 			request = self.context.get('request')
-			if request:
-				return request.build_absolute_uri(obj.player.profile_image.url)
-			return obj.player.profile_image.url
+			return resolve_media_url(request, obj.player.profile_image)
 		return None
 
 	class Meta:
@@ -195,8 +192,15 @@ class TournamentParticipantSerializer(serializers.ModelSerializer):
 class TournamentTeamSerializer(serializers.ModelSerializer):
 	captain_name = serializers.CharField(source="captain.name", read_only=True)
 	captain_email = serializers.EmailField(source="captain.email", read_only=True)
+	team_logo = serializers.SerializerMethodField()
 	members = TournamentParticipantSerializer(many=True, read_only=True)
 	member_count = serializers.SerializerMethodField()
+
+	def get_team_logo(self, obj):
+		if obj.team_logo:
+			request = self.context.get('request')
+			return resolve_media_url(request, obj.team_logo)
+		return None
 
 	def get_member_count(self, obj):
 		return obj.members.count()

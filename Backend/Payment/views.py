@@ -13,6 +13,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 import stripe
 
 from accounts.permission import IsSuperUser
+from esport.media_utils import resolve_media_url
 from esport.response import api_response
 from Notification.models import Notification
 from Notification.services import send_notification_to_user
@@ -1269,7 +1270,7 @@ class AdminWithdrawalListView(APIView):
 					'platform_fee': str(w.platform_fee),
 					'status': w.status,
 					'stripe_account_id': w.stripe_account_id or '',
-					'receipt_image': request.build_absolute_uri(w.receipt_image.url) if w.receipt_image else None,
+					'receipt_image': resolve_media_url(request, w.receipt_image),
 					'created_at': w.created_at.isoformat(),
 					'updated_at': w.updated_at.isoformat(),
 				})

@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import User
 from .otp import create_and_send_otp
+from esport.media_utils import resolve_media_url
 
 
 
@@ -16,9 +17,7 @@ class UserResponseSerializers(serializers.ModelSerializer):
     def get_profile_image(self, obj):
         if obj.profile_image:
             request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.profile_image.url)
-            return obj.profile_image.url
+            return resolve_media_url(request, obj.profile_image)
         return None
 
 
@@ -156,10 +155,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         # Adding absolute URL for profile image if it exists
         if instance.profile_image:
             request = self.context.get('request')
-            if request:
-                data['profile_image'] = request.build_absolute_uri(instance.profile_image.url)  
-            else:
-                data['profile_image'] = instance.profile_image.url
+            data['profile_image'] = resolve_media_url(request, instance.profile_image)
         
         if role == 'organizer':
             data.pop('username', None)

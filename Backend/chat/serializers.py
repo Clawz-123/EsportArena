@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from esport.media_utils import resolve_media_url
 
 from .models import ChatMessage
 
@@ -43,13 +44,7 @@ class ChatMessageSerializer(serializers.ModelSerializer):
             return None
 
         request = self.context.get("request")
-        if request:
-            return request.build_absolute_uri(obj.sender.profile_image.url)
-            
-        # Fallback for WebSocket broadcasts without request context
-        from django.conf import settings
-        domain = getattr(settings, 'SITE_URL', 'http://localhost:8000')
-        return f"{domain}{obj.sender.profile_image.url}"
+        return resolve_media_url(request, obj.sender.profile_image)
 
     def get_sender_role(self, obj):
         # Determine if user is organizer (has tournament with id = tournament_id)

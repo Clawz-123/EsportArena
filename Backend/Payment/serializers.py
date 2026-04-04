@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from esport.media_utils import resolve_media_url
 
 from .models import PaymentOrder, WithdrawalRequest
 
@@ -79,9 +80,7 @@ class WithdrawalRequestSerializer(serializers.ModelSerializer):
     def get_receipt_image(self, obj):
         if obj.receipt_image:
             request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.receipt_image.url)
-            return obj.receipt_image.url
+            return resolve_media_url(request, obj.receipt_image)
         return None
 
 

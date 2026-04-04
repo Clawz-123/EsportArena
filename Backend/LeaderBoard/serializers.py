@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from esport.media_utils import resolve_media_url
 
 from .models import GroupLeaderboardEntry
 
@@ -11,9 +12,7 @@ class GroupLeaderboardEntrySerializer(serializers.ModelSerializer):
 	def get_team_logo(self, obj):
 		if obj.team and obj.team.team_logo:
 			request = self.context.get('request')
-			if request:
-				return request.build_absolute_uri(obj.team.team_logo.url)
-			return obj.team.team_logo.url
+			return resolve_media_url(request, obj.team.team_logo)
 		return None
 
 	class Meta:
