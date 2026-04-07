@@ -8,7 +8,6 @@ from .serializers import NotificationSerializer
 def get_user_notification_group(user_id):
     return f"notifications_user_{user_id}"
 
-
 def send_notification_to_user(
     recipient,
     title,

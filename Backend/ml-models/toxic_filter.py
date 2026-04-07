@@ -97,6 +97,7 @@ class ToxicFilter:
         cleaned = re.sub(r"\s+", " ", cleaned).strip()
         return cleaned
 
+    
     def check_message(self, message: str) -> Dict[str, Any]:
         if not hasattr(self, "model") or not hasattr(self, "vectorizer"):
             # Attempt a lazy re-init if prior init failed

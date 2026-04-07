@@ -509,7 +509,7 @@ class GetUserView(generics.ListAPIView):
             )
 
 
-# Admin view to list ALL users (players + organizers), excluding superusers
+# Admin view for getting all users for admin dashboard
 class AdminUserListView(generics.ListAPIView):
     serializer_class = UserResponseSerializers
     authentication_classes = [JWTAuthentication]

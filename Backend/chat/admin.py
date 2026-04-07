@@ -9,6 +9,7 @@ from .models import (
 )
 
 
+
 @admin.register(ChatMessage)
 class ChatMessageAdmin(admin.ModelAdmin):
 	list_display = ("id", "tournament", "sender", "message_type", "created_at")
