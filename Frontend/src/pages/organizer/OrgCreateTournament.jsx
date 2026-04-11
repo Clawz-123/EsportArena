@@ -424,26 +424,31 @@ const OrgCreateTournament = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-[#E5E7EB] mb-2">
-                    Maximum Participants / Teams <span className="text-red-400">*</span>
+                    Maximum Teams <span className="text-red-400">*</span>
                   </label>
-                  <div className="relative">
-                    <Field
-                      as="select"
-                      name="maxParticipants"
-                      className={`appearance-none w-full bg-[#0B1120] border rounded-md px-4 py-2.5 pr-10 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer ${
-                        touched.maxParticipants && errors.maxParticipants ? 'border-red-400' : 'border-white/10'
-                      }`}
-                    >
-                      <option value="">Select capacity</option>
-                      <option value="8">8</option>
-                      <option value="16">16</option>
-                      <option value="32">32</option>
-                      <option value="64">64</option>
-                      <option value="128">128</option>
-                    </Field>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280] pointer-events-none" />
-                  </div>
+                  <Field
+                    type="number"
+                    name="maxParticipants"
+                    min="1"
+                    step="1"
+                    list="capacity-presets"
+                    placeholder="Select or type team slots (e.g., 16)"
+                    className={`w-full bg-[#0B1120] border rounded-md px-4 py-2.5 text-[14px] text-[#E5E7EB] placeholder-[#6B7280] focus:outline-none focus:border-[#3B82F6] transition-colors ${
+                      touched.maxParticipants && errors.maxParticipants ? 'border-red-400' : 'border-white/10'
+                    }`}
+                  />
+                  <datalist id="capacity-presets">
+                    <option value="1" />
+                    <option value="2" />
+                    <option value="4" />
+                    <option value="8" />
+                    <option value="16" />
+                    <option value="32" />
+                    <option value="64" />
+                    <option value="128" />
+                  </datalist>
                   <ErrorMessage name="maxParticipants" component="p" className="text-red-400 text-xs mt-1" />
+                  <p className="text-xs text-[#6B7280] mt-1">Capacity is total teams. For Solo, one team equals one player.</p>
                 </div>
 
                 <div className="flex items-center gap-3">

@@ -1,11 +1,12 @@
 from rest_framework import status, generics
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.shortcuts import get_object_or_404
 
 from esport.response import api_response
 from .models import GroupLeaderboardEntry
 from .serializers import GroupLeaderboardEntrySerializer
+from tournament.models import Tournament, TournamentParticipant
 
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -57,7 +58,8 @@ class CreateLeaderboardEntryView(generics.CreateAPIView):
 # Creating a view to list all the leaderboard entry for a tournament and filter it by bracket and group name
 class ListLeaderboardEntriesView(generics.ListAPIView):
 	serializer_class = GroupLeaderboardEntrySerializer
-	permission_classes = [AllowAny]
+	authentication_classes = [JWTAuthentication]
+	permission_classes = [IsAuthenticated]
 
 	@swagger_auto_schema(
 		operation_description="Get leaderboard entries by tournament, optional bracket and group",
@@ -77,6 +79,28 @@ class ListLeaderboardEntriesView(generics.ListAPIView):
 	)
 	def get(self, request, tournament_id):
 		try:
+			tournament = Tournament.objects.filter(id=tournament_id).first()
+			if not tournament:
+				return api_response(
+					is_success=False,
+					error_message="Tournament not found.",
+					status_code=status.HTTP_404_NOT_FOUND,
+				)
+
+			is_organizer = tournament.organizer_id == request.user.id
+			is_superadmin = bool(getattr(request.user, "is_superuser", False))
+			is_participant = TournamentParticipant.objects.filter(
+				tournament_id=tournament_id,
+				player_id=request.user.id,
+			).exists()
+
+			if not (is_organizer or is_superadmin or is_participant):
+				return api_response(
+					is_success=False,
+					error_message="Join this tournament to view leaderboard.",
+					status_code=status.HTTP_403_FORBIDDEN,
+				)
+
 			entries = GroupLeaderboardEntry.objects.filter(tournament_id=tournament_id)
 			bracket_id = request.query_params.get("bracket_id")
 			group_name = request.query_params.get("group_name")

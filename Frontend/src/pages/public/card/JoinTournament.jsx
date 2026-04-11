@@ -36,6 +36,30 @@ const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
   const [logoPreview, setLogoPreview] = useState(null)
   const [showIGNSection, setShowIGNSection] = useState(false)
 
+  const extractErrorMessage = (payload) => {
+    const base = payload?.Error_Message ?? payload?.error_message ?? payload?.message ?? payload
+
+    if (!base) return 'Failed to join tournament'
+    if (typeof base === 'string') return base
+
+    if (Array.isArray(base) && base.length > 0) {
+      return String(base[0])
+    }
+
+    if (typeof base === 'object') {
+      const firstValue = Object.values(base)[0]
+      if (Array.isArray(firstValue) && firstValue.length > 0) {
+        return String(firstValue[0])
+      }
+      if (typeof firstValue === 'string') {
+        return firstValue
+      }
+      return 'Failed to join tournament'
+    }
+
+    return 'Failed to join tournament'
+  }
+
   useEffect(() => {
     if (isOpen && tournament?.id) {
       dispatch(fetchUsers())
@@ -77,7 +101,7 @@ const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
 
   useEffect(() => {
     if (joinError) {
-      const errorMessage = joinError?.error_message || joinError?.message || 'Failed to join tournament'
+      const errorMessage = extractErrorMessage(joinError)
       toast.error(errorMessage)
       dispatch(clearError())
     }
@@ -182,7 +206,7 @@ const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
         }
 
         if (userBalance < entryFee) {
-          toast.error('Insufficient balance')
+          toast.error('Insufficient balance to join the tournament')
           actions.setSubmitting(false)
           return
         }
@@ -546,7 +570,7 @@ const JoinTournament = ({ tournament, isOpen, onClose, onJoin }) => {
                   </button>
                   <button
                     type="submit"
-                    disabled={isSubmitting || joinLoading || (showIGNSection && userBalance < entryFee)}
+                    disabled={isSubmitting || joinLoading}
                     className="flex-1 bg-[#3B82F6] hover:bg-[#2563EB] text-white font-semibold py-3 px-4 rounded-lg text-[14px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {joinLoading ? (

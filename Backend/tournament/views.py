@@ -876,11 +876,15 @@ class JoinTournamentView(generics.CreateAPIView):
         if tournament.status == Tournament.Status.ACTIVE:
             return  # Tournament already started
         
-        # Count current participants
-        participant_count = TournamentParticipant.objects.filter(tournament=tournament).count()
-        
-        # Check if max participants reached
-        if participant_count >= tournament.max_participants:
+        is_team_based = tournament.match_format in [Tournament.MatchFormats.DUO, Tournament.MatchFormats.SQUAD]
+        current_slots = (
+            TournamentTeam.objects.filter(tournament=tournament).count()
+            if is_team_based
+            else TournamentParticipant.objects.filter(tournament=tournament).count()
+        )
+
+        # Check if max slots reached (teams for duo/squad, players for solo)
+        if current_slots >= tournament.max_participants:
             # Auto-start the tournament
             started = tournament.start_tournament()
             if started:

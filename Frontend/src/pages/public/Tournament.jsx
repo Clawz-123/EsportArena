@@ -306,7 +306,13 @@ const Tournament = () => {
             </div>
           ) : filteredTournaments.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredTournaments.map((tournament) => (
+              {filteredTournaments.map((tournament) => {
+                const isJoined = joinedTournaments.some((j) => j.id === tournament.id)
+                const isJoinOpen = getTournamentStatus(tournament) === 'Registration'
+                const isTeamBased = ['duo', 'squad'].includes((tournament.match_format || '').toLowerCase())
+                const capacityUnit = isTeamBased ? 'Teams' : 'Players'
+
+                return (
                 <div
                   key={tournament.id}
                   className="bg-[#111827] border border-[#1F2937] rounded-lg p-6 hover:border-[#3B82F6]/50 transition-colors"
@@ -366,7 +372,7 @@ const Tournament = () => {
                     </div>
                     <div className="flex items-center gap-3 text-[13px]">
                       <Users className="w-4 h-4 text-[#3B82F6]" />
-                      <span className="text-[#9CA3AF]">0/{tournament.max_participants}</span>
+                      <span className="text-[#9CA3AF]">0/{tournament.max_participants} {capacityUnit}</span>
                     </div>
                     <div className="flex items-center gap-3 text-[13px]">
                       <Coins className="w-4 h-4 text-[#3B82F6]" />
@@ -379,7 +385,7 @@ const Tournament = () => {
                   </div>
 
                   {/* CTA Button */}
-                  {joinedTournaments.find(j => j.id === tournament.id) ? (
+                  {isJoined ? (
                     <button
                       onClick={() => window.location.href = `/tournaments/${tournament.id}`}
                       className="w-full bg-[#22C55E] hover:bg-[#16A34A] text-white font-semibold py-3 px-4 rounded-lg text-[14px] transition-colors cursor-pointer"
@@ -387,15 +393,29 @@ const Tournament = () => {
                       View Tournament
                     </button>
                   ) : (
-                    <button
-                      onClick={() => handleJoinTournament(tournament)}
-                      className="w-full bg-[#3B82F6] hover:bg-[#2563EB] text-white font-semibold py-3 px-4 rounded-lg text-[14px] transition-colors"
-                    >
-                      Join Tournament
-                    </button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => window.location.href = `/tournaments/${tournament.id}`}
+                        className="w-full bg-[#0B1220] hover:bg-[#0F172A] border border-[#1F2937] text-[#E5E7EB] font-semibold py-3 px-4 rounded-lg text-[14px] transition-colors"
+                      >
+                        View
+                      </button>
+                      <button
+                        onClick={() => handleJoinTournament(tournament)}
+                        disabled={!isJoinOpen}
+                        className={`w-full font-semibold py-3 px-4 rounded-lg text-[14px] transition-colors ${
+                          isJoinOpen
+                            ? 'bg-[#3B82F6] hover:bg-[#2563EB] text-white'
+                            : 'bg-[#1F2937] text-[#6B7280] cursor-not-allowed'
+                        }`}
+                      >
+                        {isJoinOpen ? 'Join' : 'Closed'}
+                      </button>
+                    </div>
                   )}
                 </div>
-              ))}
+                )
+              })}
             </div>
           ) : (
             <div className="text-center py-12">

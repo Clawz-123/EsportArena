@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 from esport.response import api_response
 from tournament.models import Tournament
+from tournament.models import TournamentParticipant
 
 from .models import BlockedMessage, ChatMessage, ModerationWord, ReportedMessage, ToxicUserWhitelist
 from .serializers import ChatMessageSerializer
@@ -31,6 +32,19 @@ def _find_manual_block_word(cleaned_text: str):
 		if word and word.lower() in lowered:
 			return word
 	return None
+
+
+def _can_access_tournament_private_content(user, tournament) -> bool:
+	if not user or not getattr(user, "is_authenticated", False):
+		return False
+	if getattr(user, "is_superuser", False):
+		return True
+	if tournament and tournament.organizer_id == user.id:
+		return True
+	return TournamentParticipant.objects.filter(
+		tournament=tournament,
+		player_id=user.id,
+	).exists()
 
 
 def evaluate_toxicity(message: str, user, source: str, metadata=None, record_blocked: bool = True):
@@ -87,6 +101,13 @@ class TournamentChatMessageView(APIView):
 				status_code=status.HTTP_404_NOT_FOUND,
 			)
 
+		if not _can_access_tournament_private_content(request.user, tournament):
+			return api_response(
+				is_success=False,
+				error_message="Join this tournament to access chat.",
+				status_code=status.HTTP_403_FORBIDDEN,
+			)
+
 		messages = ChatMessage.objects.filter(
 			tournament=tournament,
 			message_type=ChatMessage.MessageTypes.GENERAL,
@@ -106,6 +127,13 @@ class TournamentChatMessageView(APIView):
 				is_success=False,
 				error_message="Tournament not found.",
 				status_code=status.HTTP_404_NOT_FOUND,
+			)
+
+		if not _can_access_tournament_private_content(request.user, tournament):
+			return api_response(
+				is_success=False,
+				error_message="Join this tournament to access chat.",
+				status_code=status.HTTP_403_FORBIDDEN,
 			)
 
 		text = (request.data.get("message") or "").strip()
@@ -181,6 +209,13 @@ class TournamentAnnouncementView(APIView):
 				is_success=False,
 				error_message="Tournament not found.",
 				status_code=status.HTTP_404_NOT_FOUND,
+			)
+
+		if not _can_access_tournament_private_content(request.user, tournament):
+			return api_response(
+				is_success=False,
+				error_message="Join this tournament to view announcements.",
+				status_code=status.HTTP_403_FORBIDDEN,
 			)
 
 		announcements = ChatMessage.objects.filter(

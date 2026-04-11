@@ -293,10 +293,16 @@ class JoinTournamentSerializer(serializers.Serializer):
 
 		if is_team_based:
 			required_members = 1 if tournament.match_format == Tournament.MatchFormats.DUO else 3
-			total_new_members = 1 + len(team_members)  # captain + members
+			current_teams = TournamentTeam.objects.filter(tournament=tournament).count()
 
-			if current_participants + total_new_members > tournament.max_participants:
-				raise serializers.ValidationError("Tournament is full.")
+			if current_teams + 1 > tournament.max_participants:
+				remaining_slots = max(tournament.max_participants - current_teams, 0)
+				raise serializers.ValidationError({
+					"team_members": (
+						f"Not enough team slots left. Only {remaining_slots} slot"
+						f"{'s' if remaining_slots != 1 else ''} remain."
+					)
+				})
 
 			# Validate team name is provided
 			if not attrs.get("team_name"):

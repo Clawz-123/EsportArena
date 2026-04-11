@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { toast } from 'react-toastify'
 import { useAppDispatch, useAppSelector } from '../../../store/hooks'
 import { fetchTournamentDetail, fetchTournamentParticipants, fetchTournamentTeams } from '../../../slices/tournamentSlice'
 import { ChevronLeft, Calendar, Users, DollarSign, Trophy } from 'lucide-react'
@@ -12,7 +13,8 @@ const TournaHeader = () => {
   const navigate = useNavigate()
   const { id } = useParams()
   const dispatch = useAppDispatch()
-  const { currentTournament, loading, participants, teams } = useAppSelector((state) => state.tournament)
+  const { currentTournament, loading, participants, teams, participantsLoading } = useAppSelector((state) => state.tournament)
+  const { user } = useAppSelector((state) => state.auth || {})
   const { profile } = useAppSelector((state) => state.profile || {})
   const [activeTab, setActiveTab] = useState('overview')
 
@@ -24,6 +26,17 @@ const TournaHeader = () => {
     }
   }, [id, dispatch])
 
+  const tournament = currentTournament || {}
+  const isParticipant = participants?.some((participant) => participant.player === user?.id)
+  const isOrganizer = Boolean(
+    user?.email &&
+    tournament?.organizer_email &&
+    String(user.email).toLowerCase() === String(tournament.organizer_email).toLowerCase()
+  )
+  const isSuperAdmin = Boolean(user?.is_superuser || user?.role === 'SuperAdmin')
+  const canAccessRestrictedTabs = isOrganizer || isSuperAdmin || (!participantsLoading && isParticipant)
+  const effectiveTab = canAccessRestrictedTabs ? activeTab : 'overview'
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0F172A]">
@@ -34,8 +47,6 @@ const TournaHeader = () => {
       </div>
     )
   }
-
-  const tournament = currentTournament || {}
 
   const getTournamentStatus = (tournament) => {
     if (!tournament) return 'upcoming'
@@ -80,13 +91,23 @@ const TournaHeader = () => {
   ]
 
   const tabs = [
-    { id: 'overview', label: 'Overview' },
-    { id: 'forums', label: 'Forums' },
-    { id: 'leaderboard', label: 'Leaderboard' },
+    { id: 'overview', label: 'Overview', restricted: false },
+    { id: 'forums', label: 'Forums', restricted: true },
+    { id: 'leaderboard', label: 'Leaderboard', restricted: true },
   ]
 
+  const handleTabClick = (tab) => {
+    if (tab.restricted && !canAccessRestrictedTabs) {
+      toast.info('Only joined teams can view other sections. Please join the tournament first.', {
+        toastId: 'join-required-tabs',
+      })
+      return
+    }
+    setActiveTab(tab.id)
+  }
+
   const renderTabContent = () => {
-    switch (activeTab) {
+    switch (effectiveTab) {
       case 'overview':
         return <OverviewCard tournament={tournament} />
       case 'forums':
@@ -185,16 +206,23 @@ const TournaHeader = () => {
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 py-3 text-sm font-medium rounded-md transition-all text-center ${activeTab === tab.id
+                onClick={() => handleTabClick(tab)}
+                className={`flex-1 py-3 text-sm font-medium rounded-md transition-all text-center ${effectiveTab === tab.id
                   ? 'bg-[#2563EB] text-white shadow-lg'
-                  : 'text-[#9CA3AF] hover:text-white hover:bg-white/5'
+                  : tab.restricted && !canAccessRestrictedTabs
+                    ? 'text-[#6B7280] hover:text-[#9CA3AF] hover:bg-white/5'
+                    : 'text-[#9CA3AF] hover:text-white hover:bg-white/5'
                   }`}
               >
                 {tab.label}
               </button>
             ))}
           </div>
+          {!canAccessRestrictedTabs && (
+            <p className="mt-2 text-xs text-[#9CA3AF]">
+              Only joined players can access Forums and Leaderboard.
+            </p>
+          )}
         </div>
 
         {/* Tab Content */}

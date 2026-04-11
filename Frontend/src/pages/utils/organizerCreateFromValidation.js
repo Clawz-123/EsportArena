@@ -54,9 +54,10 @@ export const tournamentValidationSchema = Yup.object().shape({
     ),
   
   maxParticipants: Yup.number()
-    .required("Maximum participants is required")
-    .typeError("Maximum participants must be a number")
-    .oneOf([8, 16, 32, 64, 128], "Invalid participant count"),
+    .required("Maximum teams is required")
+    .typeError("Maximum teams must be a number")
+    .integer("Maximum teams must be a whole number")
+    .min(1, "Maximum teams must be at least 1"),
   
   autoGenerateBracket: Yup.boolean(),
   
@@ -79,9 +80,6 @@ export const tournamentValidationSchema = Yup.object().shape({
     .required("Third place prize is required")
     .typeError("Prize must be a number")
     .min(0, "Prize cannot be negative"),
-  
-  matchRules: Yup.string()
-    .max(2000, "Match rules cannot exceed 2000 characters"),
   
   matchRules: Yup.string()
     .max(2000, "Match rules cannot exceed 2000 characters"),
