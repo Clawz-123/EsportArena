@@ -25,7 +25,6 @@ const defaultInitialValues = {
   matchStart: '',
   expectedEnd: '',
   maxParticipants: '',
-  autoGenerateBracket: false,
   entryFee: '0',
   prizeFirst: '0',
   prizeSecond: '0',
@@ -82,7 +81,6 @@ const OrgCreateTournament = () => {
       matchStart: editTournament.match_start || '',
       expectedEnd: editTournament.expected_end || '',
       maxParticipants: editTournament.max_participants ? String(editTournament.max_participants) : '',
-      autoGenerateBracket: Boolean(editTournament.auto_generate_bracket),
       entryFee: String(editTournament.entry_fee ?? 0),
       prizeFirst: String(editTournament.prize_first ?? 0),
       prizeSecond: String(editTournament.prize_second ?? 0),
@@ -113,7 +111,6 @@ const OrgCreateTournament = () => {
       match_start: values.matchStart,
       expected_end: values.expectedEnd || null,
       max_participants: parseInt(values.maxParticipants),
-      auto_generate_bracket: values.autoGenerateBracket,
       entry_fee: parseInt(values.entryFee),
       prize_first: parseInt(values.prizeFirst),
       prize_second: parseInt(values.prizeSecond),
@@ -451,20 +448,6 @@ const OrgCreateTournament = () => {
                   <p className="text-xs text-[#6B7280] mt-1">Capacity is total teams. For Solo, one team equals one player.</p>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <Field
-                    type="checkbox"
-                    id="autoGenerateBracket"
-                    name="autoGenerateBracket"
-                    className="w-4 h-4 rounded bg-[#0B1120] border border-white/10 cursor-pointer accent-[#3B82F6]"
-                  />
-                  <label htmlFor="autoGenerateBracket" className="text-sm text-[#E5E7EB] cursor-pointer">
-                    Auto-generate bracket after registration closes
-                  </label>
-                </div>
-                <p className="text-xs text-[#6B7280]">
-                  Bracket will be automatically created when the registration period ends
-                </p>
               </div>
 
               {/* SECTION 4: Entry Fee & Prize Pool */}
@@ -587,7 +570,7 @@ const OrgCreateTournament = () => {
                   </label>
                 </div>
                 <p className="text-xs text-[#6B7280]">
-                  Tournament will automatically start when the maximum participant limit is reached
+                  If enabled, tournament will automatically start when all slots are filled
                 </p>
               </div>
 

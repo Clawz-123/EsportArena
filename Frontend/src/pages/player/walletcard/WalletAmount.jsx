@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import { X, ArrowRight } from 'lucide-react';
+import { toast } from 'react-toastify';
 import ConfirmationModal from '../../../components/common/ConfirmationModal';
 
 const WalletAmount = ({ onClose, onContinue }) => {
+  const MIN_AMOUNT = 10;
+  const MAX_AMOUNT = 5000;
+
   const [selectedAmount, setSelectedAmount] = useState('');
   const [customAmount, setCustomAmount] = useState('');
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -11,16 +15,38 @@ const WalletAmount = ({ onClose, onContinue }) => {
 
   // Helper to get the actual amount value (custom or preset)
   const getFinalAmount = () => {
-    if (customAmount) return parseInt(customAmount);
+    if (customAmount !== '') {
+      const parsed = Number(customAmount);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
     if (selectedAmount) return selectedAmount;
     return 0;
   };
 
   const handleContinue = () => {
     const amount = getFinalAmount();
-    if (amount >= 10) {
-      setShowConfirmation(true);
+
+    if (!amount) {
+      toast.error('Please enter an amount.');
+      return;
     }
+
+    if (amount < 0) {
+      toast.error('Amount cannot be negative.');
+      return;
+    }
+
+    if (amount < MIN_AMOUNT) {
+      toast.error(`Minimum top-up amount is ${MIN_AMOUNT} coins.`);
+      return;
+    }
+
+    if (amount > MAX_AMOUNT) {
+      toast.error(`Maximum top-up amount is ${MAX_AMOUNT} coins.`);
+      return;
+    }
+
+    setShowConfirmation(true);
   };
 
   const handleConfirmationConfirm = () => {
@@ -35,13 +61,28 @@ const WalletAmount = ({ onClose, onContinue }) => {
   };
 
   const handleCustomChange = (e) => {
-    const val = e.target.value.replace(/[^0-9]/g, '');
+    const raw = String(e.target.value || '').trim();
+
+    if (!raw) {
+      setCustomAmount('');
+      setSelectedAmount('');
+      return;
+    }
+
+    if (raw.startsWith('-')) {
+      const digits = raw.replace(/[^0-9]/g, '');
+      setCustomAmount(digits ? `-${digits}` : '-');
+      setSelectedAmount('');
+      return;
+    }
+
+    const val = raw.replace(/[^0-9]/g, '');
     setCustomAmount(val);
     setSelectedAmount(''); // Clear preset if custom is being typed
   };
 
   const finalAmount = getFinalAmount();
-  const isValid = finalAmount >= 10;
+  const canAttempt = finalAmount !== 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -100,17 +141,17 @@ const WalletAmount = ({ onClose, onContinue }) => {
               </span>
             </div>
             <p className="text-xs text-slate-500">
-              Minimum: 10 coins
+              Minimum: {MIN_AMOUNT} coins | Maximum: {MAX_AMOUNT} coins
             </p>
           </div>
 
           {/* Action */}
           <button
             onClick={handleContinue}
-            disabled={!isValid}
+            disabled={!canAttempt}
             className={`
                             w-full py-3.5 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all
-                            ${isValid
+                            ${canAttempt
                 ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/25'
                 : 'bg-slate-800 text-slate-500 cursor-not-allowed'
               }

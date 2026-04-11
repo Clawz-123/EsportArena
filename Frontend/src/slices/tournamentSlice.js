@@ -175,6 +175,21 @@ export const joinTournament = createAsyncThunk(
   }
 );
 
+// Creating a thunk for canceling player's registration from a tournament
+export const cancelTournamentRegistration = createAsyncThunk(
+  "tournament/cancelRegistration",
+  async (tournamentId, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.post(
+        `/tournament/cancel-registration/${tournamentId}/`
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
 // Creating a thunk for fetching tournament participants
 export const fetchTournamentParticipants = createAsyncThunk(
   "tournament/fetchParticipants",
@@ -243,6 +258,8 @@ const initialState = {
   joinLoading: false,
   joinError: null,
   joinSuccess: false,
+  cancelRegistrationLoading: false,
+  cancelRegistrationError: null,
   participantsLoading: false,
   participantsError: null,
   teamsLoading: false,
@@ -266,6 +283,7 @@ const tournamentSlice = createSlice({
       state.deleteError = null;
       state.detailError = null;
       state.joinError = null;
+      state.cancelRegistrationError = null;
       state.participantsError = null;
       state.teamsError = null;
       state.usersError = null;
@@ -449,6 +467,26 @@ const tournamentSlice = createSlice({
     builder.addCase(joinTournament.rejected, (state, action) => {
       state.joinLoading = false;
       state.joinError = action.payload;
+    });
+
+    // Cancel Tournament Registration
+    builder.addCase(cancelTournamentRegistration.pending, (state) => {
+      state.cancelRegistrationLoading = true;
+      state.cancelRegistrationError = null;
+    });
+    builder.addCase(cancelTournamentRegistration.fulfilled, (state, action) => {
+      state.cancelRegistrationLoading = false;
+      const result = action.payload?.Result || action.payload?.result;
+      const canceledTournamentId = result?.tournament_id || action.meta.arg;
+      if (canceledTournamentId) {
+        state.joinedTournaments = state.joinedTournaments.filter(
+          (t) => t.id !== canceledTournamentId
+        );
+      }
+    });
+    builder.addCase(cancelTournamentRegistration.rejected, (state, action) => {
+      state.cancelRegistrationLoading = false;
+      state.cancelRegistrationError = action.payload;
     });
 
     // Fetch Tournament Participants

@@ -21,6 +21,17 @@ const BracketCard = ({ tournamentId }) => {
   const bracketState = useAppSelector((state) => state.bracket)
   const [error, setError] = useState("")
   const [selectedGroup, setSelectedGroup] = useState('A')
+  const [showGroupSizeModal, setShowGroupSizeModal] = useState(false)
+  const [groupSize, setGroupSize] = useState('16')
+
+  const groupSizeOptions = [1, 2, 4, 8, 16, 32]
+
+  const hasBracket = Boolean(bracketState.bracket && bracketState.bracket.bracket_data)
+
+  const canGenerateByStatus = () => {
+    const normalizedStatus = String(currentTournament?.status || '').toLowerCase()
+    return normalizedStatus === 'registration closed' || normalizedStatus === 'active'
+  }
 
   useEffect(() => {
     if (tournamentId) {
@@ -32,47 +43,85 @@ const BracketCard = ({ tournamentId }) => {
 
   const canGenerate = () => {
     if (!currentTournament) return false
-    const now = new Date()
-    const regEnd = new Date(currentTournament.registration_end)
-    return now > regEnd && (teams?.length || 0) > 0
+    if (hasBracket) return false
+    return canGenerateByStatus() && (teams?.length || 0) > 0
   }
 
-  const handleGenerateBracket = async () => {
+  const validateGenerationGate = () => {
     setError("")
-    if (!currentTournament) return
-    const now = new Date()
-    const regEnd = new Date(currentTournament.registration_end)
-    if (now <= regEnd) {
-      console.log('Brackets can only be generated after registration ends')
-      toast.error('Brackets can only be generated after registration ends', { toastId: 'bracket-reg-end' })
-      return
+    if (!currentTournament) return false
+
+    if (hasBracket) {
+      toast.info('Bracket already generated for this tournament.', { toastId: 'bracket-generated-once' })
+      return false
     }
+
+    if (!canGenerateByStatus()) {
+      toast.error('Brackets can only be generated when tournament is registration closed or ongoing.', { toastId: 'bracket-status-gate' })
+      return false
+    }
+
     if (!canGenerate()) {
-      setError("Bracket can only be generated after registration ends and teams are available.")
+      setError("Bracket can only be generated when status is eligible and teams are available.")
+      return false
+    }
+
+    return true
+  }
+
+  const handleOpenGroupSizeModal = () => {
+    if (!validateGenerationGate()) return
+    setShowGroupSizeModal(true)
+  }
+
+  const handleGenerateBracket = async (selectedGroupSize) => {
+    if (!validateGenerationGate()) return
+
+    const teamsPerGroup = Number(selectedGroupSize)
+    if (!Number.isInteger(teamsPerGroup) || teamsPerGroup < 1) {
+      toast.error('Please select a valid group size.')
       return
     }
+
     const shuffled = shuffleArray(teams)
-    let groups = []
-    if (shuffled.length > 16) {
-      // Split into groups of up to 16
-      const groupCount = Math.ceil(shuffled.length / 16)
-      for (let i = 0; i < groupCount; i++) {
-        groups.push({
-          name: String.fromCharCode(65 + i), // 'A', 'B', ...
-          teams: shuffled.slice(i * 16, (i + 1) * 16),
-        })
-      }
-    } else {
-      groups = [{ name: 'A', teams: shuffled }]
+
+    const groups = []
+    const groupCount = Math.ceil(shuffled.length / teamsPerGroup)
+    for (let i = 0; i < groupCount; i++) {
+      groups.push({
+        name: String.fromCharCode(65 + i),
+        teams: shuffled.slice(i * teamsPerGroup, (i + 1) * teamsPerGroup),
+      })
     }
+
     // Save bracket to backend
     try {
-      await dispatch(saveTournamentBracket({ tournamentId, bracket_data: groups }))
-      toast.success('Bracket saved to database!')
+      const result = await dispatch(saveTournamentBracket({ tournamentId, bracket_data: groups }))
+      if (saveTournamentBracket.fulfilled.match(result)) {
+        setShowGroupSizeModal(false)
+        toast.success('Bracket saved to database!')
+      } else {
+        const errorMessage =
+          result.payload?.detail ||
+          result.payload?.Error_Message ||
+          result.payload?.error_message ||
+          result.payload?.message ||
+          'Failed to save bracket!'
+        toast.error(typeof errorMessage === 'string' ? errorMessage : 'Failed to save bracket!')
+      }
     } catch {
       toast.error('Failed to save bracket!')
     }
   }
+
+  const handleConfirmGenerateBracket = () => {
+    handleGenerateBracket(groupSize)
+  }
+
+  const estimatedGroupCount = Math.max(
+    1,
+    Math.ceil((teams?.length || 0) / Math.max(1, Number(groupSize) || 1))
+  )
 
   return (
     <div className="w-full max-w-7xl mx-auto bg-[#1e293b] border border-[#243044] rounded-2xl p-8">
@@ -103,12 +152,12 @@ const BracketCard = ({ tournamentId }) => {
         </div>
 
         <button
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-medium rounded-lg transition cursor-pointer"
-          onClick={handleGenerateBracket}
-          disabled={teamsLoading}
+          className="flex items-center gap-2 px-5 py-2.5 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-medium rounded-lg transition cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          onClick={handleOpenGroupSizeModal}
+          disabled={teamsLoading || hasBracket}
         >
           <Shuffle className="w-4 h-4" />
-          Generate Bracket
+          {hasBracket ? 'Bracket Generated' : 'Generate Bracket'}
         </button>
       </div>
 
@@ -176,6 +225,49 @@ const BracketCard = ({ tournamentId }) => {
           <p className="text-sm text-[#94a3b8]">
             Click "Generate Bracket" to create the tournament bracket
           </p>
+        </div>
+      )}
+
+      {showGroupSizeModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center px-4">
+          <div className="w-full max-w-md bg-[#111827] border border-[#1F2937] rounded-xl p-6">
+            <h3 className="text-lg font-semibold text-white mb-2">Select Group Size</h3>
+            <p className="text-sm text-[#9CA3AF] mb-4">
+              Choose how many teams should be placed in each generated group.
+            </p>
+
+            <label className="block text-sm text-[#E5E7EB] mb-2">Teams Per Group</label>
+            <select
+              value={groupSize}
+              onChange={(e) => setGroupSize(e.target.value)}
+              className="w-full bg-[#0B1220] border border-[#243044] rounded-lg px-4 py-2.5 text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6]"
+            >
+              {groupSizeOptions.map((size) => (
+                <option key={size} value={size}>{size}</option>
+              ))}
+            </select>
+
+            <p className="text-xs text-[#94A3B8] mt-3">
+              Total teams: {teams?.length || 0} | Estimated groups: {estimatedGroupCount}
+            </p>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowGroupSizeModal(false)}
+                className="px-4 py-2 rounded-lg bg-[#1F2937] hover:bg-[#2D3748] text-[#E5E7EB] text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmGenerateBracket}
+                className="px-4 py-2 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-medium"
+              >
+                Generate
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

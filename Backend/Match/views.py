@@ -4,12 +4,15 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
 from esport.response import api_response
 from .models import Match
 from tournament.models import Tournament, TournamentParticipant
 from Notification.models import Notification
 from Notification.services import send_notification_to_user
+from chat.models import ChatMessage
+from chat.services import broadcast_chat_message
 from .serializers import (
     MatchCreateSerializer,
     MatchDetailSerializer,
@@ -41,6 +44,48 @@ def _notify_match_participants(tournament, title, message, metadata=None, exclud
             notification_type=Notification.NotificationTypes.TOURNAMENT,
             metadata=metadata or {},
         )
+
+
+def _auto_transition_scheduled_matches(tournament_id=None):
+    now = timezone.now()
+    queryset = Match.objects.filter(status='Scheduled', date_time__lte=now)
+    if tournament_id is not None:
+        queryset = queryset.filter(tournament_id=tournament_id)
+    queryset.update(status='Ongoing', updated_at=now)
+
+
+def _auto_transition_single_match(match):
+    if match.status == 'Scheduled' and match.date_time and match.date_time <= timezone.now():
+        match.status = 'Ongoing'
+        match.save(update_fields=['status', 'updated_at'])
+
+
+def _publish_match_announcement_to_forum(match, sender):
+    has_announcement_details = any(
+        [
+            bool((match.room_id or '').strip()),
+            bool((match.room_pass or '').strip()),
+            bool((match.announcement or '').strip()),
+        ]
+    )
+    if not has_announcement_details:
+        return
+
+    lines = [f"Match {match.match_number} ({match.group}) Room Details"]
+    if (match.room_id or '').strip():
+        lines.append(f"Room ID: {match.room_id.strip()}")
+    if (match.room_pass or '').strip():
+        lines.append(f"Room Pass: {match.room_pass.strip()}")
+    if (match.announcement or '').strip():
+        lines.append(match.announcement.strip())
+
+    created_announcement = ChatMessage.objects.create(
+        tournament=match.tournament,
+        sender=sender,
+        message_type=ChatMessage.MessageTypes.ANNOUNCEMENT,
+        message="\n".join(lines),
+    )
+    broadcast_chat_message(created_announcement)
 
 # Creating a view to create a match in the database and only the organizer of the tournament can create a match
 class CreateMatchView(generics.CreateAPIView):
@@ -121,6 +166,9 @@ class ListMatchesByTournamentView(generics.ListAPIView):
     def get(self, request, tournament_id):
         try:
             get_object_or_404(Tournament, pk=tournament_id)
+
+            # Promote due scheduled matches to ongoing before listing.
+            _auto_transition_scheduled_matches(tournament_id=tournament_id)
             
             matches = Match.objects.filter(tournament_id=tournament_id).order_by('date_time')
             serializer = self.serializer_class(matches, many=True)
@@ -156,6 +204,10 @@ class GetMatchDetailView(generics.RetrieveAPIView):
     def get(self, request, match_id):
         try:
             match = get_object_or_404(Match, pk=match_id)
+
+            # Keep status in sync for single match reads.
+            _auto_transition_single_match(match)
+
             serializer = self.serializer_class(match)
             return api_response(
                 is_success=True,
@@ -200,9 +252,34 @@ class UpdateMatchView(generics.UpdateAPIView):
                     status_code=status.HTTP_403_FORBIDDEN
                 )
 
+            requested_status = request.data.get('status')
+            normalized_status = str(requested_status or '').strip().lower()
+
+            if normalized_status in {'ongoing', 'completed'} and match.date_time and timezone.now() < match.date_time:
+                status_text = 'Ongoing' if normalized_status == 'ongoing' else 'Completed'
+                return api_response(
+                    is_success=False,
+                    error_message=f"You cannot mark this match as {status_text} before its scheduled time.",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if normalized_status == 'completed' and str(match.status or '').strip().lower() == 'cancelled':
+                return api_response(
+                    is_success=False,
+                    error_message="Cancelled matches cannot be marked as completed.",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+
             serializer = self.serializer_class(match, data=request.data, partial=True)
             if serializer.is_valid():
                 updated_match = serializer.save()
+
+                announcement_payload_keys = ('room_id', 'room_pass', 'announcement')
+                is_announcement_update = any(
+                    key in request.data for key in announcement_payload_keys
+                )
+                if is_announcement_update:
+                    _publish_match_announcement_to_forum(updated_match, request.user)
 
                 _notify_match_participants(
                     updated_match.tournament,
@@ -263,12 +340,20 @@ class DeleteMatchView(generics.DestroyAPIView):
                     status_code=status.HTTP_403_FORBIDDEN
                 )
 
+            if match.status == 'Cancelled':
+                return api_response(
+                    is_success=False,
+                    error_message="Match is already cancelled.",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+
             tournament = match.tournament
             match_number = match.match_number
             group_name = match.group
-            deleted_match_id = match.id
-                
-            match.delete()
+            cancelled_match_id = match.id
+
+            match.status = 'Cancelled'
+            match.save(update_fields=['status', 'updated_at'])
 
             _notify_match_participants(
                 tournament,
@@ -276,7 +361,8 @@ class DeleteMatchView(generics.DestroyAPIView):
                 message=f"Match {match_number} ({group_name}) in tournament '{tournament.name}' has been cancelled.",
                 metadata={
                     "tournament_id": tournament.id,
-                    "match_id": deleted_match_id,
+                    "match_id": cancelled_match_id,
+                    "status": "Cancelled",
                 },
                 exclude_user_ids=[request.user.id],
             )
@@ -284,7 +370,10 @@ class DeleteMatchView(generics.DestroyAPIView):
             return api_response(
                 is_success=True,
                 status_code=status.HTTP_200_OK,
-                result={"message": "Match deleted successfully"}
+                result={
+                    "message": "Match cancelled successfully.",
+                    "match": MatchDetailSerializer(match).data,
+                }
             )
         except Exception as e:
             return api_response(

@@ -246,9 +246,9 @@ const OrgTournamentHistory = () => {
                           <p className="text-xs text-[#9CA3AF] mt-0.5">Prize: Rs. {(t.total_prize_pool || 0).toLocaleString()}</p>
                         </td>
                         <td className="px-4 py-3 text-[#9CA3AF]">{t.game_title} · {t.match_format}</td>
-                        <td className="px-4 py-3 text-[#9CA3AF] inline-flex items-center gap-1.5"><Calendar className="w-4 h-4 text-[#6B7280]" />{formatDate(t.match_start)}</td>
-                        <td className="px-4 py-3 text-[#E5E7EB] inline-flex items-center gap-1.5"><Users className="w-4 h-4 text-[#6B7280]" />{t.participants_count || 0}/{t.max_participants}</td>
-                        <td className="px-4 py-3 text-[#E5E7EB] inline-flex items-center gap-1.5"><Coins className="w-4 h-4 text-[#6B7280]" />Rs. {(t.revenue || 0).toLocaleString()}</td>
+                        <td className="px-4 py-3 text-[#9CA3AF]"><span className="inline-flex items-center gap-1.5 whitespace-nowrap"><Calendar className="w-4 h-4 text-[#6B7280]" />{formatDate(t.match_start)}</span></td>
+                        <td className="px-4 py-3 text-[#E5E7EB]"><span className="inline-flex items-center gap-1.5 whitespace-nowrap"><Users className="w-4 h-4 text-[#6B7280]" />{t.participants_count || 0}/{t.max_participants}</span></td>
+                        <td className="px-4 py-3 text-[#E5E7EB]"><span className="inline-flex items-center gap-1.5 whitespace-nowrap"><Coins className="w-4 h-4 text-[#6B7280]" />Rs. {(t.revenue || 0).toLocaleString()}</span></td>
                         <td className="px-4 py-3">
                           <span className={`px-2.5 py-1 text-xs rounded-full border ${getStatusBadgeClass(t.status)}`}>
                             {normalizeStatus(t.status)}

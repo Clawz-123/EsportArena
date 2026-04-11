@@ -1,12 +1,15 @@
 import * as Yup from 'yup'
 
+const MIN_WITHDRAWAL_COINS = 10
+const MAX_WITHDRAWAL_COINS = 5000
+
 // Amount validation schema
 export const withdrawAmountSchema = Yup.object().shape({
   coins: Yup.number()
     .required('Amount is required')
     .typeError('Amount must be a number')
-    .min(10, 'Minimum withdrawal is 10 coins')
-    .max(1000, 'Maximum withdrawal is 1000 coins')
+    .min(MIN_WITHDRAWAL_COINS, `Minimum withdrawal is ${MIN_WITHDRAWAL_COINS} coins`)
+    .max(MAX_WITHDRAWAL_COINS, `Maximum withdrawal is ${MAX_WITHDRAWAL_COINS} coins`)
     .positive('Amount must be positive'),
 })
 
@@ -34,8 +37,8 @@ export const withdrawFullSchema = Yup.object().shape({
   coins: Yup.number()
     .required('Amount is required')
     .typeError('Amount must be a number')
-    .min(10, 'Minimum withdrawal is 10 coins')
-    .max(1000, 'Maximum withdrawal is 1000 coins')
+    .min(MIN_WITHDRAWAL_COINS, `Minimum withdrawal is ${MIN_WITHDRAWAL_COINS} coins`)
+    .max(MAX_WITHDRAWAL_COINS, `Maximum withdrawal is ${MAX_WITHDRAWAL_COINS} coins`)
     .positive('Amount must be positive'),
   provider: Yup.string()
     .required('Provider is required')
@@ -60,8 +63,8 @@ export const validateCoins = (coins, balance) => {
     const coinsNum = Number(coins) || 0
     const balanceNum = Number(balance) || 0
 
-    if (coinsNum < 10) return 'Minimum withdrawal is 10 coins'
-    if (coinsNum > 1000) return 'Maximum withdrawal is 1000 coins'
+    if (coinsNum < MIN_WITHDRAWAL_COINS) return `Minimum withdrawal is ${MIN_WITHDRAWAL_COINS} coins`
+    if (coinsNum > MAX_WITHDRAWAL_COINS) return `Maximum withdrawal is ${MAX_WITHDRAWAL_COINS} coins`
     if (coinsNum > balanceNum) return 'Insufficient balance'
 
     return '' 

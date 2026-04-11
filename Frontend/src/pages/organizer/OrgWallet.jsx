@@ -46,6 +46,19 @@ const OrgWallet = () => {
   const [wdLoading, setWdLoading] = useState(false)
   const [viewReceipt, setViewReceipt] = useState(null)
 
+  const extractApiMessage = useCallback((payload, fallbackMessage) => {
+    const base = payload?.Error_Message ?? payload?.error_message ?? payload?.message ?? payload
+    if (!base) return fallbackMessage
+    if (typeof base === 'string') return base
+    if (Array.isArray(base) && base.length > 0) return String(base[0])
+    if (typeof base === 'object') {
+      const firstValue = Object.values(base)[0]
+      if (Array.isArray(firstValue) && firstValue.length > 0) return String(firstValue[0])
+      if (typeof firstValue === 'string') return firstValue
+    }
+    return fallbackMessage
+  }, [])
+
   const fetchMyWithdrawals = useCallback(async () => {
     setWdLoading(true)
     try {
@@ -99,17 +112,17 @@ const OrgWallet = () => {
 
   useEffect(() => {
     if (topUpError) {
-      toast.error('Failed to initiate payment.')
+      toast.error(extractApiMessage(topUpError, 'Failed to initiate payment.'))
       dispatch(clearWalletError())
     }
-  }, [dispatch, topUpError])
+  }, [dispatch, extractApiMessage, topUpError])
 
   useEffect(() => {
     if (withdrawError) {
-      toast.error(withdrawError)
+      toast.error(extractApiMessage(withdrawError, 'Withdrawal request failed.'))
       dispatch(clearWalletError())
     }
-  }, [dispatch, withdrawError])
+  }, [dispatch, extractApiMessage, withdrawError])
 
   const handleWithdraw = async (data) => {
     const result = await dispatch(requestWithdrawal(data))

@@ -275,6 +275,40 @@ def _settle_tournament_prizes(tournament, ranked_teams):
     }
 
 
+def _current_filled_slots(tournament):
+    is_team_based = tournament.match_format in [Tournament.MatchFormats.DUO, Tournament.MatchFormats.SQUAD]
+    if is_team_based:
+        return TournamentTeam.objects.filter(tournament=tournament).count()
+    return TournamentParticipant.objects.filter(tournament=tournament).count()
+
+
+def _apply_tournament_automations(tournament):
+    if not tournament:
+        return
+
+    today = timezone.localdate()
+
+    if tournament.status not in [Tournament.Status.ACTIVE, Tournament.Status.COMPLETED]:
+        if tournament.registration_end and today > tournament.registration_end:
+            if tournament.status != Tournament.Status.REGISTRATION_CLOSED:
+                tournament.status = Tournament.Status.REGISTRATION_CLOSED
+                tournament.save(update_fields=["status", "updated_at"])
+        elif (
+            tournament.registration_start
+            and tournament.registration_end
+            and tournament.registration_start <= today <= tournament.registration_end
+            and tournament.status != Tournament.Status.REGISTRATION_OPEN
+        ):
+            tournament.status = Tournament.Status.REGISTRATION_OPEN
+            tournament.save(update_fields=["status", "updated_at"])
+
+    # Explicit checkbox control for auto-start.
+    if tournament.auto_start_tournament:
+        if tournament.status not in [Tournament.Status.ACTIVE, Tournament.Status.COMPLETED]:
+            if _current_filled_slots(tournament) >= tournament.max_participants:
+                tournament.start_tournament()
+
+
 # View for Creating Tournament
 class CreateTournamentView(generics.CreateAPIView):
     serializer_class = TournamentCreateSerializer
@@ -390,6 +424,8 @@ class GetOrganizerTournamentsView(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
         try:
             tournaments = self.get_queryset()
+            for tournament in tournaments:
+                _apply_tournament_automations(tournament)
             serializer = self.serializer_class(tournaments, many=True, context={"request": request})
             return api_response(
                 is_success=True,
@@ -431,6 +467,7 @@ class GetTournamentDetailView(generics.RetrieveAPIView):
     def get(self, request, tournament_id):
         try:
             tournament = self.get_queryset().get(id=tournament_id)
+            _apply_tournament_automations(tournament)
             serializer = self.serializer_class(tournament, context={"request": request})
             return api_response(
                 is_success=True,
@@ -689,6 +726,8 @@ class GetAllPublicTournamentsView(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
         try:
             tournaments = self.get_queryset()
+            for tournament in tournaments:
+                _apply_tournament_automations(tournament)
             serializer = self.serializer_class(tournaments, many=True, context={'request': request})
             return api_response(
                 is_success=True,
@@ -711,13 +750,37 @@ class JoinTournamentView(generics.CreateAPIView):
 
     @transaction.atomic
     def perform_join(self, validated_data, user):
-        tournament = validated_data["tournament"]
+        tournament = Tournament.objects.select_for_update().get(
+            id=validated_data["tournament"].id
+        )
         team_name = validated_data.get("team_name")
         team_logo = validated_data.get("team_logo")
         team_members = validated_data.get("team_members", [])
         in_game_names = validated_data["in_game_names"]
 
         is_team_based = tournament.match_format in [Tournament.MatchFormats.DUO, Tournament.MatchFormats.SQUAD]
+
+        if tournament.status == Tournament.Status.ACTIVE:
+            raise ValidationError("Tournament has already started.")
+        if tournament.status == Tournament.Status.COMPLETED:
+            raise ValidationError("Tournament has already completed.")
+        if tournament.status == Tournament.Status.REGISTRATION_CLOSED:
+            raise ValidationError("Registration has ended.")
+
+        # Recheck registration window and capacity under lock to avoid race conditions.
+        today = timezone.now().date()
+        if tournament.registration_start > today:
+            raise ValidationError("Registration has not started yet.")
+        if tournament.registration_end < today:
+            raise ValidationError("Registration has ended.")
+
+        current_slots = (
+            TournamentTeam.objects.filter(tournament=tournament).count()
+            if is_team_based
+            else TournamentParticipant.objects.filter(tournament=tournament).count()
+        )
+        if current_slots >= tournament.max_participants:
+            raise ValidationError("Tournament slots are full.")
 
         entry_fee = Decimal(tournament.entry_fee or 0)
         if entry_fee > 0:
@@ -962,6 +1025,155 @@ class JoinTournamentView(generics.CreateAPIView):
             )
 
 
+class CancelTournamentRegistrationView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description=(
+            "Cancel player's registration from a tournament. "
+            "Allowed only for free tournaments during registration window."
+        ),
+        responses={
+            200: openapi.Response(description="Registration canceled successfully"),
+            400: openapi.Response(description="Cancellation not allowed"),
+            404: openapi.Response(description="Tournament not found"),
+            500: openapi.Response(description="Internal Server Error"),
+        },
+        tags=["Tournament"],
+    )
+    @transaction.atomic
+    def post(self, request, tournament_id):
+        try:
+            tournament = Tournament.objects.select_for_update().get(id=tournament_id)
+        except Tournament.DoesNotExist:
+            return api_response(
+                is_success=False,
+                error_message="Tournament not found.",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            participant = (
+                TournamentParticipant.objects
+                .select_related("team")
+                .filter(tournament=tournament, player=request.user)
+                .first()
+            )
+            if not participant:
+                return api_response(
+                    is_success=False,
+                    error_message="You are not registered in this tournament.",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if Decimal(tournament.entry_fee or 0) > 0:
+                return api_response(
+                    is_success=False,
+                    error_message="Paid tournament registrations cannot be canceled.",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if tournament.status in [Tournament.Status.ACTIVE, Tournament.Status.COMPLETED]:
+                return api_response(
+                    is_success=False,
+                    error_message="Registration cancellation is not allowed after tournament start.",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+
+            today = timezone.localdate()
+            if tournament.registration_end and today > tournament.registration_end:
+                return api_response(
+                    is_success=False,
+                    error_message="Registration cancellation period has ended.",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+
+            is_team_based = tournament.match_format in [
+                Tournament.MatchFormats.DUO,
+                Tournament.MatchFormats.SQUAD,
+            ]
+
+            removed_count = 0
+            canceled_team_name = None
+
+            if is_team_based and participant.team_id:
+                team = (
+                    TournamentTeam.objects
+                    .select_for_update()
+                    .filter(id=participant.team_id, tournament=tournament)
+                    .first()
+                )
+
+                if team and team.captain_id != request.user.id:
+                    return api_response(
+                        is_success=False,
+                        error_message="Only the team captain can cancel team registration.",
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                if team:
+                    team_participants = list(
+                        TournamentParticipant.objects.filter(tournament=tournament, team=team)
+                        .select_related("player")
+                    )
+                    removed_count = len(team_participants)
+                    canceled_team_name = team.team_name
+
+                    TournamentParticipant.objects.filter(tournament=tournament, team=team).delete()
+                    team.delete()
+
+                    for team_participant in team_participants:
+                        if team_participant.player_id == request.user.id:
+                            continue
+                        _notify_tournament_user(
+                            team_participant.player,
+                            title="Tournament Registration Canceled",
+                            message=(
+                                f"Your team '{canceled_team_name}' registration was canceled "
+                                f"for tournament '{tournament.name}'."
+                            ),
+                            metadata={"tournament_id": tournament.id},
+                        )
+                else:
+                    participant.delete()
+                    removed_count = 1
+            else:
+                participant.delete()
+                removed_count = 1
+
+            _notify_tournament_user(
+                request.user,
+                title="Registration Canceled",
+                message=f"You canceled your registration for tournament '{tournament.name}'.",
+                metadata={"tournament_id": tournament.id},
+            )
+            _notify_tournament_user(
+                tournament.organizer,
+                title="Player Registration Canceled",
+                message=(
+                    f"A registration was canceled in your tournament '{tournament.name}'."
+                ),
+                metadata={"tournament_id": tournament.id},
+            )
+
+            return api_response(
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+                result={
+                    "message": "Registration canceled successfully.",
+                    "tournament_id": tournament.id,
+                    "removed_count": removed_count,
+                },
+            )
+        except Exception as e:
+            return api_response(
+                is_success=False,
+                error_message=str(e),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
 # View for Getting Tournament Participants
 class GetTournamentParticipantsView(generics.ListAPIView):
     serializer_class = TournamentParticipantSerializer
@@ -1076,6 +1288,8 @@ class GetMyJoinedTournamentsView(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
         try:
             tournaments = self.get_queryset()
+            for tournament in tournaments:
+                _apply_tournament_automations(tournament)
             serializer = self.serializer_class(tournaments, many=True, context={'request': request})
             return api_response(
                 is_success=True,

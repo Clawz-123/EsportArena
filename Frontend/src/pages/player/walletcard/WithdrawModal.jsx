@@ -45,6 +45,8 @@ const METHODS = [
 ]
 
 const COIN_RATE = 130 // 130 coins = $1
+const MIN_WITHDRAWAL_COINS = 10
+const MAX_WITHDRAWAL_COINS = 5000
 
 const WithdrawModal = ({ balance, onClose, onSubmit, onStripeConnect, onStripeWithdraw, loading, connectLoading, stripeConnected }) => {
   const [step, setStep] = useState(1) // 1: amount, 2: method, 3: confirm
@@ -112,7 +114,7 @@ const WithdrawModal = ({ balance, onClose, onSubmit, onStripeConnect, onStripeWi
     setShowConfirmation(false)
   }
 
-  const quickAmounts = [100, 250, 500, 1000]
+  const quickAmounts = [100, 250, 500, 1000, 2500, 5000]
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -150,12 +152,12 @@ const WithdrawModal = ({ balance, onClose, onSubmit, onStripeConnect, onStripeWi
                   value={coins}
                   onChange={(e) => { setCoins(e.target.value); setError('') }}
                   placeholder="Enter coins to withdraw"
-                  min={10}
-                  max={1000}
+                  min={MIN_WITHDRAWAL_COINS}
+                  max={MAX_WITHDRAWAL_COINS}
                   className="w-full px-4 py-3 rounded-lg bg-[#1E293B] border border-slate-600 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
                 />
                 <p className="text-xs text-slate-500 mt-1">
-                  Minimum: 10 coins • Maximum: 1000 coins
+                  Minimum: {MIN_WITHDRAWAL_COINS} coins • Maximum: {MAX_WITHDRAWAL_COINS} coins
                 </p>
               </div>
 
@@ -196,7 +198,7 @@ const WithdrawModal = ({ balance, onClose, onSubmit, onStripeConnect, onStripeWi
 
               <button
                 onClick={handleAmountNext}
-                disabled={coinNum < 10}
+                disabled={coinNum < MIN_WITHDRAWAL_COINS || coinNum > MAX_WITHDRAWAL_COINS}
                 className="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 Continue <ArrowRight className="w-4 h-4" />

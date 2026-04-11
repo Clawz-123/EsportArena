@@ -4,6 +4,48 @@ from .models import Match
 from tournament.models import Tournament
 
 
+GAME_MAPS_BY_TITLE = {
+    Tournament.GameTitles.PUBG_MOBILE: [
+        'Erangel',
+        'Miramar',
+        'Sanhok',
+        'Vikendi',
+    ],
+    Tournament.GameTitles.FREE_FIRE: [
+        'Bermuda',
+        'Purgatory',
+        'Kalahari',
+        'Nexteera',
+    ],
+}
+
+
+def _normalize_map_name(value):
+    return str(value or '').strip().lower()
+
+
+def _validate_map_for_tournament(map_name, tournament):
+    if map_name in (None, ''):
+        return map_name
+
+    allowed_maps = GAME_MAPS_BY_TITLE.get(tournament.game_title, [])
+    if not allowed_maps:
+        return map_name
+
+    normalized_input = _normalize_map_name(map_name)
+    canonical_map = next(
+        (allowed_map for allowed_map in allowed_maps if _normalize_map_name(allowed_map) == normalized_input),
+        None,
+    )
+
+    if not canonical_map:
+        raise serializers.ValidationError({
+            'map': f"Invalid map for {tournament.game_title}. Allowed maps: {', '.join(allowed_maps)}."
+        })
+
+    return canonical_map
+
+
 # Serializer for creating a match
 class MatchCreateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -39,6 +81,9 @@ class MatchCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({
                     "match_number": "Match number already exists for this group."
                 })
+
+        if tournament:
+            attrs['map'] = _validate_map_for_tournament(attrs.get('map'), tournament)
         
         return attrs
 
@@ -100,6 +145,9 @@ class MatchUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 "match_number": "Match number already exists for this group."
             })
+
+        if 'map' in attrs:
+            attrs['map'] = _validate_map_for_tournament(attrs.get('map'), instance.tournament)
 
         return attrs
 

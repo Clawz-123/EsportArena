@@ -1,18 +1,22 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import React, { useEffect, useMemo, useState } from 'react'
 import { Trophy, Medal, ChevronDown, Pencil } from 'lucide-react'
+import { toast } from 'react-toastify'
 import { useAppDispatch, useAppSelector } from '../../../store/hooks'
 import { fetchTournamentBracket } from '../../../slices/BracketSlice'
 import { fetchLeaderboardEntries, updateLeaderboardEntry } from '../../../slices/leaderBoardSlice'
+import { fetchMatchesByTournament } from '../../../slices/MatchSlice'
 
 const LeaderBoardCard = ({ tournamentId }) => {
   const dispatch = useAppDispatch()
   const { bracket } = useAppSelector((state) => state.bracket)
   const { entries, loading, error, updateLoading } = useAppSelector((state) => state.leaderboard || {})
+  const { matches = [] } = useAppSelector((state) => state.match || {})
   const [groups, setGroups] = useState([])
   const [selectedGroup, setSelectedGroup] = useState('')
   const [editingEntry, setEditingEntry] = useState(null)
   const [editForm, setEditForm] = useState({
+    match_id: '',
     placement_points: '',
     kill_points: '',
     wwcd: '',
@@ -22,6 +26,7 @@ const LeaderBoardCard = ({ tournamentId }) => {
   useEffect(() => {
     if (tournamentId) {
       dispatch(fetchTournamentBracket(tournamentId))
+      dispatch(fetchMatchesByTournament(tournamentId))
     }
   }, [dispatch, tournamentId])
 
@@ -71,9 +76,26 @@ const LeaderBoardCard = ({ tournamentId }) => {
     return data
   }, [entries])
 
+  const groupMatches = useMemo(() => {
+    return (matches || [])
+      .filter((match) => {
+        if (!selectedGroup) return false
+        const sameGroup = String(match.group || '').trim().toLowerCase() === String(selectedGroup || '').trim().toLowerCase()
+        const isCompleted = String(match.status || '').trim().toLowerCase() === 'completed'
+        return sameGroup && isCompleted
+      })
+      .sort((a, b) => Number(a.match_number || 0) - Number(b.match_number || 0))
+  }, [matches, selectedGroup])
+
   const openEditPoints = (entry) => {
+    if (groupMatches.length === 0) {
+      toast.info('Complete at least one match in this group before updating leaderboard points.')
+      return
+    }
+
     setEditingEntry(entry)
     setEditForm({
+      match_id: String(groupMatches[0]?.id || ''),
       placement_points: String(entry.placement_points ?? ''),
       kill_points: String(entry.kill_points ?? ''),
       wwcd: String(entry.wwcd ?? ''),
@@ -82,24 +104,50 @@ const LeaderBoardCard = ({ tournamentId }) => {
 
   const closeEditPoints = () => {
     setEditingEntry(null)
-    setEditForm({ placement_points: '', kill_points: '', wwcd: '' })
+    setEditForm({ match_id: '', placement_points: '', kill_points: '', wwcd: '' })
+  }
+
+  const extractApiErrorMessage = (payload, fallback) => {
+    const base = payload?.Error_Message || payload?.error_message || payload?.message || payload
+    if (!base) return fallback
+    if (typeof base === 'string') return base
+    if (Array.isArray(base) && base.length > 0) return String(base[0])
+    if (typeof base === 'object') {
+      const firstValue = Object.values(base)[0]
+      if (Array.isArray(firstValue) && firstValue.length > 0) return String(firstValue[0])
+      if (typeof firstValue === 'string') return firstValue
+    }
+    return fallback
   }
 
   const handleEditSubmit = async (event) => {
     event.preventDefault()
     if (!editingEntry) return
 
-     dispatch(
+    if (!editForm.match_id) {
+      toast.error('Select a match before saving leaderboard points.')
+      return
+    }
+
+    const result = await dispatch(
       updateLeaderboardEntry({
         entryId: editingEntry.id,
         entryData: {
+          match_id: Number(editForm.match_id),
           placement_points: Number(editForm.placement_points || 0),
           kill_points: Number(editForm.kill_points || 0),
           wwcd: Number(editForm.wwcd || 0),
         },
       })
     )
-    closeEditPoints()
+
+    if (updateLeaderboardEntry.fulfilled.match(result)) {
+      toast.success('Leaderboard updated successfully.')
+      closeEditPoints()
+      return
+    }
+
+    toast.error(extractApiErrorMessage(result.payload, 'Failed to update leaderboard entry.'))
   }
 
   return (
@@ -219,8 +267,9 @@ const LeaderBoardCard = ({ tournamentId }) => {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <button
-                            className="p-2 rounded-lg text-[#94a3b8] hover:text-white hover:bg-white/5 transition-all opacity-0 group-hover:opacity-100"
+                            className="p-2 rounded-lg text-[#94a3b8] hover:text-white hover:bg-white/5 transition-all opacity-0 group-hover:opacity-100 disabled:opacity-40 disabled:cursor-not-allowed"
                             onClick={() => openEditPoints(entry)}
+                            disabled={groupMatches.length === 0}
                             title="Edit points"
                           >
                             <Pencil className="w-4 h-4" />
@@ -267,6 +316,23 @@ const LeaderBoardCard = ({ tournamentId }) => {
             </div>
 
             <form onSubmit={handleEditSubmit} className="p-6 pt-2 space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-white text-sm font-medium">Match *</label>
+                <select
+                  required
+                  value={editForm.match_id}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, match_id: e.target.value }))}
+                  className="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]"
+                >
+                  <option value="">Select Completed Match</option>
+                  {groupMatches.map((match) => (
+                    <option key={match.id} value={match.id}>
+                      Match {match.match_number}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="space-y-1.5">
                 <label className="block text-white text-sm font-medium">Placement Points</label>
                 <input

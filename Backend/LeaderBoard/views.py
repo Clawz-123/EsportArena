@@ -156,7 +156,57 @@ class UpdateLeaderboardEntryView(generics.UpdateAPIView):
 					status_code=status.HTTP_403_FORBIDDEN,
 				)
 
-			serializer = self.serializer_class(entry, data=request.data, partial=True, context={"request": request})
+			payload = request.data.copy()
+			selected_match_raw = payload.pop("match_id", None)
+			if isinstance(selected_match_raw, list):
+				selected_match_raw = selected_match_raw[0] if selected_match_raw else None
+
+			if selected_match_raw in (None, ""):
+				return api_response(
+					is_success=False,
+					error_message={"match_id": ["Select a match before updating leaderboard points."]},
+					status_code=status.HTTP_400_BAD_REQUEST,
+				)
+
+			try:
+				selected_match_id = int(selected_match_raw)
+			except (TypeError, ValueError):
+				return api_response(
+					is_success=False,
+					error_message={"match_id": ["Invalid match selected."]},
+					status_code=status.HTTP_400_BAD_REQUEST,
+				)
+
+			selected_match = entry.tournament.matches.filter(id=selected_match_id).first()
+			if not selected_match:
+				return api_response(
+					is_success=False,
+					error_message={"match_id": ["Selected match does not belong to this tournament."]},
+					status_code=status.HTTP_400_BAD_REQUEST,
+				)
+
+			if str(selected_match.group or "").strip().lower() != str(entry.group_name or "").strip().lower():
+				return api_response(
+					is_success=False,
+					error_message={"match_id": ["Selected match must belong to the same leaderboard group."]},
+					status_code=status.HTTP_400_BAD_REQUEST,
+				)
+
+			if str(selected_match.status or "").strip().lower() == "cancelled":
+				return api_response(
+					is_success=False,
+					error_message={"match_id": ["Cannot assign points for a cancelled match."]},
+					status_code=status.HTTP_400_BAD_REQUEST,
+				)
+
+			if str(selected_match.status or "").strip().lower() != "completed":
+				return api_response(
+					is_success=False,
+					error_message={"match_id": ["You can add leaderboard points only after the selected match is completed."]},
+					status_code=status.HTTP_400_BAD_REQUEST,
+				)
+
+			serializer = self.serializer_class(entry, data=payload, partial=True, context={"request": request})
 			if serializer.is_valid():
 				updated_entry = serializer.save()
 				return api_response(
@@ -165,6 +215,11 @@ class UpdateLeaderboardEntryView(generics.UpdateAPIView):
 					result={
 						"message": "Leaderboard entry updated successfully.",
 						"entry": GroupLeaderboardEntrySerializer(updated_entry, context={"request": request}).data,
+						"match": {
+							"id": selected_match.id,
+							"match_number": selected_match.match_number,
+							"group": selected_match.group,
+						},
 					},
 				)
 			return api_response(

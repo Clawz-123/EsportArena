@@ -45,7 +45,6 @@ const OrgTournamentHeader = () => {
   useEffect(() => {
     if (deleteSuccess) {
       toast.success('Tournament deleted successfully!')
-      setDeleteConfirmation({ isOpen: false })
       navigate('/Orgtournaments')
     }
     if (deleteError) {
@@ -86,6 +85,12 @@ const OrgTournamentHeader = () => {
   const handleEditTournament = () => {
     if (!tournament?.id) return
 
+    const explicitStatus = String(tournament?.status || '').toLowerCase()
+    if (explicitStatus === 'active' || explicitStatus === 'completed') {
+      toast.error('Ongoing or completed tournaments cannot be edited.')
+      return
+    }
+
     if (!isRegistrationOpen(tournament)) {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
@@ -108,13 +113,15 @@ const OrgTournamentHeader = () => {
 
 
   const handleOpenDeleteConfirm = () => {
+    const explicitStatus = String(tournament?.status || '').toLowerCase()
+
     // Check if tournament can be deleted
-    if (tournament?.status === 'Active') {
+    if (explicitStatus === 'active') {
       toast.error('Cannot delete tournament that is currently ongoing. Tournament can only be deleted during registration phase.')
       return
     }
 
-    if (tournament?.status === 'Completed') {
+    if (explicitStatus === 'completed') {
       toast.error('Cannot delete completed tournament.')
       return
     }
@@ -139,6 +146,13 @@ const OrgTournamentHeader = () => {
 
   const getTournamentStatus = (tournament) => {
     if (!tournament) return 'upcoming'
+
+    const explicitStatus = String(tournament.status || '').toLowerCase()
+    if (explicitStatus === 'active') return 'ongoing'
+    if (explicitStatus === 'completed') return 'completed'
+    if (explicitStatus === 'registration closed') return 'registration closed'
+    if (explicitStatus === 'registration open') return 'registration'
+
     const now = new Date()
     const matchStart = new Date(tournament.match_start)
     const matchEnd = tournament.expected_end ? new Date(tournament.expected_end) : null
@@ -149,11 +163,22 @@ const OrgTournamentHeader = () => {
   }
 
   const status = getTournamentStatus(tournament)
-  const statusColor = status === 'ongoing' ? 'bg-[#10B981]' : status === 'completed' ? 'bg-[#9CA3AF]' : 'bg-[#3B82F6]'
+  const statusColor =
+    status === 'ongoing'
+      ? 'bg-[#10B981]'
+      : status === 'completed'
+        ? 'bg-[#9CA3AF]'
+        : status === 'registration closed'
+          ? 'bg-[#D97706]'
+          : status === 'registration'
+            ? 'bg-[#2563EB]'
+            : 'bg-[#3B82F6]'
 
   const canDeleteTournament = () => {
+    const explicitStatus = String(tournament?.status || '').toLowerCase()
+
     // Cannot delete if tournament is ongoing or completed
-    if (tournament?.status === 'Active' || tournament?.status === 'Completed') {
+    if (explicitStatus === 'active' || explicitStatus === 'completed') {
       return false
     }
     // Can only delete during registration phase
@@ -201,7 +226,7 @@ const OrgTournamentHeader = () => {
       case 'bracket':
         return <BracketCard tournamentId={id} />
       case 'matches':
-        return <MatchesCard tournamentId={id} />
+        return <MatchesCard tournamentId={id} gameTitle={tournament?.game_title} />
       case 'leaderboard':
         return <LeaderBoardCard tournamentId={id} />
       case 'forum':

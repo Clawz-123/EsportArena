@@ -21,7 +21,7 @@ import { fetchTournamentBracket } from '../../../slices/BracketSlice';
 import { fetchMatchesByTournament, createMatch, deleteMatch, updateMatch } from '../../../slices/MatchSlice';
 
 // Creating a component to display and manage matches for a tournament
-const MatchesCard = ({ tournamentId }) => {
+const MatchesCard = ({ tournamentId, gameTitle }) => {
   const dispatch = useDispatch();
   const { bracket } = useSelector((state) => state.bracket);
   const { createLoading, loading: matchesLoading, error: matchesError, matches } = useSelector(
@@ -141,23 +141,37 @@ const MatchesCard = ({ tournamentId }) => {
     }
   };
 
+  const extractApiMessage = (payload, fallbackMessage) => {
+    const base = payload?.Error_Message ?? payload?.error_message ?? payload?.message ?? payload;
+    if (!base) return fallbackMessage;
+    if (typeof base === 'string') return base;
+    if (Array.isArray(base) && base.length > 0) return String(base[0]);
+    if (typeof base === 'object') {
+      const firstValue = Object.values(base)[0];
+      if (Array.isArray(firstValue) && firstValue.length > 0) return String(firstValue[0]);
+      if (typeof firstValue === 'string') return firstValue;
+    }
+    return fallbackMessage;
+  };
+
   const handleDeleteMatch = async (matchId) => {
     try {
-      const result = dispatch(deleteMatch(matchId));
+      const result = await dispatch(deleteMatch(matchId));
       if (deleteMatch.fulfilled.match(result)) {
-        toast.success('Match deleted');
+        const successMessage = extractApiMessage(result.payload?.Result || result.payload?.result, 'Match cancelled successfully.');
+        toast.success(successMessage);
         dispatch(fetchMatchesByTournament(tournamentId));
       } else {
-        toast.error('Failed to delete match');
+        toast.error(extractApiMessage(result.payload, 'Failed to cancel match'));
       }
     } catch (error) {
-      toast.error('Failed to delete match');
+      toast.error('Failed to cancel match');
     }
   };
 
   const handleCompleteMatch = async (matchId) => {
     try {
-      const result = dispatch(updateMatch({
+      const result = await dispatch(updateMatch({
         matchId,
         matchData: { status: 'Completed' },
       }));
@@ -165,7 +179,7 @@ const MatchesCard = ({ tournamentId }) => {
         toast.success('Match marked as completed');
         dispatch(fetchMatchesByTournament(tournamentId));
       } else {
-        toast.error('Failed to update match');
+        toast.error(extractApiMessage(result.payload, 'Failed to update match'));
       }
     } catch (error) {
       toast.error('Failed to update match');
@@ -388,6 +402,7 @@ const MatchesCard = ({ tournamentId }) => {
       {showMatchForm && (
         <MatchForm
           groups={groups}
+          gameTitle={gameTitle}
           onSubmit={handleCreateMatch}
           onCancel={() => setShowMatchForm(false)}
           loading={createLoading}

@@ -59,8 +59,6 @@ export const tournamentValidationSchema = Yup.object().shape({
     .integer("Maximum teams must be a whole number")
     .min(1, "Maximum teams must be at least 1"),
   
-  autoGenerateBracket: Yup.boolean(),
-  
   entryFee: Yup.number()
     .required("Entry fee is required")
     .typeError("Entry fee must be a number")

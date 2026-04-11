@@ -1,4 +1,3 @@
-from django.shortcuts import render
 from rest_framework import status, generics
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -29,27 +28,41 @@ class TournamentBracketView(generics.GenericAPIView):
         tournament = Tournament.objects.filter(id=tournament_id).first()
         if not tournament:
             return Response({'detail': 'Tournament not found.'}, status=status.HTTP_404_NOT_FOUND)
-        # If bracket already exists, update it
+
+        is_organizer = tournament.organizer_id == request.user.id
+        is_superadmin = bool(getattr(request.user, "is_superuser", False))
+        if not (is_organizer or is_superadmin):
+            return Response({'detail': 'Only tournament organizer can generate bracket.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Bracket generation is allowed only once per tournament.
         bracket = self.get_object(tournament_id)
+        if bracket:
+            return Response({'detail': 'Bracket already generated for this tournament.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Status-based generation gate (not date-based): registration closed or active only.
+        if tournament.status not in [Tournament.Status.REGISTRATION_CLOSED, Tournament.Status.ACTIVE]:
+            return Response(
+                {'detail': 'Brackets can only be generated when tournament is registration closed or ongoing.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         data = request.data.copy()
         data['tournament'] = tournament_id
-        if bracket:
-            serializer = self.get_serializer(bracket, data=data, partial=True)
-        else:
-            serializer = self.get_serializer(data=data)
+
+        serializer = self.get_serializer(data=data)
         if serializer.is_valid():
             bracket = serializer.save()
             self._sync_group_leaderboard(bracket)
 
             self._notify_participants(
                 bracket.tournament,
-                title='Bracket Updated',
-                message=f"Bracket for tournament '{bracket.tournament.name}' has been updated.",
+                title='Bracket Generated',
+                message=f"Bracket for tournament '{bracket.tournament.name}' has been generated.",
                 metadata={'tournament_id': bracket.tournament_id},
                 exclude_user_ids=[request.user.id],
             )
 
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def _notify_participants(self, tournament, title, message, metadata=None, exclude_user_ids=None):

@@ -2,7 +2,14 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { useAppDispatch, useAppSelector } from '../../../store/hooks'
-import { fetchTournamentDetail, fetchTournamentParticipants, fetchTournamentTeams } from '../../../slices/tournamentSlice'
+import {
+  fetchTournamentDetail,
+  fetchTournamentParticipants,
+  fetchTournamentTeams,
+  fetchMyJoinedTournaments,
+  fetchPublicTournaments,
+  cancelTournamentRegistration,
+} from '../../../slices/tournamentSlice'
 import { ChevronLeft, Calendar, Users, DollarSign, Trophy } from 'lucide-react'
 import Header from '../../../components/common/Header'
 import OverviewCard from './OverviewCard'
@@ -13,7 +20,7 @@ const TournaHeader = () => {
   const navigate = useNavigate()
   const { id } = useParams()
   const dispatch = useAppDispatch()
-  const { currentTournament, loading, participants, teams, participantsLoading } = useAppSelector((state) => state.tournament)
+  const { currentTournament, loading, participants, teams, participantsLoading, cancelRegistrationLoading } = useAppSelector((state) => state.tournament)
   const { user } = useAppSelector((state) => state.auth || {})
   const { profile } = useAppSelector((state) => state.profile || {})
   const [activeTab, setActiveTab] = useState('overview')
@@ -50,6 +57,12 @@ const TournaHeader = () => {
 
   const getTournamentStatus = (tournament) => {
     if (!tournament) return 'upcoming'
+
+    const explicitStatus = String(tournament.status || '').toLowerCase()
+    if (explicitStatus === 'active') return 'ongoing'
+    if (explicitStatus === 'completed') return 'completed'
+    if (explicitStatus === 'registration closed') return 'registration-closed'
+
     const now = new Date()
     const matchStart = new Date(tournament.match_start)
     const matchEnd = tournament.expected_end ? new Date(tournament.expected_end) : null
@@ -95,6 +108,47 @@ const TournaHeader = () => {
     { id: 'forums', label: 'Forums', restricted: true },
     { id: 'leaderboard', label: 'Leaderboard', restricted: true },
   ]
+
+  const extractApiMessage = (payload, fallbackMessage) => {
+    const base = payload?.Error_Message ?? payload?.error_message ?? payload?.message ?? payload
+    if (!base) return fallbackMessage
+    if (typeof base === 'string') return base
+    if (Array.isArray(base) && base.length > 0) return String(base[0])
+    if (typeof base === 'object') {
+      const firstValue = Object.values(base)[0]
+      if (Array.isArray(firstValue) && firstValue.length > 0) return String(firstValue[0])
+      if (typeof firstValue === 'string') return firstValue
+    }
+    return fallbackMessage
+  }
+
+  const handleCancelRegistration = async () => {
+    if (!id || !isParticipant) {
+      toast.info('You are not registered in this tournament.')
+      return
+    }
+
+    if (Number(tournament.entry_fee || 0) > 0) {
+      toast.info('Paid tournament registrations cannot be canceled.')
+      return
+    }
+
+    const result = await dispatch(cancelTournamentRegistration(id))
+    if (cancelTournamentRegistration.fulfilled.match(result)) {
+      const message = extractApiMessage(result.payload?.Result || result.payload?.result, 'Registration canceled successfully.')
+      toast.success(message)
+
+      dispatch(fetchTournamentDetail(id))
+      dispatch(fetchTournamentParticipants(id))
+      dispatch(fetchTournamentTeams(id))
+      dispatch(fetchMyJoinedTournaments())
+      dispatch(fetchPublicTournaments())
+      setActiveTab('overview')
+      return
+    }
+
+    toast.error(extractApiMessage(result.payload, 'Failed to cancel registration.'))
+  }
 
   const handleTabClick = (tab) => {
     if (tab.restricted && !canAccessRestrictedTabs) {
@@ -144,9 +198,10 @@ const TournaHeader = () => {
                 <h1 className="text-4xl font-bold text-white">{tournament.name}</h1>
                 <span className={`px-3 py-1 rounded-full text-xs font-semibold text-white ${status === 'ongoing' ? 'bg-[#10B981]' :
                   status === 'completed' ? 'bg-[#6B7280]' :
+                    status === 'registration-closed' ? 'bg-[#D97706]' :
                     'bg-[#2563EB]'
                   }`}>
-                  {status}
+                  {status.replace('-', ' ')}
                 </span>
               </div>
               <p className="text-[#9CA3AF] text-sm mb-3">{tournament.game_title}</p>
@@ -197,6 +252,16 @@ const TournaHeader = () => {
             <button className="w-full bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium py-2 rounded-lg transition-colors text-sm">
               Join Discord
             </button>
+            {isParticipant && !isOrganizer && !isSuperAdmin && (
+              <button
+                type="button"
+                onClick={handleCancelRegistration}
+                disabled={cancelRegistrationLoading}
+                className="mt-3 w-full bg-[#7F1D1D] hover:bg-[#991B1B] text-white font-medium py-2 rounded-lg transition-colors text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {cancelRegistrationLoading ? 'Cancelling...' : 'Cancel Registration'}
+              </button>
+            )}
           </div>
         </div>
 

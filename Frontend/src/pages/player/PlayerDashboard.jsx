@@ -26,18 +26,46 @@ const PlayerDashboard = () => {
   // Get tournament status
   const getTournamentStatus = (tournament) => {
     if (!tournament) return 'unknown'
+
+    const explicitStatus = String(tournament.status || '').toLowerCase()
+    if (explicitStatus === 'active') return 'ongoing'
+    if (explicitStatus === 'completed') return 'completed'
+    if (explicitStatus === 'registration closed') return 'registration-closed'
+    if (explicitStatus === 'registration open') return 'registration'
+
     const now = new Date()
     const regStart = new Date(tournament.registration_start)
     const regEnd = new Date(tournament.registration_end)
     const matchStart = new Date(tournament.match_start)
     const matchEnd = tournament.expected_end ? new Date(tournament.expected_end) : null
 
+    if (Number.isNaN(regStart.getTime()) || Number.isNaN(regEnd.getTime()) || Number.isNaN(matchStart.getTime())) {
+      return 'unknown'
+    }
+
     if (now < regStart) return 'upcoming'
     if (now >= regStart && now <= regEnd) return 'registration'
-    if (now > regEnd && now < matchStart) return 'registration'
+    if (now > regEnd && now < matchStart) return 'registration-closed'
     if (now >= matchStart && (!matchEnd || now <= matchEnd)) return 'ongoing'
     if (matchEnd && now > matchEnd) return 'completed'
     return 'unknown'
+  }
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'ongoing':
+        return 'Ongoing'
+      case 'registration':
+        return 'Registration'
+      case 'registration-closed':
+        return 'Registration Closed'
+      case 'completed':
+        return 'Completed'
+      case 'upcoming':
+        return 'Upcoming'
+      default:
+        return 'Unknown'
+    }
   }
 
   // Count tournaments by status
@@ -83,15 +111,17 @@ const PlayerDashboard = () => {
   const statusStyle = (status) => {
     switch (status) {
       case 'ongoing':
-        return 'bg-[#3B82F6] text-white'
+        return 'border-[#00E5A8] text-[#00E5A8] bg-[#00E5A8]/10'
       case 'registration':
-        return 'bg-[#020617] text-white border border-[#374151]'
+        return 'border-[#3B82F6] text-[#3B82F6] bg-[#3B82F6]/10'
+      case 'registration-closed':
+        return 'border-[#FF4D4F] text-[#FF4D4F] bg-[#FF4D4F]/10'
       case 'completed':
-        return 'bg-[#111827] text-[#E5E7EB] border border-[#374151]'
+        return 'border-[#9CA3AF] text-[#E5E7EB] bg-[#9CA3AF]/10'
       case 'upcoming':
-        return 'bg-[#1E293B] text-[#3B82F6]'
+        return 'border-[#60A5FA] text-[#60A5FA] bg-[#60A5FA]/10'
       default:
-        return 'bg-[#111827] text-[#6B7280]'
+        return 'border-[#6B7280] text-[#9CA3AF] bg-[#6B7280]/10'
     }
   }
 
@@ -188,11 +218,11 @@ const PlayerDashboard = () => {
                         </td>
                         <td className="px-6 py-4">
                           <span
-                            className={`inline-flex px-3 py-1 rounded-full text-xs font-medium lowercase ${statusStyle(
+                            className={`inline-flex items-center justify-center min-w-32 px-4 py-1 rounded-full text-sm font-semibold border ${statusStyle(
                               t.status
                             )}`}
                           >
-                            {t.status}
+                            {getStatusLabel(t.status)}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right">

@@ -28,6 +28,11 @@ const Tournament = () => {
 
   // Get tournament status
   const getTournamentStatus = (tournament) => {
+    const explicitStatus = String(tournament?.status || '').toLowerCase()
+    if (explicitStatus === 'active') return 'Ongoing'
+    if (explicitStatus === 'completed') return 'Completed'
+    if (explicitStatus === 'registration closed') return 'Registration Closed'
+
     const now = new Date()
     const regStart = new Date(tournament.registration_start)
     const regEnd = new Date(tournament.registration_end)
@@ -121,11 +126,28 @@ const Tournament = () => {
     return colors[hash]
   }
 
+  const getOccupiedSlots = (tournament) => {
+    const isTeamBased = ['duo', 'squad'].includes((tournament.match_format || '').toLowerCase())
+    const occupied = Number(
+      tournament.occupied_slots ??
+      (isTeamBased ? tournament.teams_count : tournament.participants_count) ??
+      0
+    )
+    return Number.isNaN(occupied) ? 0 : occupied
+  }
+
   const handleJoinTournament = (tournament) => {
     if (user?.is_organizer || user?.role?.toLowerCase() === 'organizer') {
       toast.info('Organizers cannot join tournaments')
       return
     }
+
+    const maxSlots = Number(tournament.max_participants || 0)
+    if (maxSlots > 0 && getOccupiedSlots(tournament) >= maxSlots) {
+      toast.info('Tournament slots are full')
+      return
+    }
+
     // Check if tournament is team-based (duo or squad)
     const isTeamBased = tournament.match_format?.toLowerCase().includes('squad') || 
                         tournament.match_format?.toLowerCase().includes('duo')
@@ -311,6 +333,7 @@ const Tournament = () => {
                 const isJoinOpen = getTournamentStatus(tournament) === 'Registration'
                 const isTeamBased = ['duo', 'squad'].includes((tournament.match_format || '').toLowerCase())
                 const capacityUnit = isTeamBased ? 'Teams' : 'Players'
+                const occupiedSlots = getOccupiedSlots(tournament)
 
                 return (
                 <div
@@ -372,7 +395,7 @@ const Tournament = () => {
                     </div>
                     <div className="flex items-center gap-3 text-[13px]">
                       <Users className="w-4 h-4 text-[#3B82F6]" />
-                      <span className="text-[#9CA3AF]">0/{tournament.max_participants} {capacityUnit}</span>
+                      <span className="text-[#9CA3AF]">{occupiedSlots}/{tournament.max_participants} {capacityUnit}</span>
                     </div>
                     <div className="flex items-center gap-3 text-[13px]">
                       <Coins className="w-4 h-4 text-[#3B82F6]" />

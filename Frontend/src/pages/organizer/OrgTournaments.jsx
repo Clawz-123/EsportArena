@@ -35,6 +35,13 @@ const OrgTournaments = () => {
   // Created helper function to determine the tournament status
   const getTournamentStatus = (tournament) => {
     if (tournament.is_draft) return 'Draft'
+
+    const explicitStatus = String(tournament?.status || '').toLowerCase()
+    if (explicitStatus === 'active') return 'Ongoing'
+    if (explicitStatus === 'completed') return 'Completed'
+    if (explicitStatus === 'registration closed') return 'Registration Closed'
+    if (explicitStatus === 'registration open') return 'Registration'
+
     const now = new Date()
     const regStart = new Date(tournament.registration_start)
     const regEnd = new Date(tournament.registration_end)

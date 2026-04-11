@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from rest_framework import serializers
 from esport.media_utils import resolve_media_url
 
@@ -13,7 +15,12 @@ class PaymentOrderSerializer(serializers.ModelSerializer):
 
 
 class WalletTopUpInitiateSerializer(serializers.Serializer):
-    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=10.00)
+    amount = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        min_value=Decimal('10'),
+        max_value=Decimal('5000'),
+    )
 
     def validate(self, attrs):
         amount = attrs.get('amount')
@@ -23,6 +30,12 @@ class WalletTopUpInitiateSerializer(serializers.Serializer):
 
         if amount <= 0:
             raise serializers.ValidationError('Amount must be greater than zero.')
+
+        if amount < Decimal('10'):
+            raise serializers.ValidationError('Minimum top-up amount is 10 coins.')
+
+        if amount > Decimal('5000'):
+            raise serializers.ValidationError('Maximum top-up amount is 5000 coins.')
 
         if amount != amount.to_integral_value():
             raise serializers.ValidationError('Amount must be a whole number for coin conversion.')
@@ -45,12 +58,16 @@ class WalletEsewaVerifySerializer(serializers.Serializer):
 
 
 class StripeTopUpInitiateSerializer(serializers.Serializer):
-    coins = serializers.IntegerField(min_value=1)
+    coins = serializers.IntegerField(min_value=10, max_value=5000)
 
     def validate(self, attrs):
         coins = attrs.get('coins')
-        if coins is None or coins <= 0:
-            raise serializers.ValidationError('Coins must be greater than zero.')
+        if coins is None:
+            raise serializers.ValidationError('Coins amount is required.')
+        if coins < 10:
+            raise serializers.ValidationError('Minimum top-up amount is 10 coins.')
+        if coins > 5000:
+            raise serializers.ValidationError('Maximum top-up amount is 5000 coins.')
         return attrs
 
 
@@ -59,12 +76,16 @@ class StripeTopUpVerifySerializer(serializers.Serializer):
 
 
 class StripeWithdrawSerializer(serializers.Serializer):
-    coins = serializers.IntegerField(min_value=1)
+    coins = serializers.IntegerField(min_value=10, max_value=5000)
 
     def validate(self, attrs):
         coins = attrs.get('coins')
         if coins is None or coins <= 0:
             raise serializers.ValidationError('Coins must be greater than zero.')
+        if coins < 10:
+            raise serializers.ValidationError('Minimum withdrawal amount is 10 coins.')
+        if coins > 5000:
+            raise serializers.ValidationError('Maximum withdrawal amount is 5000 coins.')
         return attrs
 
 
@@ -85,13 +106,17 @@ class WithdrawalRequestSerializer(serializers.ModelSerializer):
 
 
 class ManualWithdrawSerializer(serializers.Serializer):
-    coins = serializers.IntegerField(min_value=1)
+    coins = serializers.IntegerField(min_value=10, max_value=5000)
     provider = serializers.ChoiceField(choices=['esewa', 'khalti'])
     account_identifier = serializers.CharField(max_length=120)
 
     def validate_coins(self, value):
         if value <= 0:
             raise serializers.ValidationError('Coins must be greater than zero.')
+        if value < 10:
+            raise serializers.ValidationError('Minimum withdrawal amount is 10 coins.')
+        if value > 5000:
+            raise serializers.ValidationError('Maximum withdrawal amount is 5000 coins.')
         return value
 
     def validate_account_identifier(self, value):

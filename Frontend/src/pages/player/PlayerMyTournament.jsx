@@ -4,74 +4,123 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import { fetchMyJoinedTournaments } from '../../slices/tournamentSlice'
 import PlayerSidebar from './PlayerSidebar'
 import ProfileMenu from '../../components/common/ProfileMenu'
-import { Trophy } from 'lucide-react'
+import { ChevronDown, Search, Trophy } from 'lucide-react'
 
 const PlayerMyTournament = () => {
     const navigate = useNavigate()
     const dispatch = useAppDispatch()
-    const [activeFilter, setActiveFilter] = useState('all')
-    const { joinedTournaments, loading } = useAppSelector((state) => state.tournament)
+    const [searchQuery, setSearchQuery] = useState('')
+    const [selectedGame, setSelectedGame] = useState('All Games')
+    const [selectedStatus, setSelectedStatus] = useState('All Status')
+    const { joinedTournaments, joinedLoading, joinedError } = useAppSelector((state) => state.tournament)
 
     useEffect(() => {
         dispatch(fetchMyJoinedTournaments())
     }, [dispatch])
 
-    // Get tournament status based on dates
+    // Get tournament status using backend status first, then date fallback
     const getTournamentStatus = (tournament) => {
         if (!tournament) return 'unknown'
+
+        const explicitStatus = String(tournament.status || '').toLowerCase()
+        if (explicitStatus === 'active') return 'ongoing'
+        if (explicitStatus === 'completed') return 'completed'
+        if (explicitStatus === 'registration closed') return 'registration-closed'
+        if (explicitStatus === 'registration open') return 'registration'
+
         const now = new Date()
         const regStart = new Date(tournament.registration_start)
         const regEnd = new Date(tournament.registration_end)
         const matchStart = new Date(tournament.match_start)
         const matchEnd = tournament.expected_end ? new Date(tournament.expected_end) : null
 
-        if (now < regStart) return 'registration'
+        if (Number.isNaN(regStart.getTime()) || Number.isNaN(regEnd.getTime()) || Number.isNaN(matchStart.getTime())) {
+            return 'unknown'
+        }
+
+        if (now < regStart) return 'upcoming'
         if (now >= regStart && now <= regEnd) return 'registration'
-        if (now > regEnd && now < matchStart) return 'registration'
+        if (now > regEnd && now < matchStart) return 'registration-closed'
         if (now >= matchStart && (!matchEnd || now <= matchEnd)) return 'ongoing'
         if (matchEnd && now > matchEnd) return 'completed'
-        return 'upcoming'
+        return 'unknown'
     }
 
-    // Format tournaments with status
+    const getRegistrationStatus = (tournament) => {
+        const explicitStatus = String(tournament?.status || '').toLowerCase()
+        if (explicitStatus === 'registration open') return 'Open'
+        if (['registration closed', 'active', 'completed'].includes(explicitStatus)) return 'Closed'
+
+        const now = new Date()
+        const regStart = new Date(tournament.registration_start)
+        const regEnd = new Date(tournament.registration_end)
+
+        if (Number.isNaN(regStart.getTime()) || Number.isNaN(regEnd.getTime())) {
+            return 'Closed'
+        }
+
+        if (now >= regStart && now <= regEnd) return 'Open'
+        return 'Closed'
+    }
+
+    const getStatusLabel = (status) => {
+        switch (status) {
+            case 'ongoing':
+                return 'Ongoing'
+            case 'registration':
+                return 'Registration'
+            case 'registration-closed':
+                return 'Registration Closed'
+            case 'completed':
+                return 'Completed'
+            case 'upcoming':
+                return 'Upcoming'
+            default:
+                return 'Unknown'
+        }
+    }
+
+    const games = ['All Games', 'PUBG Mobile', 'Free Fire']
+    const statuses = [
+        'All Status',
+        'Ongoing',
+        'Registration',
+        'Registration Closed',
+        'Upcoming',
+        'Completed',
+    ]
+
+    // Normalize joined tournaments for UI rendering and filtering
     const tournaments = joinedTournaments.map((t) => ({
         ...t,
         status: getTournamentStatus(t),
+        statusLabel: getStatusLabel(getTournamentStatus(t)),
+        registrationLabel: getRegistrationStatus(t),
     }))
 
-    const filteredTournaments =
-        activeFilter === 'all'
-            ? tournaments
-            : tournaments.filter((t) => t.status === activeFilter)
-
-    const counts = {
-        all: tournaments.length,
-        ongoing: tournaments.filter((t) => t.status === 'ongoing').length,
-        registration: tournaments.filter((t) => t.status === 'registration').length,
-        completed: tournaments.filter((t) => t.status === 'completed').length,
-    }
-
-    const filters = [
-        { key: 'all', label: 'All', count: counts.all },
-        { key: 'ongoing', label: 'Ongoing', count: counts.ongoing },
-        { key: 'registration', label: 'Registration', count: counts.registration },
-        { key: 'completed', label: 'Completed', count: counts.completed },
-    ]
+    const filteredTournaments = tournaments.filter((tournament) => {
+        const matchesSearch = (tournament.name || '').toLowerCase().includes(searchQuery.toLowerCase())
+        const matchesGame = selectedGame === 'All Games' || tournament.game_title === selectedGame
+        const matchesStatus = selectedStatus === 'All Status' || tournament.statusLabel === selectedStatus
+        return matchesSearch && matchesGame && matchesStatus
+    })
 
     const getStatusStyle = (status) => {
-    switch (status) {
-      case 'ongoing':
-        return 'bg-[#3B82F6] text-white'
-      case 'registration':
-        return 'bg-[#020617] text-white border border-[#374151]'
-      case 'completed':
-        return 'bg-[#111827] text-[#E5E7EB] border border-[#374151]'
-      case 'upcoming':
-        return 'bg-[#1E293B] text-[#3B82F6]'
-      default:
-        return 'bg-[#111827] text-[#6B7280]'
+        switch (status) {
+            case 'ongoing':
+                return 'border-[#00E5A8] text-[#00E5A8] bg-[#00E5A8]/10'
+            case 'registration':
+                return 'border-[#3B82F6] text-[#3B82F6] bg-[#3B82F6]/10'
+            case 'registration-closed':
+                return 'border-[#FF4D4F] text-[#FF4D4F] bg-[#FF4D4F]/10'
+            case 'completed':
+                return 'border-[#9CA3AF] text-[#E5E7EB] bg-[#9CA3AF]/10'
+            case 'upcoming':
+                return 'border-[#60A5FA] text-[#60A5FA] bg-[#60A5FA]/10'
+            default:
+                return 'border-[#6B7280] text-[#9CA3AF] bg-[#6B7280]/10'
+        }
     }
-  }
 
     return (
         <div className="flex min-h-screen bg-[#0F172A]">
@@ -81,13 +130,7 @@ const PlayerMyTournament = () => {
             {/* Main */}
             <div className="flex-1 flex flex-col overflow-hidden">
                 {/* Header */}
-                <header className="bg-[#0F172A] border-b border-[#1F2937] px-8 py-6">
-                    {/* Top Row – Profile */}
-                    <div className="flex justify-end mb-6">
-                        <ProfileMenu />
-                    </div>
-
-                    {/* Bottom Row – Title + Action */}
+                <header className="bg-[#0F172A] border-b border-[#1F2937] px-8 py-6 flex items-center justify-between">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <Trophy
@@ -99,46 +142,81 @@ const PlayerMyTournament = () => {
                                     My Tournaments
                                 </h1>
                                 <p className="text-sm text-[#9CA3AF] mt-1">
-                                    All tournaments you have joined
+                                    Manage and track all tournaments you joined
                                 </p>
                             </div>
                         </div>
+                    </div>
 
+                    <div className="flex items-center gap-4">
                         <button
                             onClick={() => navigate('/tournaments')}
                             className="bg-[#3B82F6] hover:bg-[#2563EB] px-5 py-2.5 rounded-md text-sm font-semibold text-white transition-colors"
                         >
                             Browse Tournaments
                         </button>
+
+                        <ProfileMenu />
                     </div>
                 </header>
 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto">
-                    <div className="max-w-7xl mx-auto p-6">
-                        <div className="bg-[#1E293B] rounded-lg overflow-hidden">
-                            {/* Filters */}
-                            <div className="px-6 py-4 flex gap-2">
-                                {filters.map((filter) => (
-                                    <button
-                                        key={filter.key}
-                                        onClick={() => setActiveFilter(filter.key)}
-                                        className={`px-4 py-2 text-[13px] font-semibold transition-colors ${
-                                            activeFilter === filter.key
-                                                ? 'text-white border-b-4 border-[#3B82F6]'
-                                                : 'text-[#9CA3AF] hover:text-white hover:bg-[#111827]'
-                                        }`}
-                                    >
-                                        {filter.label} ({filter.count})
-                                    </button>
-                                ))}
+                    <div className="max-w-300 mx-auto p-6 space-y-6">
+                        {/* Search & Filter Bar */}
+                        <div className="flex gap-4 items-center">
+                            <div className="flex-1 relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6B7280]" strokeWidth={1.5} />
+                                <input
+                                    type="text"
+                                    placeholder="Search tournaments..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full bg-[#111827] border border-[#1F2937] rounded-md pl-10 pr-4 py-2.5 text-[14px] text-[#E5E7EB] placeholder-[#6B7280] focus:outline-none focus:border-[#3B82F6] transition-colors"
+                                />
                             </div>
 
-                            {/* Table */}
-                            <div className="bg-[#1E293B]">
+                            <div className="relative">
+                                <select
+                                    value={selectedGame}
+                                    onChange={(e) => setSelectedGame(e.target.value)}
+                                    className="appearance-none bg-[#111827] border border-[#1F2937] rounded-md px-4 py-2.5 pr-10 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer"
+                                >
+                                    {games.map((game) => (
+                                        <option key={game} value={game}>
+                                            {game}
+                                        </option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280] pointer-events-none" strokeWidth={1.5} />
+                            </div>
+
+                            <div className="relative">
+                                <select
+                                    value={selectedStatus}
+                                    onChange={(e) => setSelectedStatus(e.target.value)}
+                                    className="appearance-none bg-[#111827] border border-[#1F2937] rounded-md px-4 py-2.5 pr-10 text-[14px] text-[#E5E7EB] focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer"
+                                >
+                                    {statuses.map((status) => (
+                                        <option key={status} value={status}>
+                                            {status}
+                                        </option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280] pointer-events-none" strokeWidth={1.5} />
+                            </div>
+                        </div>
+
+                        {/* Table */}
+                        <div>
+                            <h2 className="text-base font-semibold text-[#E5E7EB] mb-4">
+                                Tournaments ({filteredTournaments.length})
+                            </h2>
+
+                            <div className="bg-[#111827] border border-[#1F2937] rounded-lg overflow-hidden">
                                 <table className="w-full">
                                     <thead>
-                                        <tr className="border-b border-[#111827]">
+                                        <tr className="border-b border-[#1F2937]">
                                             <th className="px-6 py-3 text-left text-[13px] font-medium text-[#9CA3AF]">
                                                 Name
                                             </th>
@@ -147,6 +225,9 @@ const PlayerMyTournament = () => {
                                             </th>
                                             <th className="px-6 py-3 text-left text-[13px] font-medium text-[#9CA3AF]">
                                                 Format
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-[13px] font-medium text-[#9CA3AF]">
+                                                Registration
                                             </th>
                                             <th className="px-6 py-3 text-left text-[13px] font-medium text-[#9CA3AF]">
                                                 Status
@@ -158,10 +239,16 @@ const PlayerMyTournament = () => {
                                     </thead>
 
                                     <tbody>
-                                        {loading ? (
+                                        {joinedLoading ? (
                                             <tr>
-                                                <td colSpan="5" className="px-6 py-8 text-center">
+                                                <td colSpan="6" className="px-6 py-8 text-center">
                                                     <p className="text-sm text-[#9CA3AF]">Loading tournaments...</p>
+                                                </td>
+                                            </tr>
+                                        ) : joinedError ? (
+                                            <tr>
+                                                <td colSpan="6" className="px-6 py-8 text-center">
+                                                    <p className="text-sm text-red-400">Failed to load tournaments. Please try again.</p>
                                                 </td>
                                             </tr>
                                         ) : filteredTournaments.length > 0 ? (
@@ -179,13 +266,16 @@ const PlayerMyTournament = () => {
                                                     <td className="px-6 py-4 text-sm text-[#9CA3AF]">
                                                         {tournament.match_format || 'N/A'}
                                                     </td>
+                                                    <td className="px-6 py-4 text-sm text-[#9CA3AF]">
+                                                        {tournament.registrationLabel}
+                                                    </td>
                                                     <td className="px-6 py-4">
                                                         <span
-                                                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium capitalize  ${getStatusStyle(
+                                                            className={`inline-flex items-center justify-center min-w-32 px-4 py-1 rounded-full text-sm font-semibold border ${getStatusStyle(
                                                                 tournament.status
                                                             )}`}
                                                         >
-                                                            {tournament.status}
+                                                            {tournament.statusLabel}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4 text-right">
@@ -204,9 +294,11 @@ const PlayerMyTournament = () => {
                                             ))
                                         ) : (
                                             <tr>
-                                                <td colSpan="5" className="px-6 py-8 text-center">
+                                                <td colSpan="6" className="px-6 py-8 text-center">
                                                     <p className="text-sm text-[#6B7280]">
-                                                        No tournaments found.
+                                                        {searchQuery || selectedGame !== 'All Games' || selectedStatus !== 'All Status'
+                                                            ? 'No tournaments found matching your search criteria.'
+                                                            : 'No tournaments joined yet.'}
                                                     </p>
                                                 </td>
                                             </tr>

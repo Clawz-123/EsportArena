@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { MessageSquare, Megaphone, Loader, Flag, Trash2 } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '../../../store/hooks'
-import { fetchMessages, fetchAnnouncements, addMessage, setCurrentUserId, removeMessage } from '../../../slices/ChatSlice'
+import { fetchMessages, fetchAnnouncements, addMessage, addAnnouncement, setCurrentUserId, removeMessage } from '../../../slices/ChatSlice'
 import { chatAPI, formatBackendMessage, formatBackendAnnouncement } from '../../../axios/chatAPI'
 import ChatInput from '../../../components/common/ChatInput'
 import ConfirmationModal from '../../../components/common/ConfirmationModal'
@@ -68,7 +68,11 @@ const ForumCard = ({ tournament }) => {
           const data = JSON.parse(event.data)
 
           if (data.event === 'chat_message') {
-            dispatch(addMessage(data.data))
+            if (data?.data?.message_type === 'announcement') {
+              dispatch(addAnnouncement(data.data))
+            } else {
+              dispatch(addMessage(data.data))
+            }
           } else if (data.event === 'connected') {
             console.log('Connected to tournament chat')
           }

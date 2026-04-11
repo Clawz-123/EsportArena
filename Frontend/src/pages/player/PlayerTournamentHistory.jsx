@@ -266,13 +266,17 @@ const PlayerTournamentHistory = () => {
                           <p className="text-xs text-[#9CA3AF] mt-0.5">Joined: {formatDate(t.joined_at)}</p>
                         </td>
                         <td className="px-4 py-3 text-[#9CA3AF]">{t.game_title} · {t.match_format}</td>
-                        <td className="px-4 py-3 text-[#9CA3AF] inline-flex items-center gap-1.5">
-                          <Calendar className="w-4 h-4 text-[#6B7280]" />
-                          {formatDate(t.match_start)}
+                        <td className="px-4 py-3 text-[#9CA3AF]">
+                          <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                            <Calendar className="w-4 h-4 text-[#6B7280]" />
+                            {formatDate(t.match_start)}
+                          </span>
                         </td>
-                        <td className="px-4 py-3 text-[#E5E7EB] inline-flex items-center gap-1.5">
-                          <Coins className="w-4 h-4 text-[#6B7280]" />
-                          {t.entry_fee > 0 ? `Rs. ${t.entry_fee}` : 'Free'}
+                        <td className="px-4 py-3 text-[#E5E7EB]">
+                          <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                            <Coins className="w-4 h-4 text-[#6B7280]" />
+                            {t.entry_fee > 0 ? `Rs. ${t.entry_fee}` : 'Free'}
+                          </span>
                         </td>
                         <td className="px-4 py-3 text-[#E5E7EB]">Rs. {(t.total_prize_pool || 0).toLocaleString()}</td>
                         <td className="px-4 py-3">

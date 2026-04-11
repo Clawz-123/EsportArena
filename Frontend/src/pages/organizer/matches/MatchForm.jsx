@@ -1,11 +1,12 @@
 import React from 'react';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
-import * as Yup from 'yup';
 import { X, Gamepad2 } from 'lucide-react';
-import { maps, modes } from './MatchOptions'; 
+import { getMapsForGame, modes } from './MatchOptions'; 
 import { MatchValidationSchema } from '../../utils/MatchesValidation';
 
-const MatchForm = ({ groups = [], onSubmit, onCancel, loading }) => {
+const MatchForm = ({ groups = [], gameTitle = '', onSubmit, onCancel, loading }) => {
+  const availableMaps = getMapsForGame(gameTitle);
+
   const fields = [
     {
       name: 'group',
@@ -34,9 +35,10 @@ const MatchForm = ({ groups = [], onSubmit, onCancel, loading }) => {
       name: 'map',
       label: 'Map (Optional)',
       type: 'select',
-      options: maps.map((m) => ({ value: m, label: m })),
+      options: availableMaps.map((m) => ({ value: m, label: m })),
       required: false,
-      placeholder: 'Select map',
+      placeholder: availableMaps.length ? 'Select map' : 'No maps available for this game',
+      disabled: availableMaps.length === 0,
     },
     {
       name: 'mode',
@@ -98,7 +100,8 @@ const MatchForm = ({ groups = [], onSubmit, onCancel, loading }) => {
                       <Field
                         as="select"
                         name={field.name}
-                        className="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6] appearance-none"
+                        disabled={field.disabled}
+                        className="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6] appearance-none disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         <option value="">{field.placeholder}</option>
                         {field.options.map((opt) => (

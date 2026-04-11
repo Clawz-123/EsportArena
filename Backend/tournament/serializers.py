@@ -102,12 +102,25 @@ class TournamentDetailSerializer(serializers.ModelSerializer):
 	organizer_name = serializers.CharField(source="organizer.name", read_only=True)
 	organizer_profile_image = serializers.SerializerMethodField()
 	total_prize_pool = serializers.IntegerField(read_only=True)
+	participants_count = serializers.SerializerMethodField()
+	teams_count = serializers.SerializerMethodField()
+	occupied_slots = serializers.SerializerMethodField()
 
 	def get_organizer_profile_image(self, obj):
 		if obj.organizer and obj.organizer.profile_image:
 			request = self.context.get('request')
 			return resolve_media_url(request, obj.organizer.profile_image)
 		return None
+
+	def get_participants_count(self, obj):
+		return obj.participants.count()
+
+	def get_teams_count(self, obj):
+		return obj.teams.count()
+
+	def get_occupied_slots(self, obj):
+		is_team_based = obj.match_format in [Tournament.MatchFormats.DUO, Tournament.MatchFormats.SQUAD]
+		return obj.teams.count() if is_team_based else obj.participants.count()
 
 	class Meta:
 		model = Tournament
@@ -131,6 +144,9 @@ class TournamentDetailSerializer(serializers.ModelSerializer):
 			"prize_second",
 			"prize_third",
 			"total_prize_pool",
+			"participants_count",
+			"teams_count",
+			"occupied_slots",
 			"match_rules",
 			"auto_start_tournament",
 			"status",
@@ -144,6 +160,9 @@ class TournamentDetailSerializer(serializers.ModelSerializer):
 			"organizer_name",
 			"organizer_profile_image",
 			"total_prize_pool",
+			"participants_count",
+			"teams_count",
+			"occupied_slots",
 			"status",
 			"started_at",
 			"created_at",
@@ -266,6 +285,13 @@ class JoinTournamentSerializer(serializers.Serializer):
 
 		attrs["tournament"] = tournament
 
+		if tournament.status == Tournament.Status.ACTIVE:
+			raise serializers.ValidationError("Tournament has already started.")
+		if tournament.status == Tournament.Status.COMPLETED:
+			raise serializers.ValidationError("Tournament has already completed.")
+		if tournament.status == Tournament.Status.REGISTRATION_CLOSED:
+			raise serializers.ValidationError("Registration has ended.")
+
 		# Validate registration period
 		today = timezone.now().date()
 		if tournament.registration_start > today:
@@ -296,13 +322,7 @@ class JoinTournamentSerializer(serializers.Serializer):
 			current_teams = TournamentTeam.objects.filter(tournament=tournament).count()
 
 			if current_teams + 1 > tournament.max_participants:
-				remaining_slots = max(tournament.max_participants - current_teams, 0)
-				raise serializers.ValidationError({
-					"team_members": (
-						f"Not enough team slots left. Only {remaining_slots} slot"
-						f"{'s' if remaining_slots != 1 else ''} remain."
-					)
-				})
+				raise serializers.ValidationError({"team_members": "Tournament slots are full."})
 
 			# Validate team name is provided
 			if not attrs.get("team_name"):
@@ -336,7 +356,7 @@ class JoinTournamentSerializer(serializers.Serializer):
 		else:
 			# Solo tournament
 			if current_participants + 1 > tournament.max_participants:
-				raise serializers.ValidationError("Tournament is full.")
+				raise serializers.ValidationError("Tournament slots are full.")
 
 			# Validate captain has in-game name
 			if str(user.id) not in in_game_names or not in_game_names[str(user.id)].strip():
