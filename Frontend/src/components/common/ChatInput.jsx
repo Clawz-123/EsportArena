@@ -15,7 +15,7 @@ const ChatInput = ({
   const trimmed = useMemo(() => message.trim(), [message]);
 
   const parseResponse = (payload) => {
-    // Backend may wrap result; normalize shape
+    // Handle different response structures for blocked messages
     const result = payload?.result ?? payload?.Result ?? payload;
     const blocked = payload?.blocked ?? result?.blocked ?? false;
     const errorMessage = payload?.error ?? payload?.Error_Message ?? '';

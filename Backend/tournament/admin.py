@@ -38,7 +38,7 @@ class TournamentAdmin(admin.ModelAdmin):
             "fields": ("entry_fee", "prize_first", "prize_second", "prize_third", "total_prize_pool")
         }),
         ("Rules & Results", {
-            "fields": ("match_rules", "require_result_proof", "proof_type", "result_time_limit_hours")
+            "fields": ("match_rules",)
         }),
         ("Control", {
             "fields": ("auto_start_tournament", "status", "started_at")

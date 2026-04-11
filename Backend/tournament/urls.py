@@ -9,6 +9,7 @@ urlpatterns = [
     path('my-joined/', views.GetMyJoinedTournamentsView.as_view(), name='my-joined-tournaments'),
     path('detail/<int:tournament_id>/', views.GetTournamentDetailView.as_view(), name='tournament-detail'),
     path('update/<int:tournament_id>/', views.UpdateTournamentView.as_view(), name='update-tournament'),
+    path('complete/<int:tournament_id>/', views.CompleteTournamentView.as_view(), name='complete-tournament'),
     path('delete/<int:tournament_id>/', views.DeleteTournamentView.as_view(), name='delete-tournament'),
     path('join/', views.JoinTournamentView.as_view(), name='join-tournament'),
     path('participants/<int:tournament_id>/', views.GetTournamentParticipantsView.as_view(), name='tournament-participants'),

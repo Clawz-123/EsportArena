@@ -302,7 +302,7 @@ const ForumCard = ({ tournament }) => {
           )}
         </div>
 
-        {/* Input Areas - fixed at bottom inside flex column */}
+        {/* This is the chat input area */}
         {activeTab === 'General' && (
           <div className="shrink-0 px-6 pb-5 pt-3 border-t border-[#1F2937] bg-[#0B1220]">
             <ChatInput

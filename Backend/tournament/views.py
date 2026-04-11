@@ -102,6 +102,179 @@ def _notify_tournament_participants(tournament, title, message, metadata=None, e
         )
 
 
+def _prize_positions(tournament):
+    return [
+        (1, Decimal(tournament.prize_first or 0)),
+        (2, Decimal(tournament.prize_second or 0)),
+        (3, Decimal(tournament.prize_third or 0)),
+    ]
+
+
+def _prize_reference(tournament_id, position):
+    return f"tournament:{tournament_id}:prize:{position}"
+
+
+def _is_prize_position_settled(tournament_id, position):
+    reference = _prize_reference(tournament_id, position)
+    return WalletTransaction.objects.filter(
+        reference=reference,
+        status=WalletTransaction.Status.COMPLETED,
+        transaction_type__in=[
+            WalletTransaction.TransactionType.PRIZE,
+            WalletTransaction.TransactionType.REFUND,
+        ],
+    ).exists()
+
+
+def _get_ranked_teams_for_payout(tournament, limit=3):
+    from LeaderBoard.models import GroupLeaderboardEntry
+
+    entries = (
+        GroupLeaderboardEntry.objects.filter(tournament=tournament)
+        .select_related("team", "team__captain")
+        .order_by("rank", "-total_points", "id")
+    )
+
+    ranked_teams = []
+    seen_team_ids = set()
+    for entry in entries:
+        team = entry.team
+        if not team or team.id in seen_team_ids:
+            continue
+
+        seen_team_ids.add(team.id)
+        ranked_teams.append(team)
+        if len(ranked_teams) >= limit:
+            break
+
+    return ranked_teams
+
+
+def _settle_tournament_prizes(tournament, ranked_teams):
+    organizer_wallet, _ = Wallet.objects.get_or_create(user=tournament.organizer)
+    payout_items = []
+    total_paid = Decimal("0.00")
+    total_refunded = Decimal("0.00")
+
+    for position, amount in _prize_positions(tournament):
+        if amount <= 0:
+            continue
+
+        reference = _prize_reference(tournament.id, position)
+        existing_transaction = (
+            WalletTransaction.objects.filter(
+                reference=reference,
+                status=WalletTransaction.Status.COMPLETED,
+                transaction_type__in=[
+                    WalletTransaction.TransactionType.PRIZE,
+                    WalletTransaction.TransactionType.REFUND,
+                ],
+            )
+            .select_related("wallet__user")
+            .first()
+        )
+
+        if existing_transaction:
+            if existing_transaction.transaction_type == WalletTransaction.TransactionType.PRIZE:
+                total_paid += existing_transaction.amount
+                payout_items.append(
+                    {
+                        "position": position,
+                        "status": "already_paid",
+                        "amount": str(existing_transaction.amount),
+                        "winner": existing_transaction.wallet.user.email,
+                    }
+                )
+            else:
+                total_refunded += existing_transaction.amount
+                payout_items.append(
+                    {
+                        "position": position,
+                        "status": "already_refunded",
+                        "amount": str(existing_transaction.amount),
+                    }
+                )
+            continue
+
+        winner_team = ranked_teams[position - 1] if len(ranked_teams) >= position else None
+
+        if winner_team and winner_team.captain:
+            winner_wallet, _ = Wallet.objects.get_or_create(user=winner_team.captain)
+            winner_wallet.balance = Decimal(winner_wallet.balance or 0) + amount
+            winner_wallet.save(update_fields=["balance", "updated_at"])
+
+            WalletTransaction.objects.create(
+                wallet=winner_wallet,
+                transaction_type=WalletTransaction.TransactionType.PRIZE,
+                direction=WalletTransaction.Direction.CREDIT,
+                amount=amount,
+                status=WalletTransaction.Status.COMPLETED,
+                method=WalletTransaction.Method.INTERNAL,
+                reference=reference,
+                note=(
+                    f"Tournament prize for position {position} "
+                    f"({winner_team.team_name}) in {tournament.name}"
+                ),
+            )
+
+            total_paid += amount
+            payout_items.append(
+                {
+                    "position": position,
+                    "status": "paid",
+                    "amount": str(amount),
+                    "team_id": winner_team.id,
+                    "team_name": winner_team.team_name,
+                    "winner": winner_team.captain.email,
+                }
+            )
+
+            _notify_tournament_user(
+                winner_team.captain,
+                title="Tournament Prize Awarded",
+                message=(
+                    f"Your team '{winner_team.team_name}' secured position {position} "
+                    f"in '{tournament.name}' and received {amount} coins."
+                ),
+                metadata={
+                    "tournament_id": tournament.id,
+                    "team_id": winner_team.id,
+                    "position": position,
+                    "amount": str(amount),
+                },
+            )
+            continue
+
+        organizer_wallet.balance = Decimal(organizer_wallet.balance or 0) + amount
+        organizer_wallet.save(update_fields=["balance", "updated_at"])
+
+        WalletTransaction.objects.create(
+            wallet=organizer_wallet,
+            transaction_type=WalletTransaction.TransactionType.REFUND,
+            direction=WalletTransaction.Direction.CREDIT,
+            amount=amount,
+            status=WalletTransaction.Status.COMPLETED,
+            method=WalletTransaction.Method.INTERNAL,
+            reference=reference,
+            note=f"Unassigned tournament prize refund for position {position} in {tournament.name}",
+        )
+
+        total_refunded += amount
+        payout_items.append(
+            {
+                "position": position,
+                "status": "refunded",
+                "amount": str(amount),
+            }
+        )
+
+    return {
+        "paid_total": str(total_paid),
+        "refunded_total": str(total_refunded),
+        "items": payout_items,
+    }
+
+
 # View for Creating Tournament
 class CreateTournamentView(generics.CreateAPIView):
     serializer_class = TournamentCreateSerializer
@@ -906,6 +1079,114 @@ class GetMyJoinedTournamentsView(generics.ListAPIView):
                 result={
                     "count": tournaments.count(),
                     "tournaments": serializer.data
+                },
+            )
+        except Exception as e:
+            return api_response(
+                is_success=False,
+                error_message=str(e),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class CompleteTournamentView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description=(
+            "Complete a tournament and settle prize payouts for top 3 teams "
+            "based on leaderboard rank."
+        ),
+        responses={
+            200: openapi.Response(description="Tournament completed and prizes settled"),
+            400: openapi.Response(description="Missing leaderboard rankings for pending prizes"),
+            403: openapi.Response(description="Forbidden - Only organizer or superadmin can complete"),
+            404: openapi.Response(description="Tournament not found"),
+            500: openapi.Response(description="Internal Server Error"),
+        },
+        tags=["Tournament"],
+    )
+    @transaction.atomic
+    def post(self, request, tournament_id):
+        try:
+            tournament = Tournament.objects.select_for_update().get(id=tournament_id)
+        except Tournament.DoesNotExist:
+            return api_response(
+                is_success=False,
+                error_message="Tournament not found.",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            is_organizer = tournament.organizer_id == request.user.id
+            is_superadmin = bool(getattr(request.user, "is_superuser", False))
+            if not (is_organizer or is_superadmin):
+                return api_response(
+                    is_success=False,
+                    error_message="You do not have permission to complete this tournament.",
+                    status_code=status.HTTP_403_FORBIDDEN,
+                )
+
+            ranked_teams = _get_ranked_teams_for_payout(tournament)
+            unsettled_prize_positions = [
+                position
+                for position, amount in _prize_positions(tournament)
+                if amount > 0 and not _is_prize_position_settled(tournament.id, position)
+            ]
+
+            if unsettled_prize_positions and not ranked_teams:
+                return api_response(
+                    is_success=False,
+                    error_message=(
+                        "No leaderboard entries found. Add rankings before completing "
+                        "the tournament and distributing prizes."
+                    ),
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+
+            payout_summary = _settle_tournament_prizes(tournament, ranked_teams)
+
+            was_already_completed = tournament.status == Tournament.Status.COMPLETED
+            if not was_already_completed:
+                update_fields = ["status", "updated_at"]
+                tournament.status = Tournament.Status.COMPLETED
+                if not tournament.started_at:
+                    tournament.started_at = timezone.now()
+                    update_fields.append("started_at")
+                tournament.save(update_fields=update_fields)
+
+                _notify_tournament_participants(
+                    tournament,
+                    title="Tournament Completed",
+                    message=f"Tournament '{tournament.name}' has been completed.",
+                    metadata={"tournament_id": tournament.id, "status": tournament.status},
+                    exclude_user_ids=[tournament.organizer_id],
+                )
+
+            _notify_tournament_user(
+                tournament.organizer,
+                title="Tournament Payout Processed",
+                message=(
+                    f"Prize settlement for tournament '{tournament.name}' has been processed."
+                ),
+                metadata={
+                    "tournament_id": tournament.id,
+                    "already_completed": was_already_completed,
+                    "payout_summary": payout_summary,
+                },
+            )
+
+            return api_response(
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+                result={
+                    "message": (
+                        "Tournament completed and prizes settled successfully."
+                        if not was_already_completed
+                        else "Tournament was already completed. Pending prize settlements were processed."
+                    ),
+                    "payout_summary": payout_summary,
                 },
             )
         except Exception as e:
