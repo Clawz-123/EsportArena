@@ -1,78 +1,93 @@
-🎮 Esports Arena – Online Tournament Management System
+# Esports Arena
 
-Esports Arena is a full-stack web application designed to manage online gaming tournaments in a structured, automated, and user-friendly way.
-The platform supports multiple competitive games and provides dashboards for Players, Organizers, and Admins with secure authentication and virtual coin–based transactions.
+Esports Arena is a full-stack web app for managing esports tournaments.
 
-🚀 Features
-🔹 User Roles
+## Live Demo
 
-Player: Join tournaments, submit results, manage wallet, withdraw earnings.
+https://esportarena01.netlify.app
 
-Organizer: Create and manage tournaments, verify results, update standings.
+It includes:
 
-Admin: Monitor users, tournaments, and transactions.
+- Player, Organizer, and Admin roles
+- Tournament, match, bracket, and leaderboard management
+- Wallet and payment features
+- Notification and chat support
 
-🔹 Tournament Management
+## Tech Stack
 
-Create tournaments with custom rules.
+- Frontend: React + Vite
+- Backend: Django + Django REST Framework + Channels
+- Database: PostgreSQL
 
-Automatic group / bracket generation.
+## Quick Start
 
-Real-time leaderboard updates.
+### 1. Clone the project
 
-Match result submission with screenshot proof.
+```bash
+git clone <repo-url>
+cd EsportArena
+```
 
-🔹 Wallet & Payments
+### 2. Setup backend
 
-Virtual coin–based economy.
+```powershell
+cd Backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
 
-Top-up wallet using eSewa or Khalti.
+Create a .env file inside Backend with at least:
 
-Semi-automatic withdrawal (API based).
+```env
+SECRET_KEY=your-secret-key
+DEBUG=True
+ALLOWED_HOSTS=127.0.0.1,localhost
 
-Transaction logging for transparency.
+DB_NAME=your_db_name
+DB_USER=your_db_user
+DB_PASSWORD=your_db_password
+DB_HOST=127.0.0.1
+DB_PORT=5432
+```
 
-🔹 Forums & Communication
+Run migrations and start backend:
 
-General forum for all users.
+```powershell
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver
+```
 
-Tournament-specific forums.
+### 3. Setup frontend
 
-Basic toxicity detection using keyword filtering.
+Open a new terminal:
 
-🔹 Security & Authentication
+```powershell
+cd Frontend
+npm install
+```
 
-JWT-based authentication.
+Create a .env file inside Frontend:
 
-Role-based access control.
+```env
+VITE_API_URL=http://127.0.0.1:8000/api
+```
 
-Secure password hashing.
+Start frontend:
 
-🛠️ Tech Stack
-Frontend
+```powershell
+npm run dev
+```
 
-React.js
+## Use the Project
 
-Tailwind CSS
+1. Open frontend at http://localhost:5173
+2. Register or login
+3. Use role-based dashboard features
+4. Use admin panel at http://127.0.0.1:8000/admin
 
-Axios
+## API Docs
 
-Backend
-
-Django REST Framework
-
-Python
-
-JWT Authentication
-
-Database
-
-PostgreSQL
-
-External Services
-
-eSewa / Khalti Payment Gateway
-
-Cloudinary (Image Uploads)
-
-SMTP (Email Notifications)
+- Swagger: http://127.0.0.1:8000/swagger/
+- ReDoc: http://127.0.0.1:8000/redoc/
